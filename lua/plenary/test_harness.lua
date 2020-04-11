@@ -28,6 +28,8 @@ function test_harness:run()
 
   -- weirdly need to redraw the screen sometimes... oh well
   vim.cmd("mode")
+
+  vim.cmd("nnoremap q :qa<CR>")
 end
 
 
