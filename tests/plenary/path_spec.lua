@@ -50,6 +50,7 @@ function TestPath:testMustCalledWithColon()
     lu.assertError(path.new, 'lua')
 end
 
+-- @sideeffect
 function TestPath:testMkdir()
     local p = path:new("_dir_not_exist")
 

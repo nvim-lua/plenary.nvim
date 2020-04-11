@@ -66,3 +66,7 @@ Currently comes bundled with (or slightly modified):
 - luaunit: https://github.com/bluebird75/luaunit -> Used for unit testing
 
 ### And more to come :)
+
+- [ ] Foating window wrappers
+- [ ] Easy border windows to any floating window
+- [ ] ...
