@@ -20,5 +20,34 @@ function TestPath:testAbsolute()
     lu.assertEquals(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
 end
 
+function TestPath:testJoin()
+    lu.assertEquals(path:new("lua", "plenary"), path:new("lua"):joinpath("plenary"))
+end
+
+function TestPath:testCoolDiv()
+    lu.assertEquals(path:new("lua", "plenary"), path:new("lua") / "plenary")
+end
+
+function TestPath:testJoinWithPath()
+    lu.assertEquals(path:new("lua", "plenary"), path:new("lua", path:new("plenary")))
+    lu.assertEquals(path:new("lua", "plenary"), path:new("lua"):joinpath(path:new("plenary")))
+end
+
+function TestPath:testExists()
+    lu.assertIsTrue(path:new("README.md"):exists())
+    lu.assertIsFalse(path:new("asdf.md"):exists())
+end
+
+function TestPath:testIsDir()
+    lu.assertIsTrue(path:new("lua"):is_dir())
+    lu.assertIsFalse(path:new("asdf"):is_dir())
+end
+
+function TestPath:testMustCalledWithColon()
+    -- This will work, cause we used a colon
+    lu.assertIsTable(path:new('lua'))
+    -- This will error, since we did not
+    lu.assertError(path.new, 'lua')
+end
 
 test_harness:run()

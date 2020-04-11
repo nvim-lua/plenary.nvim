@@ -11,13 +11,19 @@ path.__index = path
 
 path.__div = function(self, other)
     assert(path.is_path(self))
-    assert(path.is_path(other))
+    assert(path.is_path(other) or type(other) == 'string')
 
     return self:joinpath(other)
 end
 
 path.__tostring = function(self)
     return self.raw
+end
+
+-- TODO: See where we concat the table, and maybe we could make this work.
+path.__concat = function(self, other)
+    print(self, other)
+    return self.raw .. other
 end
 
 path.is_path = function(a)
@@ -27,7 +33,17 @@ end
 -- TODO: check for windows
 path._sep = "/"
 
-function path:new(path_input)
+function path:new(...)
+    assert(type(self) ~= 'string', "You probably forgot to call path:new and did path.new()")
+    local args = {...}
+
+    local path_input
+    if #args == 1 then
+        path_input = args[1]
+    else
+        path_input = args
+    end
+
     -- If we already have a path, it's fine.
     --   Just return it
     if path.is_path(path_input) then
@@ -37,7 +53,19 @@ function path:new(path_input)
 
     local path_string
     if vim.tbl_islist(path_input) then
-        path_string = table.concat(path_input, path._sep)
+        -- TODO: It's possible this could be done more elegantly with __concat
+        --       But I'm unsure of what we'd do to make that happen
+        local path_objs = {}
+        for _, v in ipairs(path_input) do
+            if path.is_path(v) then
+                table.insert(path_objs, v.raw)
+            else
+                assert(type(v) == 'string')
+                table.insert(path_objs, v)
+            end
+        end
+
+        path_string = table.concat(path_objs, path._sep)
     else
         assert(type(path_input) == 'string')
         path_string = path_input
@@ -57,8 +85,7 @@ function path:new(path_input)
 end
 
 function path:joinpath(path_string)
-    -- TODO: This should not just concat these.
-    return path.new(self.raw .. path._sep .. path_string)
+    return path:new(self.raw, path_string)
 end
 
 function path:absolute()
@@ -73,12 +100,11 @@ function path:absolute()
 end
 
 function path:exists()
-    return vim.fn.filereadable(self.absolute())
+    return vim.fn.filereadable(self:absolute()) == 1
 end
 
 function path:is_dir()
-    return vim.fn.isdirectory(self.absolute())
+    return vim.fn.isdirectory(self:absolute()) == 1
 end
-
 
 return path
