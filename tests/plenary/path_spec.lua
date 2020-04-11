@@ -50,4 +50,17 @@ function TestPath:testMustCalledWithColon()
     lu.assertError(path.new, 'lua')
 end
 
+function TestPath:testMkdir()
+    local p = path:new("_dir_not_exist")
+
+    p:rmdir()
+    lu.assertIsFalse(p:exists())
+
+    p:mkdir()
+    lu.assertIsTrue(p:exists())
+
+    p:rmdir()
+    lu.assertIsFalse(p:exists())
+end
+
 test_harness:run()

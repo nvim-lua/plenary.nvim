@@ -4,6 +4,7 @@
 --- Reference: https://docs.python.org/3/library/pathlib.html
 
 local vim = vim
+local luv = require('luv')  -- TODO: Might want to consider more luv, less vim for some of these.
 
 local path = {}
 
@@ -100,11 +101,45 @@ function path:absolute()
 end
 
 function path:exists()
-    return vim.fn.filereadable(self:absolute()) == 1
+    return vim.fn.filereadable(self:absolute()) == 1 or self:is_dir()
+end
+
+function path:mkdir(mode, parents, exists_ok)
+    mode = mode or 448 -- 0700 -> decimal
+
+    if parents == nil then
+        parents = true
+    end
+
+    if exists_ok == nil then
+        exists_ok = true
+    end
+
+    local vim_fn_path = ""
+    if parents then
+        vim_fn_path = "p"
+    end
+
+    return vim.fn.mkdir(self:absolute(), vim_fn_path, mode)
+end
+
+function path:rmdir()
+    if not self:exists() then
+        return
+    end
+
+    luv.fs_rmdir(self:absolute())
 end
 
 function path:is_dir()
     return vim.fn.isdirectory(self:absolute()) == 1
+end
+
+-- TODO:
+--  Maybe I can use libuv for this?
+function path:open()
+end
+function path:close()
 end
 
 return path
