@@ -15,6 +15,19 @@ Note that this library is useless outside of Neovim since it requires Neovim fun
 
 A Lua module that implements a bunch of the things from `pathlib` from Python, so that paths are easy to work with.
 
+### plenary.popup
+
+`popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
+to provide compatibility layer for Neovim.
+
+Status: WIP
+
+### plenary.window
+
+Window helper functions to wrap some of the more difficult cases. Particularly for floating windows.
+
+Status: WIP
+
 ### plenary.test_harness
 
 See test files in `./tests/plenary/`. For example
