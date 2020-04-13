@@ -15,6 +15,21 @@ Note that this library is useless outside of Neovim since it requires Neovim fun
 
 A Lua module that implements a bunch of the things from `pathlib` from Python, so that paths are easy to work with.
 
+### plenary.context_manager
+
+Implements `with` and `open` just like in Python. For example:
+
+```lua
+local with = context_manager.with
+local open = context_manager.open
+
+local result = with(open("README.md"), function(reader)
+  return reader:read()
+end)
+
+assert(result == "# plenary.nvim")
+```
+
 ### plenary.popup
 
 `popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
