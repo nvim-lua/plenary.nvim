@@ -4,7 +4,7 @@ package.loaded['plenary.test_harness'] = nil
 local luvjob = require('luvjob')
 
 local f = require("plenary.functional")
-local lu = require("plenary.luaunit")
+local lu = require("luaunit")
 local Path = require("plenary.path")
 local win_float = require("plenary.window.float")
 

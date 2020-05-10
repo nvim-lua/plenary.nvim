@@ -42,9 +42,9 @@ function context_manager.open(filename, mode)
     filename = filename.filename
   end
 
-  return coroutine.create(function()
-    local file_io = assert(io.open(filename, mode))
+  local file_io = assert(io.open(filename, mode))
 
+  return coroutine.create(function()
     coroutine.yield(file_io)
 
     file_io:close()

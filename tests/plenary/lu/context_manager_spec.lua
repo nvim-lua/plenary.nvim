@@ -1,4 +1,4 @@
-local lu = require("plenary.luaunit")
+local lu = require("luaunit")
 
 local context_manager = require("plenary.context_manager")
 local debug_utils = require("plenary.debug_utils")
@@ -7,7 +7,7 @@ local Path = require("plenary.path")
 local with = context_manager.with
 local open = context_manager.open
 
-local README_STR_PATH = vim.fn.fnamemodify(debug_utils.sourced_filepath(), ":h:h:h") .. "/README.md"
+local README_STR_PATH = vim.fn.fnamemodify(debug_utils.sourced_filepath(), ":h:h:h:h") .. "/README.md"
 local README_FIRST_LINE = "# plenary.nvim"
 
 TestContextManager = {}

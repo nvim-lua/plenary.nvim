@@ -48,21 +48,21 @@ Status: WIP
 See test files in `./tests/plenary/`. For example
 
 ```lua
-local test_harness = require("plenary.test_harness")
-local lu = require("plenary.luaunit")
+local lu = require("luaunit")
 
-local path = require("plenary.path")
+local Path = require("plenary.path")
+local test_harness = require("plenary.test_harness")
 
 TestPath = {}
 
 function TestPath:testReadme()
-    local p = path:new("README.md")
+    local p = Path:new("README.md")
 
     lu.assertEquals(p.raw, "README.md")
 end
 
 function TestPath:testAbsolute()
-    local p = path:new("README.md")
+    local p = Path:new("README.md")
 
     lu.assertEquals(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
 end
