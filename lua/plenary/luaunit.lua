@@ -2676,7 +2676,7 @@ end
         -- return status line string according to results
         local s = {
             string.format('Ran %d tests in %0.3f seconds',
-                          result.runCount, result.duration),
+                          result.runCount, result.duration * 1000),
             conditional_plural(result.successCount, 'success'),
         }
         if result.notSuccessCount > 0 then
@@ -3108,7 +3108,8 @@ end
                 instance = _G[instanceName]
 
                 if instance == nil then
-                    error( "No such name in global space: "..instanceName )
+                  error(name)
+                  error( "No such name in global space: "..instanceName )
                 end
 
                 if type(instance) ~= 'table' then

@@ -35,9 +35,15 @@ function context_manager.with(obj, callable)
   end
 end
 
+--- @param filename string|table -- If string, used as io.open(filename)
+---                                 Else, should be a table with `filename` as an attribute
 function context_manager.open(filename, mode)
+  if type(filename) == 'table' and filename.filename then
+    filename = filename.filename
+  end
+
   return coroutine.create(function()
-    local file_io = io.open(filename, mode)
+    local file_io = assert(io.open(filename, mode))
 
     coroutine.yield(file_io)
 

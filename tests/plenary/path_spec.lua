@@ -2,18 +2,24 @@
 local test_harness = require("plenary.test_harness")
 local lu = require("plenary.luaunit")
 
-local path = require("plenary.path")
+local Path = require("plenary.path")
+
+_ = [[
+package.loaded['tests.plenary.path_spec'] = nil
+require('tests.plenary.path_spec')
+require('plenary.test_harness'):run(nil, nil, "TestPath")
+]]
 
 TestPath = {}
 
 function TestPath:testReadme()
-    local p = path:new("README.md")
+    local p = Path:new("README.md")
 
-    lu.assertEquals(p.raw, "README.md")
+    lu.assertEquals(p.filename, "README.md")
 end
 
 function TestPath:testAbsolute()
-    local p = path:new("README.md")
+    local p = Path:new("README.md")
 
     -- This is kind of a dumb thin since this is literally the way to call it...
     -- but oh well
@@ -21,38 +27,42 @@ function TestPath:testAbsolute()
 end
 
 function TestPath:testJoin()
-    lu.assertEquals(path:new("lua", "plenary"), path:new("lua"):joinpath("plenary"))
+    lu.assertEquals(Path:new("lua", "plenary"), Path:new("lua"):joinpath("plenary"))
 end
 
 function TestPath:testCoolDiv()
-    lu.assertEquals(path:new("lua", "plenary"), path:new("lua") / "plenary")
+    lu.assertEquals(Path:new("lua", "plenary"), Path:new("lua") / "plenary")
 end
 
 function TestPath:testJoinWithPath()
-    lu.assertEquals(path:new("lua", "plenary"), path:new("lua", path:new("plenary")))
-    lu.assertEquals(path:new("lua", "plenary"), path:new("lua"):joinpath(path:new("plenary")))
+    lu.assertEquals(Path:new("lua", "plenary"), Path:new("lua", Path:new("plenary")))
+    lu.assertEquals(Path:new("lua", "plenary"), Path:new("lua"):joinpath(Path:new("plenary")))
 end
 
 function TestPath:testExists()
-    lu.assertIsTrue(path:new("README.md"):exists())
-    lu.assertIsFalse(path:new("asdf.md"):exists())
+    lu.assertIsTrue(Path:new("README.md"):exists())
+    lu.assertIsFalse(Path:new("asdf.md"):exists())
 end
 
 function TestPath:testIsDir()
-    lu.assertIsTrue(path:new("lua"):is_dir())
-    lu.assertIsFalse(path:new("asdf"):is_dir())
+    lu.assertIsTrue(Path:new("lua"):is_dir())
+    lu.assertIsFalse(Path:new("asdf"):is_dir())
 end
 
-function TestPath:testMustCalledWithColon()
+function TestPath:testCanBeCalledWithoutColon()
     -- This will work, cause we used a colon
-    lu.assertIsTable(path:new('lua'))
-    -- This will error, since we did not
-    lu.assertError(path.new, 'lua')
+    local with_colon = Path:new('lua')
+    lu.assertIsTable(with_colon)
+
+    local no_colon = Path.new('lua')
+    lu.assertIsTable(no_colon)
+
+    lu.assertEquals(with_colon, no_colon)
 end
 
 -- @sideeffect
 function TestPath:testMkdir()
-    local p = path:new("_dir_not_exist")
+    local p = Path:new("_dir_not_exist")
 
     p:rmdir()
     lu.assertIsFalse(p:exists())
@@ -63,5 +73,3 @@ function TestPath:testMkdir()
     p:rmdir()
     lu.assertIsFalse(p:exists())
 end
-
-test_harness:run()
