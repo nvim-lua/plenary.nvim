@@ -1,8 +1,8 @@
 
-local test_harness = require("plenary.test_harness")
-local lu = require("plenary.luaunit")
+local lu = require("luaunit")
 
 local Path = require("plenary.path")
+local test_harness = require("plenary.test_harness")
 
 _ = [[
 package.loaded['tests.plenary.path_spec'] = nil
