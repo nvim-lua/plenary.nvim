@@ -1,9 +1,14 @@
-local test_harness = require("plenary.test_harness")
 local lu = require("plenary.luaunit")
 
 local context_manager = require("plenary.context_manager")
+local debug_utils = require("plenary.debug_utils")
+local Path = require("plenary.path")
+
 local with = context_manager.with
 local open = context_manager.open
+
+local README_STR_PATH = vim.fn.fnamemodify(debug_utils.sourced_filepath(), ":h:h:h") .. "/README.md"
+local README_FIRST_LINE = "# plenary.nvim"
 
 TestContextManager = {}
 
@@ -56,11 +61,19 @@ function TestContextManager:testDoesNotWorkWithCoroutineWithExtraYields()
 end
 
 function TestContextManager:testOpenWorks()
-  local result = with(open("README.md"), function(reader)
+  local result = with(open(README_STR_PATH), function(reader)
     return reader:read()
   end)
 
-  lu.assertEquals(result, "# plenary.nvim")
+  lu.assertEquals(result, README_FIRST_LINE)
 end
 
-test_harness:run()
+function TestContextManager:testOpenWorksWithPath()
+  local p = Path:new(README_STR_PATH)
+
+  local result = with(open(p), function(reader)
+    return reader:read()
+  end)
+
+  lu.assertEquals(result, README_FIRST_LINE)
+end

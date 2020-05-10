@@ -10,6 +10,9 @@ local path = {}
 
 path.__index = path
 
+-- TODO: Could use this to not have to call new... not sure
+-- path.__call = path:new
+
 path.__div = function(self, other)
     assert(path.is_path(self))
     assert(path.is_path(other) or type(other) == 'string')
@@ -18,13 +21,13 @@ path.__div = function(self, other)
 end
 
 path.__tostring = function(self)
-    return self.raw
+    return self.filename
 end
 
 -- TODO: See where we concat the table, and maybe we could make this work.
 path.__concat = function(self, other)
     print(self, other)
-    return self.raw .. other
+    return self.filename .. other
 end
 
 path.is_path = function(a)
@@ -35,8 +38,12 @@ end
 path._sep = "/"
 
 function path:new(...)
-    assert(type(self) ~= 'string', "You probably forgot to call path:new and did path.new()")
     local args = {...}
+
+    if type(self) == 'string' then
+        table.insert(args, 1, self)
+        self = path
+    end
 
     local path_input
     if #args == 1 then
@@ -59,7 +66,7 @@ function path:new(...)
         local path_objs = {}
         for _, v in ipairs(path_input) do
             if path.is_path(v) then
-                table.insert(path_objs, v.raw)
+                table.insert(path_objs, v.filename)
             else
                 assert(type(v) == 'string')
                 table.insert(path_objs, v)
@@ -75,7 +82,8 @@ function path:new(...)
     -- TODO: Should probably remove and dumb stuff like double seps, periods in the middle, etc.
 
     local obj = {
-        raw=path_string,
+        filename = path_string,
+
 
         _absolute=nil,
     }
@@ -86,7 +94,7 @@ function path:new(...)
 end
 
 function path:joinpath(path_string)
-    return path:new(self.raw, path_string)
+    return path:new(self.filename, path_string)
 end
 
 function path:absolute()
@@ -94,7 +102,7 @@ function path:absolute()
         -- NOTE: I can see a potential bug here in the fact that
         --   I'm not sure how we know if we've got the right cwd to do this.
         --   So maybe at some point we'll have to cache the cwd when we create the path.
-        self._absolute = vim.fn.fnamemodify(self.raw, ":p")
+        self._absolute = vim.fn.fnamemodify(self.filename, ":p")
     end
 
     return self._absolute
@@ -139,6 +147,7 @@ end
 --  Maybe I can use libuv for this?
 function path:open()
 end
+
 function path:close()
 end
 
