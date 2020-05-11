@@ -10,3 +10,7 @@ require("tests.plenary.path_spec")
 test_harness:run(0, 0, "TestPath")
 
 
+[[
+lua require("plenary.test_harness"):test_directory("luaunit", "./tests/plenary/lu/")
+lua require("plenary.test_harness"):test_directory("busted", "./tests/plenary/bu/")
+]]

@@ -8,7 +8,7 @@ local exit = require 'busted.compatibility'.exit
 local loadstring = require 'busted.compatibility'.loadstring
 local loaded = false
 
-return function(options)
+return function(options, level)
   if loaded then return function() end else loaded = true end
 
   local isatty = io.type(io.stdout) == 'file' and term.isatty(io.stdout)
@@ -26,7 +26,7 @@ return function(options)
 
   require 'busted'(busted)
 
-  local level = 2
+  level = level or 2
   local info = debug.getinfo(level, 'Sf')
   local source = info.source
   local fileName = source:sub(1,1) == '@' and source:sub(2) or nil
@@ -217,6 +217,6 @@ return function(options)
   busted.publish({ 'exit' })
 
   if options.standalone or failures > 0 or errors > 0 then
-    exit(failures + errors, forceExit)
+    -- exit(failures + errors, forceExit)
   end
 end
