@@ -69,7 +69,7 @@ function test_harness:run(test_type, buf, win, ...)
   vim.cmd("nnoremap q :q<CR>")
 end
 
-function test_harness:test_directory(test_type, directory)
+function test_harness:test_directory(test_type, directory, headless)
   validate_test_type(test_type)
 
   log.debug("Starting...")
@@ -92,8 +92,15 @@ function test_harness:test_directory(test_type, directory)
           )
         },
         on_exit = function(j_self, _, _)
-          vim.fn.nvim_buf_set_lines(res.buf, -1, -1, false, j_self:result())
-          vim.cmd('mode')
+          if headless then
+            -- print(j_self:result())
+            for _k, v in ipairs(j_self:result()) do
+              print(v)
+            end
+          else
+            vim.fn.nvim_buf_set_lines(res.buf, -1, -1, false, j_self:result())
+            vim.cmd('mode')
+          end
         end
       })
     end,
@@ -108,8 +115,10 @@ function test_harness:test_directory(test_type, directory)
   luvjob.join(unpack(jobs))
 
   log.debug("Done...")
-  -- for _, j in ipairs(jobs) do
-  -- end
+
+  if headless then
+    vim.cmd('qa!')
+  end
 end
 
 function test_harness:_find_files_to_run(directory)
@@ -137,11 +146,13 @@ function test_harness:_run_path(test_type, directory)
     pcall(function() dofile(p:absolute()) end)
   end
 
-  print("\n")
-  print("===== Results ===== ")
-  print("\n")
-  test_harness:run(test_type, buf, win)
-  print("\n")
+  if test_type == 'luanit' then
+    print("\n")
+    print("===== Results ===== ")
+    print("\n")
+    test_harness:run(test_type, buf, win)
+    print("\n")
+  end
 
   vim.cmd("qa!")
 

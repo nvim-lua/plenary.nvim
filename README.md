@@ -8,6 +8,13 @@ All the lua functions I don't want to write twice.
 
 Note that this library is useless outside of Neovim since it requires Neovim functions. It should be usable with any recent version of Neovim though.
 
+## Installation
+
+```vim
+" Requied plugin for job management in Lua
+Plug 'tjdevries/luvjob.nvim'
+Plug 'tjdevries/plenary.nvim'
+```
 
 ## Modules
 
@@ -45,7 +52,33 @@ Status: WIP
 
 ### plenary.test_harness
 
-See test files in `./tests/plenary/`. For example
+Supports both `busted` and `luaunit` style testing.
+
+#### Busted
+
+See test files in `./tests/plenary/bu`.
+
+Add the following line to the beginning of your test file:
+
+```lua
+require('plenary.test_harness'):setup_busted()
+```
+
+And then you can run your tests from command line by doing:
+
+```
+-> nvim --headless -c 'lua require("plenary.test_harness"):test_directory("busted", "./tests/plenary/bu/", true)'
+```
+
+OR you can run from within Neovim (in a new nvim instance, so you don't need to worry about hot reloading or anyything like that)
+
+```vim
+lua require("plenary.test_harness"):test_directory("busted", "./tests/plenary/bu/")
+```
+
+#### LuaUnit
+
+See test files in `./tests/plenary/lu`. For example
 
 ```lua
 local lu = require("luaunit")
