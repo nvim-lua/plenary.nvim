@@ -68,6 +68,10 @@ And then you can run your tests from command line by doing:
 
 ```
 -> nvim --headless -c 'lua require("plenary.test_harness"):test_directory("busted", "./tests/plenary/bu/", true)'
+Loading Tests For:  /home/tj/plugins/plenary.nvim/tests/plenary/bu/uses_nvim_spec.lua+
+1 success / 0 failures / 0 errors / 0 pending : 0.000263 seconds
+Loading Tests For:  /home/tj/plugins/plenary.nvim/tests/plenary/bu/simple_busted_spec.lua+
+1 success / 0 failures / 0 errors / 0 pending : 0.000255 seconds%
 ```
 
 OR you can run from within Neovim (in a new nvim instance, so you don't need to worry about hot reloading or anyything like that)
