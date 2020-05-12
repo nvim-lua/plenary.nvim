@@ -176,11 +176,12 @@ function harness:_run_path(test_type, directory)
     print(" ")
     print("Loading Tests For: ", p:absolute(), "\n")
 
-    local ok, _ = pcall(function() dofile(p:absolute()) end)
+    dofile(p:absolute())
+    -- local ok, _ = pcall(function() dofile(p:absolute()) end)
 
-    if not ok then
-      print("Failed to load file")
-    end
+    -- if not ok then
+    --   print("Failed to load file")
+    -- end
   end
 
   harness:run(test_type, buf, win)
