@@ -8,19 +8,24 @@ local lu = require("luaunit")
 local Path = require("plenary.path")
 local win_float = require("plenary.window.float")
 
+local p_debug = vim.fn.getenv("DEBUG_PLENARY")
+if p_debug == vim.NIL then
+  p_debug = false
+end
+
 local log = setmetatable({}, {
   __index = function(_, key)
     return function(...)
-      if key == 'debug' then
+      if (key == 'debug') and (not p_debug) then
         return
       end
 
-      print('[', key, ']', ...)
+      print('[', key, ']', ..., "\n")
     end
   end
 })
 
-local test_harness = {}
+local harness = {}
 
 local function validate_test_type(test_type)
   if test_type ~= 'luaunit' and test_type ~= 'busted' then
@@ -35,7 +40,17 @@ local function validate_test_type(test_type)
 end
 
 
-function test_harness:run(test_type, buf, win, ...)
+local print_output = function(_, ...)
+  for _, v in ipairs({...}) do
+    print(v)
+  end
+end
+
+local nvim_output = function(buf, ...)
+  vim.fn.nvim_buf_set_lines(buf, -1, -1, false, {...})
+end
+
+function harness:run(test_type, buf, win, ...)
   validate_test_type(test_type)
 
   if buf == nil then
@@ -53,6 +68,11 @@ function test_harness:run(test_type, buf, win, ...)
   vim.fn.nvim_buf_set_option(buf, 'swapfile', false)
 
   if test_type == 'luaunit' then
+    print("\n")
+    print("===== Results ===== ")
+    print("\n")
+    print("\n")
+
     lu.LuaUnit.run(...)
   elseif test_type == 'busted' then
     -- Requires people to have called `setup_busted`
@@ -69,7 +89,7 @@ function test_harness:run(test_type, buf, win, ...)
   vim.cmd("nnoremap q :q<CR>")
 end
 
-function test_harness:test_directory(test_type, directory, headless)
+function harness:test_directory(test_type, directory, headless)
   validate_test_type(test_type)
 
   log.debug("Starting...")
@@ -77,6 +97,13 @@ function test_harness:test_directory(test_type, directory, headless)
   local res = win_float.centered()
   vim.cmd('mode')
   vim.fn.nvim_buf_set_keymap(res.buf, "n", "q", ":q<CR>", {})
+
+  local outputter
+  if headless then
+    outputter = print_output
+  else
+    outputter = nvim_output
+  end
 
   local paths = self:_find_files_to_run(directory)
   local jobs = f.map(
@@ -91,16 +118,20 @@ function test_harness:test_directory(test_type, directory, headless)
             test_type, p
           )
         },
-        on_exit = function(j_self, _, _)
-          if headless then
-            -- print(j_self:result())
-            for _k, v in ipairs(j_self:result()) do
-              print(v)
-            end
-          else
-            vim.fn.nvim_buf_set_lines(res.buf, -1, -1, false, j_self:result())
-            vim.cmd('mode')
+        -- Can be turned on to debug
+        on_stdout = function(...)
+          if p_debug then
+            print("STDOUT:", ...)
           end
+        end,
+        on_stderr = function(...)
+          if p_debug then
+            print("STDERR:", ...)
+          end
+        end,
+        on_exit = function(j_self, _, _)
+          outputter(res.buf, unpack(j_self:result()))
+          vim.cmd('mode')
         end
       })
     end,
@@ -112,8 +143,8 @@ function test_harness:test_directory(test_type, directory, headless)
     j:start()
   end
 
+  log.debug("...Waiting")
   luvjob.join(unpack(jobs))
-
   log.debug("Done...")
 
   if headless then
@@ -121,7 +152,7 @@ function test_harness:test_directory(test_type, directory, headless)
   end
 end
 
-function test_harness:_find_files_to_run(directory)
+function harness:_find_files_to_run(directory)
   local finder = luvjob:new({
     command = 'find',
     args = {directory, '-type', 'f', '-name', '*_spec.lua'},
@@ -133,35 +164,34 @@ function test_harness:_find_files_to_run(directory)
   return f.map(Path.new, finder:result())
 end
 
-function test_harness:_run_path(test_type, directory)
+function harness:_run_path(test_type, directory)
   validate_test_type(test_type)
 
-  local paths = test_harness:_find_files_to_run(directory)
+  local paths = harness:_find_files_to_run(directory)
 
   local buf = 0
   local win = 0
 
   for _, p in pairs(paths) do
-    print("Loading Tests For: ", p:absolute())
-    pcall(function() dofile(p:absolute()) end)
+    print(" ")
+    print("Loading Tests For: ", p:absolute(), "\n")
+
+    local ok, _ = pcall(function() dofile(p:absolute()) end)
+
+    if not ok then
+      print("Failed to load file")
+    end
   end
 
-  if test_type == 'luanit' then
-    print("\n")
-    print("===== Results ===== ")
-    print("\n")
-    test_harness:run(test_type, buf, win)
-    print("\n")
-  end
-
+  harness:run(test_type, buf, win)
   vim.cmd("qa!")
 
   return paths
 end
 
 
-function test_harness:setup_busted()
+function harness:setup_busted()
   require('busted.runner')({output='plainTerminal'}, 3)
 end
 
-return test_harness
+return harness
