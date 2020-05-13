@@ -93,8 +93,8 @@ function path:new(...)
     return obj
 end
 
-function path:joinpath(path_string)
-    return path:new(self.filename, path_string)
+function path:joinpath(...)
+    return path:new(self.filename, ...)
 end
 
 function path:absolute()

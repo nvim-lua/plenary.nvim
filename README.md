@@ -18,6 +18,11 @@ Plug 'tjdevries/plenary.nvim'
 
 ## Modules
 
+- `plenary.path`
+- `plenary.context_manager`
+- `plenary.neorocks`
+- `plenary.test_harness`
+
 ### plenary.path
 
 A Lua module that implements a bunch of the things from `pathlib` from Python, so that paths are easy to work with.
@@ -37,18 +42,31 @@ end)
 assert(result == "# plenary.nvim")
 ```
 
-### plenary.popup
+### plenary.neorocks
 
-`popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
-to provide compatibility layer for Neovim.
+Install lua packages with `luarocks`!
 
-Status: WIP
+Include the following somewhere in your configuration (either heredoc or sourced lua file):
 
-### plenary.window
+```lua
+local neorocks = require("plenary.neorocks")
 
-Window helper functions to wrap some of the more difficult cases. Particularly for floating windows.
+-- This will run a one-time setup to install hererocks and other required packages.
+-- After running this, you should be able to install anything that you can install via luarocks.
+neorocks.setup_hererocks()
 
-Status: WIP
+-- ensure_installed(package_name, lua_name, headless)
+-- Only installs if currently not installed.
+--
+--   package_name : str             - Name of the package for luarocks
+--   lua_name     : (optional) str  - Name of the package that you can require. Used to determine if we have it installed already (not from luarocks)
+--   headless     : (optional) bool - Whether to display in a floating window or via prints. Recommended to use `true` when in your configs
+neorocks.ensure_installed('penlight', 'pl', true)
+neorocks.ensure_installed('lua-cjson', 'cjson', true)
+```
+
+Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
+
 
 ### plenary.test_harness
 
@@ -103,21 +121,12 @@ function TestPath:testAbsolute()
 
     lu.assertEquals(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
 end
-
-
-test_harness:run()
 ```
 
 Running the command:
 
 ```
-$ nvim -c "luafile ./tests/plenary/path_spec.lua"
-```
-
-Results in a buffer
-```
-  2 Ran 2 tests in 0.000 seconds, 2 successes, 0 failures
-  2 OK
+$ nvim --headless -c 'lua require("plenary.test_harness"):test_directory("luaunit", "./tests/plenary/lu/", true)'
 ```
 
 This is awesome because it uses the vim lua APi in the tests and in the code! Which is always a hassle when
@@ -125,10 +134,36 @@ writing Lua plugins for Neovim. This makes it possible to actually write tests a
 
 I will make the test harness a little nicer to use in the future, but that's the general idea.
 
+
+### plenary.popup
+
+`popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
+to provide compatibility layer for Neovim.
+
+Status: WIP
+
+### plenary.window
+
+Window helper functions to wrap some of the more difficult cases. Particularly for floating windows.
+
+Status: WIP
+
+
+### Troubleshooting
+
+If you're having trouble / things are hanging / other problems:
+
+```
+$ export DEBUG_PLENARY=true
+```
+
+This will enable debuggin for the plugin.
+
 ### Bundled with:
 
-Currently comes bundled with (or slightly modified):
+Currently comes bundled with slightly modified versions of:
 - luaunit: https://github.com/bluebird75/luaunit -> Used for unit testing
+- busted: Unit testing library
 
 ### And more to come :)
 
