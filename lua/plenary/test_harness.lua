@@ -93,6 +93,12 @@ function harness:test_directory(test_type, directory, headless)
   validate_test_type(test_type)
 
   log.debug("Starting...")
+  if test_type == 'busted' then
+    -- Only need to make sure penlight/lfs is available, since we have slightly different busted
+    require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
+    require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
+  end
+
 
   local res = win_float.centered()
   vim.cmd('mode')
@@ -192,6 +198,9 @@ end
 
 
 function harness:setup_busted()
+  require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
+  require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
+
   require('busted.runner')({output='plainTerminal'}, 3)
 end
 
