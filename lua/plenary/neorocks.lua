@@ -75,16 +75,27 @@ neorocks.is_setup = function()
 end
 
 neorocks.get_hererocks = function(headless, opts)
-  local wget_cmd = string.format(
-    'wget %s -O %s',
-    'https://raw.githubusercontent.com/luarocks/hererocks/latest/hererocks.py',
-    neorocks._hererocks_file:absolute()
-  )
+  local url_loc = 'https://raw.githubusercontent.com/luarocks/hererocks/latest/hererocks.py'
+
+  local cmd
+  if vim.fn.executable('curl') > 0 then
+    cmd = string.format(
+      'curl %s -o %s',
+      url_loc,
+      neorocks._hererocks_file:absolute()
+    )
+  elseif vim.fn.executable('wget') > 0 then
+    cmd = string.format(
+      'wget %s -O %s',
+      url_loc,
+      neorocks._hererocks_file:absolute()
+    )
+  end
 
   print("================================================================================")
   print("                       Installing hererocks")
   print("================================================================================")
-  run(wget_cmd, headless, opts)
+  run(cmd, headless, opts)
 end
 
 neorocks.setup_hererocks = function(force, headless, opts)
