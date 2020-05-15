@@ -18,4 +18,24 @@ f.partial = function(fun, ...)
   end
 end
 
+f.any = function(f, iterable)
+  for k, v in pairs(iterable) do
+    if f(k, v) then
+      return true
+    end
+  end
+
+  return false
+end
+
+f.all = function(f, iterable)
+  for k, v in pairs(iterable) do
+    if not f(k, v) then
+      return false
+    end
+  end
+
+  return true
+end
+
 return f
