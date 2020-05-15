@@ -5,6 +5,8 @@
 
 local vim = vim
 
+local Border = require("plenary.window.border")
+
 local popup = {}
 
 popup._pos_map = {
@@ -33,6 +35,7 @@ function popup.popup_create(what, options)
     buf = what
   else
     buf = vim.fn.nvim_create_buf(false, true)
+    assert(buf, "Failed to create buffer")
 
     -- TODO: Handle list of lines
     vim.fn.nvim_buf_set_lines(buf, 0, -1, true, {what})
@@ -89,6 +92,8 @@ function popup.popup_create(what, options)
   win_opts.style = 'minimal'
 
   -- Feels like maxheigh, minheight, maxwidth, minwidth will all be related
+  win_opts.height = 5
+  win_opts.width = 25
 
   -- textprop	When present the popup is positioned next to a text
   -- 		property with this name and will move when the text
@@ -99,7 +104,7 @@ function popup.popup_create(what, options)
   --   textpropid
 
   -- border
-  local top, left, right, bottom
+  local border_options = {}
   if options.border then
     local b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft
     if options.borderchars == nil then
@@ -115,28 +120,15 @@ function popup.popup_create(what, options)
     elseif #options.borderchars == 8 then
       b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = options.borderhighlight
     end
-
-    print(b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft)
-    print(top, left, right, bottom)
   end
 
-  -- title
-  if options.title then
-    if options.border then
-      -- TODO: Replace middle section of border with title
-      local start, finish = 1, 2
-      top = string.sub(1, start) .. options.title .. string.sub(finish, -1)
-    else
-      -- TODO: This should really be centered
-      top = " " .. options.title .. " "
-    end
-  end
+  win_opts.relative = "editor"
 
   local win_id
   if options.hidden then
     assert(false, "I have not implemented this yet and don't know how")
   else
-    win_id = vim.fn.nvim_open_win(buf, 0, win_opts)
+    win_id = vim.fn.nvim_open_win(buf, true, win_opts)
   end
 
 
@@ -147,6 +139,14 @@ function popup.popup_create(what, options)
     elseif options.moved == 'word' then
       -- TODO: Handle word, WORD, expr, and the range functions... which seem hard?
     end
+  else
+    vim.cmd(
+      string.format(
+        "autocmd BufLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)",
+        buf,
+        win_id
+      )
+    )
   end
 
   if options.time then
@@ -161,7 +161,7 @@ function popup.popup_create(what, options)
     vim.fn.nvim_win_set_option(0, 'cursorline', true)
   end
 
-  vim.fn.nvim_win_set_option(0, 'wrap', dict_default(options, 'wrap', option_defaults))
+  -- vim.fn.nvim_win_set_option(0, 'wrap', dict_default(options, 'wrap', option_defaults))
 
   -- ===== Not Implemented Options =====
   -- flip: not implemented at the time of writing
@@ -177,6 +177,21 @@ function popup.popup_create(what, options)
   --
   -- tabpage: seems useless
 
+  -- Create border
+
+  -- title
+  if options.title then
+    border_options.title = options.title
+
+    if options.border == 0 or options.border == nil then
+      options.border = 1
+      border_options.width = 1
+    end
+  end
+
+  if options.border then
+    Border:new(buf, win_id, win_opts, border_options)
+  end
 
   -- TODO: Perhaps there's a way to return an object that looks like a window id,
   --    but actually has some extra metadata about it.

@@ -35,3 +35,16 @@ function CanWinBeReordered()
     _ = {vim.fn.win_gotoid(win_text), vim.cmd("sleep 100m"), vim.fn.win_gotoid(current_win)}
     _ = {vim.fn.win_gotoid(win_text), vim.cmd("redraw"), vim.fn.win_gotoid(current_win)}
 end
+
+function CanMakeBorders()
+    package.loaded['plenary.window.border'] = nil
+    package.loaded['plenary.popup'] = nil
+
+    Popup = require('plenary.popup').popup_create("Hello world", {
+        title = "Example",
+
+        line = 3,
+        col = 3,
+        pos = "topleft"
+    })
+end
