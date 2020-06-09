@@ -60,9 +60,8 @@ neorocks.setup_hererocks()
 --
 --   package_name : str             - Name of the package for luarocks
 --   lua_name     : (optional) str  - Name of the package that you can require. Used to determine if we have it installed already (not from luarocks)
---   headless     : (optional) bool - Whether to display in a floating window or via prints. Recommended to use `true` when in your configs
-neorocks.ensure_installed('penlight', 'pl', true)
-neorocks.ensure_installed('lua-cjson', 'cjson', true)
+neorocks.ensure_installed('penlight', 'pl')
+neorocks.ensure_installed('lua-cjson', 'cjson')
 ```
 
 Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
