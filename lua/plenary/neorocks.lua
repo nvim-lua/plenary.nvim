@@ -6,6 +6,8 @@ local luvjob = require('luvjob')
 local Path = require('plenary.path')
 local win_float = require('plenary.window.float')
 
+local headless = require('plenary.nvim_meta').is_headless
+
 
 local job_printer = function(prefix, should_write)
   return function(_, data, _)
@@ -19,9 +21,11 @@ local job_printer = function(prefix, should_write)
 end
 
 
-local run = function(cmd, headless, opts)
+local run = function(cmd, opts)
   if opts == nil then
     opts = {}
+    opts.split = true
+    opts.wait = true
   end
 
   local job_id
@@ -48,7 +52,12 @@ local run = function(cmd, headless, opts)
     end
 
     job_id = vim.fn.termopen(cmd)
-    vim.cmd("startinsert")
+
+    while not vim.wait(
+          1000,
+          function() return vim.fn.jobwait({job_id}, 0)[1] == -1 end
+        ) do
+    end
   end
 
   return job_id
@@ -74,7 +83,7 @@ neorocks.is_setup = function()
   end
 end
 
-neorocks.get_hererocks = function(headless, opts)
+neorocks.get_hererocks = function(opts)
   local url_loc = 'https://raw.githubusercontent.com/luarocks/hererocks/latest/hererocks.py'
 
   local cmd
@@ -86,7 +95,7 @@ neorocks.get_hererocks = function(headless, opts)
     )
   elseif vim.fn.executable('wget') > 0 then
     cmd = string.format(
-      'wget %s -O %s',
+      'wget %s -O %s --verbose',
       url_loc,
       neorocks._hererocks_file:absolute()
     )
@@ -95,19 +104,19 @@ neorocks.get_hererocks = function(headless, opts)
   print("================================================================================")
   print("                       Installing hererocks")
   print("================================================================================")
-  run(cmd, headless, opts)
+  run(cmd, opts)
+
+  -- Just make sure to wait til we can actually read the file.
+  -- Sometimes the job exists before we get a chacne to do so.
+  vim.wait(10000, function() return vim.fn.filereadable(neorocks._hererocks_file:absolute()) ~= 0 end)
 end
 
-neorocks.setup_hererocks = function(force, headless, opts)
+neorocks.setup_hererocks = function(force, opts)
   local lua_version = neorocks.get_lua_version()
   local install_location = neorocks._hererocks_install_location(lua_version)
 
   if force == nil then
     force = false
-  end
-
-  if headless == nil then
-    headless = true
   end
 
   if opts == nil then
@@ -117,7 +126,7 @@ neorocks.setup_hererocks = function(force, headless, opts)
   end
 
   if vim.fn.filereadable(neorocks._hererocks_file:absolute()) == 0 then
-   neorocks.get_hererocks(headless, opts)
+   neorocks.get_hererocks(opts)
   end
 
   if neorocks.is_setup() and not force then
@@ -136,7 +145,6 @@ neorocks.setup_hererocks = function(force, headless, opts)
         "latest",
         install_location:absolute()
       ),
-      headless,
       opts
     )
   end
@@ -219,7 +227,11 @@ neorocks._luarocks_run = function(luarocks_arg)
       '%s && luarocks %s',
       source_string,
       luarocks_arg
-    )
+    ),
+    {
+      split = true,
+      wait = true
+    }
   )
 end
 
@@ -247,8 +259,10 @@ neorocks._luarocks_exec = function(luarocks_arg, silent)
   return j:result()
 end
 
-neorocks.install = function(package_name, headless)
-  neorocks.setup_hererocks(false, headless)
+neorocks.install = function(package_name, lua_name, force)
+  if neorocks.is_package_installed(package_name, lua_name) and not force then
+    return
+  end
 
   if headless then
     neorocks._luarocks_exec(string.format('install %s', package_name))
@@ -257,9 +271,19 @@ neorocks.install = function(package_name, headless)
   end
 
   neorocks.setup_paths()
+
+  -- Wait for install to complete
+  -- while not vim.wait(100, function() return pcall(function() return require(lua_name) end) end) do
+  -- end
 end
 
-neorocks.ensure_installed = function(package_name, lua_name, headless)
+neorocks.ensure_installed = function(package_name, lua_name)
+  -- Don't try and install on startup. It's annoying.
+  -- Maybe someday we can do it.
+  if not neorocks.is_setup() then
+    return
+  end
+
   neorocks.setup_paths()
 
   if lua_name == nil then
@@ -270,7 +294,7 @@ neorocks.ensure_installed = function(package_name, lua_name, headless)
     return
   end
 
-  neorocks.install(package_name, headless)
+  neorocks.install(package_name, lua_name)
 end
 
 neorocks.remove = function(package_name)

@@ -2,11 +2,14 @@ package.loaded['luvjob'] = nil
 package.loaded['plenary.test_harness'] = nil
 
 local luvjob = require('luvjob')
+local lu = require("luaunit")
+
+local Path = require("plenary.path")
 
 local f = require("plenary.functional")
-local lu = require("luaunit")
-local Path = require("plenary.path")
 local win_float = require("plenary.window.float")
+
+local headless = require("plenary.nvim_meta").is_headless
 
 local p_debug = vim.fn.getenv("DEBUG_PLENARY")
 if p_debug == vim.NIL then
@@ -73,7 +76,11 @@ function harness:run(test_type, buf, win, ...)
     print("\n")
     print("\n")
 
-    lu.LuaUnit.run(...)
+    local luaunit_result = lu.LuaUnit.run(...)
+    if headless and luaunit_result ~= 0 then
+      os.exit(luaunit_result)
+    end
+
   elseif test_type == 'busted' then
     -- Requires people to have called `setup_busted`
   else
@@ -89,7 +96,7 @@ function harness:run(test_type, buf, win, ...)
   vim.cmd("nnoremap q :q<CR>")
 end
 
-function harness:test_directory(test_type, directory, headless)
+function harness:test_directory(test_type, directory)
   validate_test_type(test_type)
 
   log.debug("Starting...")
@@ -154,6 +161,10 @@ function harness:test_directory(test_type, directory, headless)
   log.debug("Done...")
 
   if headless then
+    if f.any(function(_, v) return v.code ~= 0 end, jobs) then
+      os.exit(1)
+    end
+
     vim.cmd('qa!')
   end
 end
@@ -198,8 +209,8 @@ end
 
 
 function harness:setup_busted()
-  require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
-  require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
+  require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs')
+  require('plenary.neorocks').ensure_installed('penlight', 'pl')
 
   require('busted.runner')({output='plainTerminal'}, 3)
 end
