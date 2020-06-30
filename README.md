@@ -169,3 +169,5 @@ Currently comes bundled with slightly modified versions of:
 - [ ] Foating window wrappers
 - [ ] Easy border windows to any floating window
 - [ ] ...
+
+Maybe I should just bundle hererocks.py...?
