@@ -13,8 +13,7 @@ function Border._create_lines(content_win_options, border_win_options)
     local title = string.format(" %s ", border_win_options.title)
     local title_len = string.len(title)
 
-    local midpoint = math.floor(content_win_options.width / 2)
-    local left_start = midpoint - math.floor(title_len / 2)
+    local midpoint = math.floor(content_win_options.width / 2) local left_start = midpoint - math.floor(title_len / 2)
 
     topline = string.format("%s%s%s%s%s",
       border_win_options.topleft,
@@ -91,10 +90,12 @@ function Border:new(content_buf_id, content_win_id, content_win_options, border_
     height = content_win_options.height + 2 * border_width,
   })
 
+  local silent = true
   vim.cmd(
     string.format(
-      "autocmd BufLeave,BufDelete <buffer=%s> ++once call nvim_win_close(%s, v:false)",
+      "autocmd WinLeave,BufLeave,BufDelete <buffer=%s> ++once ++nested %s call nvim_win_close(%s, v:true)",
       content_buf_id,
+      (silent and "silent!") or "",
       obj.win_id
     )
   )

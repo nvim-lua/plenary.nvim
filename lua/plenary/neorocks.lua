@@ -4,6 +4,8 @@
 local luvjob = require('luvjob')
 
 local Path = require('plenary.path')
+
+local run = require('plenary.run')
 local win_float = require('plenary.window.float')
 
 local headless = require('plenary.nvim_meta').is_headless
@@ -21,47 +23,47 @@ local job_printer = function(prefix, should_write)
 end
 
 
-local run = function(cmd, opts)
-  if opts == nil then
-    opts = {}
-    opts.split = true
-    opts.wait = true
-  end
+-- local run = function(cmd, opts)
+--   if opts == nil then
+--     opts = {}
+--     opts.split = true
+--     opts.wait = true
+--   end
 
-  local job_id
+--   local job_id
 
-  -- if cmd then print(cmd) end
-  if headless then
-    job_id = -1
+--   -- if cmd then print(cmd) end
+--   if headless then
+--     job_id = -1
 
-    local j = luvjob:new({
-      command = "bash",
-      args = {"-c", cmd},
-      on_stdout = job_printer("OUT >> "),
-      on_stderr = job_printer("ERR >> ", true),
-    })
+--     local j = luvjob:new({
+--       command = "bash",
+--       args = {"-c", cmd},
+--       on_stdout = job_printer("OUT >> "),
+--       on_stderr = job_printer("ERR >> ", true),
+--     })
 
-    j:start()
-    j:wait()
-  else
-    if opts.split then
-      vim.cmd("botright 10new")
-    else
-      local floater = win_float.centered()
-      vim.fn.win_gotoid(floater.win)
-    end
+--     j:start()
+--     j:wait()
+--   else
+--     if opts.split then
+--       vim.cmd("botright 10new")
+--     else
+--       local floater = win_float.centered()
+--       vim.fn.win_gotoid(floater.win)
+--     end
 
-    job_id = vim.fn.termopen(cmd)
+--     job_id = vim.fn.termopen(cmd)
 
-    while not vim.wait(
-          1000,
-          function() return vim.fn.jobwait({job_id}, 0)[1] == -1 end
-        ) do
-    end
-  end
+--     while not vim.wait(
+--           1000,
+--           function() return vim.fn.jobwait({job_id}, 0)[1] == -1 end
+--         ) do
+--     end
+--   end
 
-  return job_id
-end
+--   return job_id
+-- end
 
 local neorocks = {}
 
@@ -101,14 +103,18 @@ neorocks.get_hererocks = function(opts)
     )
   end
 
-  print("================================================================================")
-  print("                       Installing hererocks")
-  print("================================================================================")
-  run(cmd, opts)
+  local run_buf = run.with_displayed_output(
+    {"                       Installing hererocks"},
+    cmd,
+    opts
+  )
 
   -- Just make sure to wait til we can actually read the file.
   -- Sometimes the job exists before we get a chacne to do so.
   vim.wait(10000, function() return vim.fn.filereadable(neorocks._hererocks_file:absolute()) ~= 0 end)
+  vim.fn.input("[Press enter to continue]")
+  print("All done....")
+  win_float.clear(run_buf)
 end
 
 neorocks.setup_hererocks = function(force, opts)
@@ -134,10 +140,8 @@ neorocks.setup_hererocks = function(force, opts)
   end
 
   if lua_version.jit then
-    print("================================================================================")
-    print("                       Installing luajit & luarocks")
-    print("================================================================================")
-    local job_id = run(
+    local run_buf = run.with_displayed_output(
+      {"                       Installing luajit & luarocks"},
       string.format(
         "python %s --verbose -j %s -r %s %s",
         neorocks._hererocks_file:absolute(),
@@ -147,6 +151,9 @@ neorocks.setup_hererocks = function(force, opts)
       ),
       opts
     )
+
+    -- vim.fn.input("[Press enter to continue]")
+    -- win_float.clear(run_buf)
   end
 end
 
@@ -222,7 +229,8 @@ neorocks._luarocks_run = function(luarocks_arg)
   local install_location = neorocks._hererocks_install_location(lua_version)
   local source_string = neorocks._source_string(install_location)
 
-  run(
+  run.with_displayed_output(
+    {"Lua rocks install"},
     string.format(
       '%s && luarocks %s',
       source_string,
@@ -271,10 +279,6 @@ neorocks.install = function(package_name, lua_name, force)
   end
 
   neorocks.setup_paths()
-
-  -- Wait for install to complete
-  -- while not vim.wait(100, function() return pcall(function() return require(lua_name) end) end) do
-  -- end
 end
 
 neorocks.ensure_installed = function(package_name, lua_name)
