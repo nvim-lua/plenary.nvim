@@ -218,9 +218,21 @@ neorocks.setup_paths = function()
   end
 end
 
+-- activate hererocks based on current $SHELL
+local function source_activate(install_location, activate_file)
+  return string.format('source %s', install_location:joinpath('bin', activate_file):absolute())
+end
+
 --- Get the string to source hererocks
 neorocks._source_string = function(install_location)
-  return string.format('source %s', install_location:joinpath('bin', 'activate'):absolute())
+  local user_shell = os.getenv("SHELL")
+  local shell = user_shell:gmatch("([^/]*)$")()
+  if shell == "fish" then
+    return source_activate(install_location, 'activate.fish')
+  elseif shell == "csh" then
+    return source_activate(install_location, 'activate.csh')
+  end
+  return source_activate(install_location, 'activate')
 end
 
 --- Properly source and run a luarocks command. Will run `luarocks $luarocks_arg`
