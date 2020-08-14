@@ -1,5 +1,5 @@
--- package.loaded['plenary.path'] = nil
--- package.loaded['plenary.neorocks'] = nil
+vim.api.nvim_err_writeln("[NEOROCKS] This will be deprecated at some point soon. Code will live in packer.nvim")
+vim.api.nvim_err_writeln("[NEOROCKS] It is possible in the future we'll separate it out, but further experiments will happen there.")
 
 local luvjob = require('luvjob')
 

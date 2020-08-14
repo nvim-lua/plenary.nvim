@@ -8,20 +8,22 @@ All the lua functions I don't want to write twice.
 
 Note that this library is useless outside of Neovim since it requires Neovim functions. It should be usable with any recent version of Neovim though.
 
+At the moment, it is very much in pre-alpha :smile: Expect changes to the way some functions are structured. I'm hoping to finish some document generators to provide better documentation for people to use and consume and then at some point we'll stabilize on a few more stable APIs.
+
 ## Installation
 
 ```vim
-" Requied plugin for job management in Lua
-Plug 'tjdevries/luvjob.nvim'
-Plug 'tjdevries/plenary.nvim'
+Plug 'nvim-lua/plenary.nvim'
 ```
 
 ## Modules
 
 - `plenary.path`
 - `plenary.context_manager`
-- `plenary.neorocks`
 - `plenary.test_harness`
+
+Deprecated:
+- `plenary.neorocks` (this is moving to packer.nvim -- maybe once it has stablized there we could consider adding it back here)
 
 ### plenary.path
 
@@ -41,30 +43,6 @@ end)
 
 assert(result == "# plenary.nvim")
 ```
-
-### plenary.neorocks
-
-Install lua packages with `luarocks`!
-
-Include the following somewhere in your configuration (either heredoc or sourced lua file):
-
-```lua
-local neorocks = require("plenary.neorocks")
-
--- This will run a one-time setup to install hererocks and other required packages.
--- After running this, you should be able to install anything that you can install via luarocks.
-neorocks.setup_hererocks()
-
--- ensure_installed(package_name, lua_name, headless)
--- Only installs if currently not installed.
---
---   package_name : str             - Name of the package for luarocks
---   lua_name     : (optional) str  - Name of the package that you can require. Used to determine if we have it installed already (not from luarocks)
-neorocks.ensure_installed('penlight', 'pl')
-neorocks.ensure_installed('lua-cjson', 'cjson')
-```
-
-Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
 
 
 ### plenary.test_harness
@@ -147,7 +125,6 @@ Window helper functions to wrap some of the more difficult cases. Particularly f
 
 Status: WIP
 
-
 ### Troubleshooting
 
 If you're having trouble / things are hanging / other problems:
@@ -157,6 +134,31 @@ $ export DEBUG_PLENARY=true
 ```
 
 This will enable debuggin for the plugin.
+
+### plenary.neorocks
+
+Install lua packages with `luarocks`!
+
+Include the following somewhere in your configuration (either heredoc or sourced lua file):
+
+```lua
+local neorocks = require("plenary.neorocks")
+
+-- This will run a one-time setup to install hererocks and other required packages.
+-- After running this, you should be able to install anything that you can install via luarocks.
+neorocks.setup_hererocks()
+
+-- ensure_installed(package_name, lua_name, headless)
+-- Only installs if currently not installed.
+--
+--   package_name : str             - Name of the package for luarocks
+--   lua_name     : (optional) str  - Name of the package that you can require. Used to determine if we have it installed already (not from luarocks)
+neorocks.ensure_installed('penlight', 'pl')
+neorocks.ensure_installed('lua-cjson', 'cjson')
+```
+
+Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
+
 
 ### Bundled with:
 
