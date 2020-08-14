@@ -18,10 +18,10 @@ run.with_displayed_output = function(title_text, cmd, opts)
     end
   end
 
-  vim.fn.win_gotoid(views.win)
+  vim.fn.win_gotoid(views.win_id)
   vim.cmd [[startinsert]]
 
-  return views.buf, views.win
+  return views.bufnr, views.win_id
 end
 
 return run

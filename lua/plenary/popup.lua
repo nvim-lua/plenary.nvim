@@ -30,15 +30,15 @@ end
 
 
 function popup.popup_create(what, options)
-  local buf
+  local bufnr
   if type(what) == 'number' then
-    buf = what
+    bufnr = what
   else
-    buf = vim.fn.nvim_create_buf(false, true)
-    assert(buf, "Failed to create buffer")
+    bufnr = vim.fn.nvim_create_buf(false, true)
+    assert(bufnr, "Failed to create buffer")
 
     -- TODO: Handle list of lines
-    vim.fn.nvim_buf_set_lines(buf, 0, -1, true, {what})
+    vim.fn.nvim_buf_set_lines(bufnr, 0, -1, true, {what})
   end
 
   local option_defaults = {
@@ -128,7 +128,7 @@ function popup.popup_create(what, options)
   if options.hidden then
     assert(false, "I have not implemented this yet and don't know how")
   else
-    win_id = vim.fn.nvim_open_win(buf, true, win_opts)
+    win_id = vim.fn.nvim_open_win(bufnr, true, win_opts)
   end
 
 
@@ -143,7 +143,7 @@ function popup.popup_create(what, options)
     vim.cmd(
       string.format(
         "autocmd BufLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)",
-        buf,
+        bufnr,
         win_id
       )
     )
@@ -190,7 +190,7 @@ function popup.popup_create(what, options)
   end
 
   if options.border then
-    Border:new(buf, win_id, win_opts, border_options)
+    Border:new(bufnr, win_id, win_opts, border_options)
   end
 
   -- TODO: Perhaps there's a way to return an object that looks like a window id,

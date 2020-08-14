@@ -103,7 +103,7 @@ neorocks.get_hererocks = function(opts)
     )
   end
 
-  local run_buf = run.with_displayed_output(
+  local run_bufnr = run.with_displayed_output(
     {"                       Installing hererocks"},
     cmd,
     opts
@@ -114,7 +114,7 @@ neorocks.get_hererocks = function(opts)
   vim.wait(10000, function() return vim.fn.filereadable(neorocks._hererocks_file:absolute()) ~= 0 end)
   vim.fn.input("[Press enter to continue]")
   print("All done....")
-  win_float.clear(run_buf)
+  win_float.clear(run_bufnr)
 end
 
 neorocks.setup_hererocks = function(force, opts)
@@ -140,7 +140,7 @@ neorocks.setup_hererocks = function(force, opts)
   end
 
   if lua_version.jit then
-    local run_buf = run.with_displayed_output(
+    local run_bufnr = run.with_displayed_output(
       {"                       Installing luajit & luarocks"},
       string.format(
         "python %s --verbose -j %s -r %s %s",
