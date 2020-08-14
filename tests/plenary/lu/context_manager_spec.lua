@@ -34,7 +34,6 @@ end
 
 
 function TestContextManager:testWorksWithCoroutine()
-  lu.assertIsTrue(false)
   local co = function()
     coroutine.yield(10)
   end
