@@ -49,4 +49,10 @@ f.first = f.make_selector(1)
 f.second = f.make_selector(2)
 f.third = f.make_selector(3)
 
+function f.last(...)
+  local length = select('#', ...)
+  local x = select(length, ...)
+  return x
+end
+
 return f
