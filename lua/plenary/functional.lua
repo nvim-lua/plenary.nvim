@@ -38,4 +38,19 @@ f.all = function(f, iterable)
   return true
 end
 
+function f.first(...)
+  local x = select(1, ...)
+  return x
+end
+
+function f.second(...)
+  local x = select(2, ...)
+  return x
+end
+
+function f.third(...)
+  local x = select(3, ...)
+  return x
+end
+
 return f
