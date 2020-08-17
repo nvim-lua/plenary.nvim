@@ -1,6 +1,6 @@
 local profile = {}
 
-function profile.time(f, iterations, ...)
+function profile.benchmark(f, iterations, ...)
   local start_time = vim.loop.hrtime()
   for _ = 1, iterations or 1E9 do
     f(...)
