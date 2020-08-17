@@ -38,19 +38,15 @@ f.all = function(f, iterable)
   return true
 end
 
-function f.first(...)
-  local x = select(1, ...)
-  return x
+function f.make_selector(n)
+  return function(...)
+    local x = select(n, ...)
+    return x
+  end
 end
 
-function f.second(...)
-  local x = select(2, ...)
-  return x
-end
-
-function f.third(...)
-  local x = select(3, ...)
-  return x
-end
+f.first = f.make_selector(1)
+f.second = f.make_selector(2)
+f.third = f.make_selector(3)
 
 return f
