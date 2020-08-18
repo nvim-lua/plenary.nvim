@@ -38,16 +38,16 @@ function f.all(f, iterable)
   return true
 end
 
-function f.make_selector(n)
+function f.select_only(n)
   return function(...)
     local x = select(n, ...)
     return x
   end
 end
 
-f.first = f.make_selector(1)
-f.second = f.make_selector(2)
-f.third = f.make_selector(3)
+f.first = f.select_only(1)
+f.second = f.select_only(2)
+f.third = f.select_only(3)
 
 function f.last(...)
   local length = select('#', ...)
