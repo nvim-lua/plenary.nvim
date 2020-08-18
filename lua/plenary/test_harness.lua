@@ -1,32 +1,13 @@
-package.loaded['luvjob'] = nil
-package.loaded['plenary.test_harness'] = nil
-
-local luvjob = require('luvjob')
 local lu = require("luaunit")
 
 local Path = require("plenary.path")
+local Job = require("plenary.job")
 
 local f = require("plenary.functional")
+local log = require("plenary.log")
 local win_float = require("plenary.window.float")
 
 local headless = require("plenary.nvim_meta").is_headless
-
-local p_debug = vim.fn.getenv("DEBUG_PLENARY")
-if p_debug == vim.NIL then
-  p_debug = false
-end
-
-local log = setmetatable({}, {
-  __index = function(_, key)
-    return function(...)
-      if (key == 'debug') and (not p_debug) then
-        return
-      end
-
-      print('[', key, ']', ..., "\n")
-    end
-  end
-})
 
 local harness = {}
 
@@ -41,7 +22,6 @@ local function validate_test_type(test_type)
     )
   end
 end
-
 
 local print_output = function(_, ...)
   for _, v in ipairs({...}) do
@@ -102,8 +82,8 @@ function harness:test_directory(test_type, directory)
   log.debug("Starting...")
   if test_type == 'busted' then
     -- Only need to make sure penlight/lfs is available, since we have slightly different busted
-    require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
-    require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
+    -- require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
+    -- require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
   end
 
 
@@ -121,7 +101,7 @@ function harness:test_directory(test_type, directory)
   local paths = self:_find_files_to_run(directory)
   local jobs = f.map(
     function(p)
-      return luvjob:new({
+      return Job:new({
         command = 'nvim',
         args = {
           '--headless',
@@ -157,7 +137,7 @@ function harness:test_directory(test_type, directory)
   end
 
   log.debug("...Waiting")
-  luvjob.join(unpack(jobs))
+  Job.join(unpack(jobs))
   log.debug("Done...")
 
   if headless then
@@ -170,15 +150,12 @@ function harness:test_directory(test_type, directory)
 end
 
 function harness:_find_files_to_run(directory)
-  local finder = luvjob:new({
+  local finder = Job:new({
     command = 'find',
     args = {directory, '-type', 'f', '-name', '*_spec.lua'},
   })
 
-  finder:start()
-  finder:wait()
-
-  return f.map(Path.new, finder:result())
+  return f.map(Path.new, finder:sync())
 end
 
 function harness:_run_path(test_type, directory)
@@ -209,8 +186,15 @@ end
 
 
 function harness:setup_busted()
-  require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs')
-  require('plenary.neorocks').ensure_installed('penlight', 'pl')
+  if not pcall(require, 'lfs') then
+    vim.api.nvim_err_writeln("Lua Filesystem (lfs) is required.")
+    return
+  end
+
+  if not pcall(require, 'pl') then
+    vim.api.nvim_err_writeln("Penlight (pl) is required.")
+    return
+  end
 
   require('busted.runner')({output='plainTerminal'}, 3)
 end

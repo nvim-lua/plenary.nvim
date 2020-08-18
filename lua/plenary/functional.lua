@@ -1,5 +1,3 @@
-package.loaded['plenary.functional'] = nil
-
 local f = {}
 
 f.map = function(fun, iter)

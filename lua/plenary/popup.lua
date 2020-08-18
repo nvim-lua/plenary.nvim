@@ -161,7 +161,7 @@ function popup.popup_create(what, vim_options)
     vim.fn.nvim_win_set_option(0, 'cursorline', true)
   end
 
-  -- vim.fn.nvim_win_set_option(0, 'wrap', dict_default(options, 'wrap', option_defaults))
+  -- vim.fn.nvim_win_set_option(0, 'wrap', dict_default(vim_options, 'wrap', option_defaults))
 
   -- ===== Not Implemented Options =====
   -- flip: not implemented at the time of writing
