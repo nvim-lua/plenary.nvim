@@ -170,6 +170,13 @@ Currently comes bundled with slightly modified versions of:
 
 - [ ] Foating window wrappers
 - [ ] Easy border windows to any floating window
-- [ ] ...
 
-Maybe I should just bundle hererocks.py...?
+
+
+### Used by:
+
+- [express_line.nvim](https://github.com/tjdevries/express_line.nvim)
+- [apyrori.nvim](https://github.com/tjdevries/apyrori.nvim)
+- [nlua.nvim](https://github.com/tjdevries/nlua.nvim)
+- (TODO) [popup.nvim](https://github.com/nvim-lua/popup.nvim)
+- (TODO) [telescope.nvim](https://github.com/nvim-lua/telescope.nvim)
