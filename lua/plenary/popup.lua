@@ -29,7 +29,7 @@ local function dict_default(options, key, default)
 end
 
 
-function popup.popup_create(what, options)
+function popup.popup_create(what, vim_options)
   local bufnr
   if type(what) == 'number' then
     bufnr = what
@@ -47,28 +47,28 @@ function popup.popup_create(what, options)
 
   local win_opts = {}
 
-  if options.line then
+  if vim_options.line then
     -- TODO: Need to handle "cursor", "cursor+1", ...
-    win_opts.row = options.line
+    win_opts.row = vim_options.line
   else
     -- TODO: It says it needs to be "vertically cenetered"?...
     -- wut is that.
     win_opts.row = 0
   end
 
-  if options.col then
+  if vim_options.col then
     -- TODO: Need to handle "cursor", "cursor+1", ...
-    win_opts.col = options.col
+    win_opts.col = vim_options.col
   else
     -- TODO: It says it needs to be "horizontally cenetered"?...
     win_opts.col = 0
   end
 
-  if options.pos then
-    if options.pos == 'center' then
+  if vim_options.pos then
+    if vim_options.pos == 'center' then
       -- TODO: Do centering..
     else
-      win_opts.anchor = popup._pos_map[options.pos]
+      win_opts.anchor = popup._pos_map[vim_options.pos]
     end
   end
 
@@ -77,7 +77,7 @@ function popup.popup_create(what, options)
   -- 		vertically and there is more space on the other side
   -- 		then the popup is placed on the other side of the
   -- 		position indicated by "line".
-  if dict_default(options, 'posinvert', option_defaults) then
+  if dict_default(vim_options, 'posinvert', option_defaults) then
     -- TODO: handle the invert thing
   end
 
@@ -105,27 +105,27 @@ function popup.popup_create(what, options)
 
   -- border
   local border_options = {}
-  if options.border then
+  if vim_options.border then
     local b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft
-    if options.borderchars == nil then
+    if vim_options.borderchars == nil then
       b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = {
         '-' , '|'      , '-'   , '|'    , '┌'        , '┐'       , '┘'       , '└'
       }
-    elseif #options.borderchars == 1 then
+    elseif #vim_options.borderchars == 1 then
       -- TODO: Unpack 8 times cool to the same vars
       print('...')
-    elseif #options.borderchars == 2 then
+    elseif #vim_options.borderchars == 2 then
       -- TODO: Unpack to edges & corners
       print('...')
-    elseif #options.borderchars == 8 then
-      b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = options.borderhighlight
+    elseif #vim_options.borderchars == 8 then
+      b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = vim_options.borderhighlight
     end
   end
 
   win_opts.relative = "editor"
 
   local win_id
-  if options.hidden then
+  if vim_options.hidden then
     assert(false, "I have not implemented this yet and don't know how")
   else
     win_id = vim.fn.nvim_open_win(bufnr, true, win_opts)
@@ -133,10 +133,10 @@ function popup.popup_create(what, options)
 
 
   -- Moved, handled after since we need the window ID
-  if options.moved then
-    if options.moved == 'any' then
+  if vim_options.moved then
+    if vim_options.moved == 'any' then
       vim.lsp.util.close_preview_autocmd({'CursorMoved', 'CursorMovedI'}, win_id)
-    elseif options.moved == 'word' then
+    elseif vim_options.moved == 'word' then
       -- TODO: Handle word, WORD, expr, and the range functions... which seem hard?
     end
   else
@@ -149,15 +149,15 @@ function popup.popup_create(what, options)
     )
   end
 
-  if options.time then
+  if vim_options.time then
     local timer = vim.loop.new_timer()
-    timer:start(options.time, 0, vim.schedule_wrap(function()
+    timer:start(vim_options.time, 0, vim.schedule_wrap(function()
       vim.fn.nvim_close_win(win_id, false)
     end))
   end
 
   -- Buffer Options
-  if options.cursorline then
+  if vim_options.cursorline then
     vim.fn.nvim_win_set_option(0, 'cursorline', true)
   end
 
@@ -180,16 +180,16 @@ function popup.popup_create(what, options)
   -- Create border
 
   -- title
-  if options.title then
-    border_options.title = options.title
+  if vim_options.title then
+    border_options.title = vim_options.title
 
-    if options.border == 0 or options.border == nil then
-      options.border = 1
+    if vim_options.border == 0 or vim_options.border == nil then
+      vim_options.border = 1
       border_options.width = 1
     end
   end
 
-  if options.border then
+  if vim_options.border then
     Border:new(bufnr, win_id, win_opts, border_options)
   end
 
