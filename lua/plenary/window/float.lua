@@ -50,22 +50,22 @@ function win_float.centered(options)
 
   local win_opts = win_float.default_opts(options)
 
-  local buf = vim.fn.nvim_create_buf(false, true)
-  local win = vim.fn.nvim_open_win(buf, true, win_opts)
+  local bufnr = vim.fn.nvim_create_buf(false, true)
+  local win_id = vim.fn.nvim_open_win(bufnr, true, win_opts)
 
   vim.cmd('setlocal nocursorcolumn')
-  vim.fn.nvim_win_set_option(win, 'winblend', options.winblend)
+  vim.fn.nvim_win_set_option(win_id, 'winblend', options.winblend)
 
   vim.cmd(
     string.format(
       "autocmd WinLeave <buffer> silent! execute 'bdelete! %s'",
-      buf
+      bufnr
     )
   )
 
   return {
-    buf=buf,
-    win=win,
+    bufnr=bufnr,
+    win_id=win_id,
   }
 end
 
@@ -83,19 +83,19 @@ function win_float.centered_with_top_win(top_text, options)
 
   minor_win_opts.height = #top_text
 
-  local minor_buf = vim.fn.nvim_create_buf(false, true)
-  local minor_win = vim.fn.nvim_open_win(minor_buf, true, minor_win_opts)
+  local minor_bufnr = vim.fn.nvim_create_buf(false, true)
+  local minor_win_id = vim.fn.nvim_open_win(minor_bufnr, true, minor_win_opts)
 
   vim.cmd('setlocal nocursorcolumn')
-  vim.fn.nvim_win_set_option(minor_win, 'winblend', options.winblend)
+  vim.fn.nvim_win_set_option(minor_win_id, 'winblend', options.winblend)
 
-  vim.api.nvim_buf_set_lines(minor_buf, 0, -1, false, top_text)
+  vim.api.nvim_buf_set_lines(minor_bufnr, 0, -1, false, top_text)
 
-  local primary_buf = vim.fn.nvim_create_buf(false, true)
-  local primary_win = vim.fn.nvim_open_win(primary_buf, true, primary_win_opts)
+  local primary_bufnr = vim.fn.nvim_create_buf(false, true)
+  local primary_win_id = vim.fn.nvim_open_win(primary_bufnr, true, primary_win_opts)
 
   vim.cmd('setlocal nocursorcolumn')
-  vim.fn.nvim_win_set_option(primary_win, 'winblend', options.winblend)
+  vim.fn.nvim_win_set_option(primary_win_id, 'winblend', options.winblend)
 
   -- vim.cmd(
   --   string.format(
@@ -113,21 +113,21 @@ function win_float.centered_with_top_win(top_text, options)
   -- )
 
 
-  local primary_border = Border:new(primary_buf, primary_win, primary_win_opts, {})
-  local minor_border = Border:new(minor_buf, minor_win, minor_win_opts, {})
+  local primary_border = Border:new(primary_bufnr, primary_win_id, primary_win_opts, {})
+  local minor_border = Border:new(minor_bufnr, minor_win_id, minor_win_opts, {})
 
-  _associated_bufs[primary_buf] = {
-    primary_win, minor_win, primary_border.win_id, minor_border.win_id
+  _associated_bufs[primary_bufnr] = {
+    primary_win_id, minor_win_id, primary_border.win_id, minor_border.win_id
   }
 
-  clear_buf_on_leave(primary_buf)
+  clear_buf_on_leave(primary_bufnr)
 
   return {
-    buf = primary_buf,
-    win = primary_win,
+    bufnr = primary_bufnr,
+    win_id = primary_win_id,
 
-    minor_buf = minor_buf,
-    minor_win = minor_win,
+    minor_bufnr = minor_bufnr,
+    minor_win_id = minor_win_id,
   }
 end
 
@@ -140,7 +140,7 @@ end
 --@param row_range number | Table:
 --                  If number, then center the window taking up this percentage of the screen.
 --                  If table, first index should be start, second_index should be end
-win_float.percentage_range_window = function(col_range, row_range, options)
+function win_float.percentage_range_window(col_range, row_range, options)
   options = tbl.apply_defaults(options, win_float.default_options)
 
   local win_opts = win_float.default_opts(options)
@@ -178,29 +178,29 @@ win_float.percentage_range_window = function(col_range, row_range, options)
   win_opts.col = math.floor(vim.o.columns * col_start_percentage)
   win_opts.width = math.floor(vim.o.columns * width_percentage)
 
-  local buf = options.bufnr or vim.fn.nvim_create_buf(false, true)
-  local win = vim.fn.nvim_open_win(buf, true, win_opts)
-  vim.api.nvim_win_set_buf(win, buf)
+  local bufnr = options.bufnr or vim.fn.nvim_create_buf(false, true)
+  local win_id = vim.fn.nvim_open_win(bufnr, true, win_opts)
+  vim.api.nvim_win_set_buf(win_id, bufnr)
 
   vim.cmd('setlocal nocursorcolumn')
-  vim.fn.nvim_win_set_option(win, 'winblend', options.winblend)
+  vim.fn.nvim_win_set_option(win_id, 'winblend', options.winblend)
 
-  local border = Border:new(buf, win, win_opts, {})
+  local border = Border:new(bufnr, win_id, win_opts, {})
 
-  _associated_bufs[buf] = { win, border.win_id, }
+  _associated_bufs[bufnr] = { win_id, border.win_id, }
 
-  clear_buf_on_leave(buf)
+  clear_buf_on_leave(bufnr)
 
   return {
-    buf = buf,
-    win = win,
+    bufnr = bufnr,
+    win_id = win_id,
 
-    border_buf = border.buf_id,
+    border_bufnr = border.bufnr,
     border_win_id = border.win_id,
   }
 end
 
-win_float.clear = function(bufnr)
+function win_float.clear(bufnr)
   if _associated_bufs[bufnr] == nil then
     return
   end
