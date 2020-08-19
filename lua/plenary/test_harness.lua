@@ -29,26 +29,26 @@ local print_output = function(_, ...)
   end
 end
 
-local nvim_output = function(buf, ...)
-  vim.fn.nvim_buf_set_lines(buf, -1, -1, false, {...})
+local nvim_output = function(bufnr, ...)
+  vim.fn.nvim_buf_set_lines(bufnr, -1, -1, false, {...})
 end
 
-function harness:run(test_type, buf, win, ...)
+function harness:run(test_type, bufnr, win_id, ...)
   validate_test_type(test_type)
 
-  if buf == nil then
-    buf = vim.fn.nvim_create_buf(false, true)
+  if bufnr == nil then
+    bufnr = vim.fn.nvim_create_buf(false, true)
   end
 
-  if win == nil then
+  if win_id == nil then
     -- TODO: Could just make win be 0...?
     local opts = win_float.default_opts()
-    win = vim.fn.nvim_open_win(buf, true, opts)
+    win_id = vim.fn.nvim_open_win(bufnr, true, opts)
   end
 
-  vim.fn.nvim_buf_set_option(buf, 'buftype', 'nofile')
-  vim.fn.nvim_buf_set_option(buf, 'bufhidden', 'hide')
-  vim.fn.nvim_buf_set_option(buf, 'swapfile', false)
+  vim.fn.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
+  vim.fn.nvim_buf_set_option(bufnr, 'bufhidden', 'hide')
+  vim.fn.nvim_buf_set_option(bufnr, 'swapfile', false)
 
   if test_type == 'luaunit' then
     print("\n")
@@ -71,7 +71,7 @@ function harness:run(test_type, buf, win, ...)
   -- lu.LuaUnit.run("--outputtype=tap")
 
   -- weirdly need to redraw the screen sometimes... oh well
-  vim.fn.win_gotoid(win)
+  vim.fn.win_gotoid(win_id)
   vim.cmd("mode")
   vim.cmd("nnoremap q :q<CR>")
 end
@@ -89,7 +89,7 @@ function harness:test_directory(test_type, directory)
 
   local res = win_float.centered()
   vim.cmd('mode')
-  vim.fn.nvim_buf_set_keymap(res.buf, "n", "q", ":q<CR>", {})
+  vim.fn.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
 
   local outputter
   if headless then
@@ -123,7 +123,7 @@ function harness:test_directory(test_type, directory)
           end
         end,
         on_exit = function(j_self, _, _)
-          outputter(res.buf, unpack(j_self:result()))
+          outputter(res.bufnr, unpack(j_self:result()))
           vim.cmd('mode')
         end
       })
@@ -163,8 +163,8 @@ function harness:_run_path(test_type, directory)
 
   local paths = harness:_find_files_to_run(directory)
 
-  local buf = 0
-  local win = 0
+  local bufnr = 0
+  local win_id = 0
 
   for _, p in pairs(paths) do
     print(" ")
@@ -178,7 +178,7 @@ function harness:_run_path(test_type, directory)
     -- end
   end
 
-  harness:run(test_type, buf, win)
+  harness:run(test_type, bufnr, win_id)
   vim.cmd("qa!")
 
   return paths

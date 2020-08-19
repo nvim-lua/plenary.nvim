@@ -49,7 +49,7 @@ function Border._create_lines(content_win_options, border_win_options)
   return border_lines
 end
 
-function Border:new(content_buf_id, content_win_id, content_win_options, border_win_options)
+function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
   assert(type(content_win_id) == 'number', "Must supply a valid win_id. It's possible you forgot to call with ':'")
 
   border_win_options = tbl.apply_defaults(border_win_options, {
@@ -73,15 +73,15 @@ function Border:new(content_buf_id, content_win_id, content_win_options, border_
   obj._border_win_options = border_win_options
 
 
-  obj.buf_id = vim.api.nvim_create_buf(false, true)
-  assert(obj.buf_id, "Failed to create border buffer")
+  obj.bufnr = vim.api.nvim_create_buf(false, true)
+  assert(obj.bufnr, "Failed to create border buffer")
 
   obj.contents = Border._create_lines(content_win_options, border_win_options)
-  vim.api.nvim_buf_set_lines(obj.buf_id, 0, -1, false, obj.contents)
+  vim.api.nvim_buf_set_lines(obj.bufnr, 0, -1, false, obj.contents)
 
   local border_width = border_win_options.width
 
-  obj.win_id = vim.api.nvim_open_win(obj.buf_id, false, {
+  obj.win_id = vim.api.nvim_open_win(obj.bufnr, false, {
     relative = content_win_options.relative,
     style = "minimal",
     row = content_win_options.row - border_width,
@@ -94,7 +94,7 @@ function Border:new(content_buf_id, content_win_id, content_win_options, border_
   vim.cmd(
     string.format(
       "autocmd WinLeave,BufLeave,BufDelete <buffer=%s> ++once ++nested %s call nvim_win_close(%s, v:true)",
-      content_buf_id,
+      content_bufnr,
       (silent and "silent!") or "",
       obj.win_id
     )
