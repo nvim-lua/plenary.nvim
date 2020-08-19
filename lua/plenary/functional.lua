@@ -1,6 +1,6 @@
 local f = {}
 
-f.map = function(fun, iter)
+function f.map(fun, iter)
   local results = {}
   for _, v in pairs(iter) do
     table.insert(results, fun(v))
@@ -9,14 +9,14 @@ f.map = function(fun, iter)
   return results
 end
 
-f.partial = function(fun, ...)
+function f.partial(fun, ...)
   local args = {...}
   return function(...)
     return fun(unpack(args), ...)
   end
 end
 
-f.any = function(f, iterable)
+function f.any(f, iterable)
   for k, v in pairs(iterable) do
     if f(k, v) then
       return true
@@ -26,7 +26,7 @@ f.any = function(f, iterable)
   return false
 end
 
-f.all = function(f, iterable)
+function f.all(f, iterable)
   for k, v in pairs(iterable) do
     if not f(k, v) then
       return false
@@ -34,6 +34,23 @@ f.all = function(f, iterable)
   end
 
   return true
+end
+
+function f.select_only(n)
+  return function(...)
+    local x = select(n, ...)
+    return x
+  end
+end
+
+f.first = f.select_only(1)
+f.second = f.select_only(2)
+f.third = f.select_only(3)
+
+function f.last(...)
+  local length = select('#', ...)
+  local x = select(length, ...)
+  return x
 end
 
 return f
