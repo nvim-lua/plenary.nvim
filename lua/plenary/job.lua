@@ -35,15 +35,20 @@ function Job:new(o)
   obj.env = o.env
   obj.detach = o.detach
 
+  obj._user_on_start = o.on_start
   obj._user_on_stdout = o.on_stdout
   obj._user_on_stderr = o.on_stderr
   obj._user_on_exit = o.on_exit
+
+  obj._additional_on_exit_callbacks = {}
 
   -- Could expose these I suppose
   obj._raw_stdout = ''
   obj._raw_stderr = ''
 
   obj._raw_output = ''
+
+  obj.user_data = {}
 
   return setmetatable(obj, self)
 end
@@ -71,6 +76,10 @@ function Job:shutdown(code, signal)
 
   if self._user_on_exit then
     self:_user_on_exit(code, signal)
+  end
+
+  for _, v in ipairs(self._additional_on_exit_callbacks) do
+    v(self, code, signal)
   end
 
   self.stdout:read_stop()
@@ -111,8 +120,12 @@ function Job:_create_uv_options()
   return options
 end
 
+-- TODO: Add the ability to have callback called ONLY on complete lines.
+--          Remember, to send the last line when you're done though :laugh:
 local on_output = function(self, cb)
   local results = {}
+
+  local index = 1
 
   return function(err, data)
     if data == nil then
@@ -124,6 +137,9 @@ local on_output = function(self, cb)
     end
 
     local subbed = data:gsub("\r", "")
+
+    -- TODO: Should we really be keeping all these outputs saved?
+    --      Should probably at least be an option to do so. Possibly discard later?
     self._raw_stdout  = self._raw_stdout .. subbed
     self._raw_output  = self._raw_output .. subbed
 
@@ -132,7 +148,6 @@ local on_output = function(self, cb)
     end
 
     -- Get rid of pesky \r
-    data = data:gsub("\r", "")
 
     local line, start, found_newline
     while true do
@@ -155,13 +170,18 @@ local on_output = function(self, cb)
     end
 
     if cb then
-      cb(err, data)
+      print("Calling CB with data: ", vim.inspect(cb), subbed)
+      cb(err, subbed)
     end
   end
 end
 
 function Job:start()
   local options = self:_create_uv_options()
+
+  if self._user_on_start then
+    self:_user_on_start()
+  end
 
   self.handle, self.pid = uv.spawn(
     options.command,
@@ -170,18 +190,6 @@ function Job:start()
   )
 
   self.stdout:read_start(on_output(self, self._user_on_stdout))
-
-  _ = (function(err, data)
-    if data ~= nil then
-      local subbed = data:gsub("\r", "")
-      self._raw_stdout  = self._raw_stdout .. subbed
-      self._raw_output  = self._raw_output .. subbed
-    end
-
-    if self._user_on_stdout then
-      vim.schedule(function() self._user_on_stdout(err, data) end)
-    end
-  end)
 
   self.stderr:read_start(function(err, data)
     if data ~= nil then
@@ -254,61 +262,6 @@ function Job:co_wait(wait_time)
   return self
 end
 
-
-function Job.accumulate_results(results)
-  return function(err, data)
-    if data == nil then
-      if results[#results] == '' then
-        table.remove(results, #results)
-      end
-
-      return
-    end
-
-    if results[1] == nil then
-      results[1] = ''
-    end
-
-    -- Get rid of pesky \r
-    data = data:gsub("\r", "")
-
-    local line, start, found_newline
-    while true do
-      start = string.find(data, "\n") or #data
-      found_newline = string.find(data, "\n")
-
-      line = string.sub(data, 1, start)
-      data = string.sub(data, start + 1, -1)
-
-      line = line:gsub("\r", "")
-      line = line:gsub("\n", "")
-
-      results[#results] = (results[#results] or '') .. line
-
-      if found_newline then
-        table.insert(results, '')
-      else
-        break
-      end
-    end
-
-    -- if found_newline and results[#results] == '' then
-    --   table.remove(results, #results)
-    -- end
-
-    -- if string.find(data, "\n") then
-    --   for _, line in ipairs(vim.fn.split(data, "\n")) do
-    --     line = line:gsub("\n", "")
-    --     line = line:gsub("\r", "")
-
-    --     table.insert(results, line)
-    --   end
-    -- else
-    --   results[#results] = results[#results] .. data
-    -- end
-  end
-end
-
 --- Wait for all jobs to complete
 function Job.join(...)
   local jobs_to_wait = {...}
@@ -367,6 +320,18 @@ end
 
 function Job.chain_status(id)
   return _request_status[id]
+end
+
+function Job.is_job(item)
+  if type(item) ~= 'table' then
+    return false
+  end
+
+  return getmetatable(item) == Job
+end
+
+function Job:add_on_exit_callback(cb)
+  table.insert(self._additional_on_exit_callbacks, cb)
 end
 
 return Job
