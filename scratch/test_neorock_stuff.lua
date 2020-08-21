@@ -4,11 +4,12 @@ require('plenary.reload').reload_module('plenary')
 -- Probably would be useful to have an uninstall anyways
 
 local neorocks = require('plenary.neorocks')
+neorocks.install('luasocket')
 
 -- local job = neorocks._get_setup_job(false)
-neorocks.ensure_installed('effil', 'effil')
-neorocks.ensure_installed('lua-cjson')
-neorocks.ensure_installed('luasocket')
+-- neorocks.ensure_installed('effil', 'effil')
+-- neorocks.ensure_installed('lua-cjson')
+-- neorocks.ensure_installed('luasocket')
 
 -- if job then
 --   job:start()
