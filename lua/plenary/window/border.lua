@@ -135,14 +135,15 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   --   content_bufnr,
   --   obj.win_id
   -- ))
+
   vim.cmd(string.format(
-    "autocmd BufLeave,BufDelete <buffer=%s> ++nested ++once :call popup#close_related_win(%s, %s)",
+    "autocmd BufLeave,BufDelete <buffer=%s> ++nested ++once :lua require('plenary.window').close_related_win(%s, %s)",
     content_bufnr,
     content_win_id,
     obj.win_id))
 
   vim.cmd(string.format(
-    "autocmd WinClosed,WinLeave <buffer=%s> ++nested ++once :call popup#close_win(%s, v:true)",
+    "autocmd WinClosed,WinLeave <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
     content_bufnr,
     obj.win_id))
 
