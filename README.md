@@ -21,9 +21,7 @@ Plug 'nvim-lua/plenary.nvim'
 - `plenary.path`
 - `plenary.context_manager`
 - `plenary.test_harness`
-
-Deprecated:
-- `plenary.neorocks` (this is moving to packer.nvim -- maybe once it has stablized there we could consider adding it back here)
+- `plenary.neorocks` (This may move to packer.nvim, but I have added some improvements to use it more as a library.)
 
 ### plenary.path
 
