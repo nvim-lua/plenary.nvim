@@ -6,9 +6,9 @@ require('plenary.reload').reload_module('plenary')
 local neorocks = require('plenary.neorocks')
 
 -- local job = neorocks._get_setup_job(false)
-neorocks.install('effil', 'effil')
-neorocks.install('lua-cjson')
-neorocks.install('luasocket')
+neorocks.ensure_installed('effil', 'effil')
+neorocks.ensure_installed('lua-cjson')
+neorocks.ensure_installed('luasocket')
 
 -- if job then
 --   job:start()
