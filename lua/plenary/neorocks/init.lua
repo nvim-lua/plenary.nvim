@@ -7,7 +7,6 @@ local window_float = require('plenary.window.float')
 
 local headless = require('plenary.nvim_meta').is_headless
 
-
 local neorocks = {}
 
 neorocks.scheduler = require('plenary.neorocks.scheduler'):new()
@@ -164,6 +163,10 @@ end
 
 --- Idempotent adding of paths for both package.path and package.cpath
 neorocks.setup_paths = function()
+  if not neorocks._is_setup then
+    return
+  end
+
   if neorocks._path_setup_complete then
     return
   end
