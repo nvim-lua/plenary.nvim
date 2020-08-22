@@ -1,4 +1,4 @@
-## Pre-Alpha:
+## Pre-Alpha
 - Change the keys in tables returned by functions in the `plenary.window.float` module:
     - `buf` -> `bufnr`
     - `minor_buf` -> `minor_bufnr`
