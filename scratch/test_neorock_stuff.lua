@@ -4,7 +4,7 @@ require('plenary.reload').reload_module('plenary')
 -- Probably would be useful to have an uninstall anyways
 
 local neorocks = require('plenary.neorocks')
-neorocks.install('luasocket')
+neorocks.install('luasocket', nil, true)
 
 -- local job = neorocks._get_setup_job(false)
 -- neorocks.ensure_installed('effil', 'effil')

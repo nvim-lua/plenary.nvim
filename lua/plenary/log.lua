@@ -117,11 +117,16 @@ log.new = function(config, standalone)
 
       local split_console = vim.split(console_string, "\n")
       for _, v in ipairs(split_console) do
-        vim.cmd(string.format([[echom "[%s] %s"]], config.plugin, vim.fn.escape(v, '"')))
+        local formatted_msg = string.format("[%s] %s", config.plugin, vim.fn.escape(v, '"'))
+
+        local ok = pcall(vim.cmd, string.format([[echom "%s"]], formatted_msg))
+        if not ok then
+          vim.api.nvim_out_write(msg .. "\n")
+        end
       end
 
       if config.highlights and level_config.hl then
-        vim.cmd("echohl NONE")
+        vim.cmd "echohl NONE"
       end
     end
 

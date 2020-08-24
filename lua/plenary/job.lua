@@ -123,9 +123,11 @@ end
 -- TODO: Add the ability to have callback called ONLY on complete lines.
 --          Remember, to send the last line when you're done though :laugh:
 local on_output = function(self, cb)
-  local results = {}
+  if not self.results then
+    self.results = {''}
+  end
 
-  local index = 1
+  results = self.results
 
   return function(err, data)
     if data == nil then
@@ -143,14 +145,8 @@ local on_output = function(self, cb)
     self._raw_stdout  = self._raw_stdout .. subbed
     self._raw_output  = self._raw_output .. subbed
 
-    if results[1] == nil then
-      results[1] = ''
-    end
-
-    -- Get rid of pesky \r
-
     local line, start, found_newline
-    while true do
+    repeat
       start = string.find(data, "\n") or #data
       found_newline = string.find(data, "\n")
 
@@ -164,14 +160,11 @@ local on_output = function(self, cb)
 
       if found_newline then
         table.insert(results, '')
-      else
-        break
       end
-    end
+    until not found_newline
 
     if cb then
-      print("Calling CB with data: ", vim.inspect(cb), subbed)
-      cb(err, subbed)
+      cb(err, subbed, self)
     end
   end
 end
