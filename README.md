@@ -166,7 +166,7 @@ Currently comes bundled with slightly modified versions of:
 
 ### And more to come :)
 
-- [ ] Foating window wrappers
+- [ ] Floating window wrappers
 - [ ] Easy border windows to any floating window
 
 
