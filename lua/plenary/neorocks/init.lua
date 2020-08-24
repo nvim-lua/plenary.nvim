@@ -5,7 +5,8 @@ local log = require('plenary.log')
 local run = require('plenary.run')
 local window_float = require('plenary.window.float')
 
-local headless = require('plenary.nvim_meta').is_headless
+-- TODO: We should consider not making windows when headless.
+-- local headless = require('plenary.nvim_meta').is_headless
 
 local neorocks = {}
 
@@ -18,20 +19,35 @@ neorocks.job_with_display_output = function(title_text, command, args)
     title_text = {title_text}
   end
 
-  local job = nil
-
-  local outputter = vim.schedule_wrap(function(_, data)
+  local outputter = vim.schedule_wrap(function(_, data, self)
     if data == nil then
       return
     end
 
-    local bufnr = job.user_data.views.bufnr
+    if not self then
+      return
+    end
+
+    local bufnr = self.user_data.views.bufnr
+    local win_id = self.user_data.views.win_id
 
     if not vim.api.nvim_buf_is_valid(bufnr) then
       return
     end
 
-    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, vim.split(data, "\n"))
+    local split_data = vim.split(data, "\n")
+    if #split_data > 1 and split_data[#split_data] == "" then
+      split_data[#split_data] = nil
+    end
+
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, split_data)
+
+    if not vim.api.nvim_win_is_valid(win_id) then
+      return
+    end
+
+    local final_row = #vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    vim.api.nvim_win_set_cursor(win_id, {final_row, 0})
   end)
 
   return Job:new {
@@ -39,15 +55,33 @@ neorocks.job_with_display_output = function(title_text, command, args)
     command = command,
     args = args,
 
-    on_start = function(j)
-      job = j
-      job.user_data.views = window_float.centered_with_top_win(title_text)
+    on_start = function(self)
+      self.user_data.views = window_float.centered_with_top_win(title_text, {winblend = 0})
 
-      vim.fn.win_gotoid(job.user_data.views.win_id)
+      vim.fn.win_gotoid(self.user_data.views.win_id)
+      vim.api.nvim_win_set_option(self.user_data.views.win_id, 'wrap', false)
     end,
 
     on_stdout = outputter,
     on_stderr = outputter,
+
+    on_exit = vim.schedule_wrap(function(self, signal)
+      -- if not vim.tbl_isempty(self._additional_on_exit_callbacks) then
+      --   return
+      -- end
+
+      local bufnr = self.user_data.views.bufnr
+      if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+      vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {"", ("="):rep(40), "  Success! Leave window to close.", ("="):rep(40)})
+
+      local win_id = self.user_data.views.win_id
+      if not vim.api.nvim_win_is_valid(win_id) then return end
+
+      local final_row = #vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      vim.api.nvim_win_set_cursor(win_id, {final_row, 0})
+
+    end)
   }
 end
 
@@ -68,10 +102,10 @@ neorocks._lua_version = (function()
   error("NEOROCKS: Unsupported Lua Versions", _VERSION)
 end)()
 
-neorocks._base_path = Path:new(vim.fn.stdpath('cache'), 'plenary_hererocks')
-neorocks._hererocks_file = Path:new(vim.fn.stdpath('cache'), 'hererocks.py')
+neorocks._base_path                  = Path:new(vim.fn.stdpath('cache'), 'plenary_hererocks')
+neorocks._hererocks_file             = Path:new(vim.fn.stdpath('cache'), 'hererocks.py')
 neorocks._hererocks_install_location = Path:new(neorocks._base_path, neorocks._lua_version.dir)
-neorocks._is_setup = vim.fn.isdirectory(Path:new(neorocks._hererocks_install_location, "lib"):absolute()) > 0
+neorocks._is_setup                   = vim.fn.isdirectory(Path:new(neorocks._hererocks_install_location, "lib"):absolute()) > 0
 
 neorocks._get_hererocks_job = function()
   local url_loc = 'https://raw.githubusercontent.com/luarocks/hererocks/latest/hererocks.py'
