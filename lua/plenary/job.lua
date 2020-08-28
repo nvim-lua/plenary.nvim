@@ -1,6 +1,8 @@
 local vim = vim
 local uv = vim.loop
 
+local log = require('plenary.log')
+
 local Job = {}
 Job.__index = Job
 
@@ -42,11 +44,7 @@ function Job:new(o)
 
   obj._additional_on_exit_callbacks = {}
 
-  -- Could expose these I suppose
-  obj._raw_stdout = ''
-  obj._raw_stderr = ''
-
-  obj._raw_output = ''
+  obj._maximum_results = o.maximum_results
 
   obj.user_data = {}
 
@@ -127,7 +125,7 @@ local on_output = function(self, cb)
     self.results = {''}
   end
 
-  results = self.results
+  local results = self.results
 
   return function(err, data)
     if data == nil then
@@ -138,13 +136,6 @@ local on_output = function(self, cb)
       return
     end
 
-    local subbed = data:gsub("\r", "")
-
-    -- TODO: Should we really be keeping all these outputs saved?
-    --      Should probably at least be an option to do so. Possibly discard later?
-    self._raw_stdout  = self._raw_stdout .. subbed
-    self._raw_output  = self._raw_output .. subbed
-
     local line, start, found_newline
     repeat
       start = string.find(data, "\n") or #data
@@ -154,18 +145,28 @@ local on_output = function(self, cb)
       data = string.sub(data, start + 1, -1)
 
       line = line:gsub("\r", "")
-      line = line:gsub("\n", "")
 
       results[#results] = (results[#results] or '') .. line
 
       if found_newline then
+        local result_number = #results
+
+        if cb then
+          cb(err, results[result_number], self)
+        end
+
+        -- Stop processing if we've surpassed the maximum.
+        if self._maximum_results then
+          if result_number > self._maximum_results then
+            self:shutdown()
+            return
+          end
+        end
+
         table.insert(results, '')
       end
     until not found_newline
 
-    if cb then
-      cb(err, subbed, self)
-    end
   end
 end
 
@@ -183,18 +184,7 @@ function Job:start()
   )
 
   self.stdout:read_start(on_output(self, self._user_on_stdout))
-
-  self.stderr:read_start(function(err, data)
-    if data ~= nil then
-      local subbed = data:gsub("\r", "")
-      self._raw_stderr  = self._raw_stderr .. subbed
-      self._raw_output  = self._raw_output .. subbed
-    end
-
-    if self._user_on_stderr then
-      vim.schedule(function () self._user_on_stderr(err, data) end)
-    end
-  end)
+  self.stderr:read_start(on_output(self, self._user_on_stderr))
 
   return self
 end
@@ -206,22 +196,8 @@ function Job:sync()
   return self:result()
 end
 
-function Job:stdout_result()
-  return vim.split(self._raw_stdout, "\n")
-end
-
-function Job:stderr_result()
-  return vim.split(self._raw_stderr, "\n")
-end
-
 function Job:result()
-  local res = vim.split(self._raw_output, "\n")
-
-  if res[#res] == '' then
-    table.remove(res, #res)
-  end
-
-  return res
+  return self.results
 end
 
 function Job:pid()
