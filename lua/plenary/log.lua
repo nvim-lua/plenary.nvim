@@ -57,7 +57,7 @@ log.new = function(config, standalone)
   if standalone then
     obj = log
   else
-    obj = {}
+    obj = config
   end
 
   local levels = {}
@@ -104,11 +104,11 @@ log.new = function(config, standalone)
     -- Output to console
     if config.use_console then
       local console_string = string.format(
-      "[%-6s%s] %s: %s",
-      nameupper,
-      os.date("%H:%M:%S"),
-      lineinfo,
-      msg
+        "[%-6s%s] %s: %s",
+        nameupper,
+        os.date("%H:%M:%S"),
+        lineinfo,
+        msg
       )
 
       if config.highlights and level_config.hl then
