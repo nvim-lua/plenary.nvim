@@ -19,17 +19,22 @@ local function all_modules(dir)
 end
 
 vim.api.nvim_command('cd lua/')
+local luacc_lua_path = vim.fn.input('Path to luacc.lua: ')
 local command = {
-  'luacc',
+  'lua',
+  luacc_lua_path,
   '-o', 'init.lua',
   '-i', 'plenary/',
+  '-i', 'plenary/lsp',
+  '-i', 'plenary/window',
+  '-i', 'plenary/neorocks',
   'plenary.init'
 }
 
 local modules = vim.tbl_filter(function(x) return x ~= 'plenary.init' end, all_modules('plenary'))
 
 for _, v in ipairs(modules) do
-  table.insert(command, v)
+  table.insert(command, (v:gsub('%.init', '')))
 end
 
 vim.fn.jobwait(

@@ -682,9 +682,9 @@ return M
 
 end,
 
-["plenary.neorocks.init"] = function()
+["plenary.neorocks"] = function()
 --------------------
--- Module: 'plenary.neorocks.init'
+-- Module: 'plenary.neorocks'
 --------------------
 local Job = require('plenary.job')
 local Path = require('plenary.path')
@@ -2010,6 +2010,9 @@ end,
 --------------------
 -- Module: 'plenary.window.float'
 --------------------
+package.loaded['plenary.tbl'] = nil
+package.loaded['plenary.window.float'] = nil
+
 local Border = require("plenary.window.border")
 local tbl = require('plenary.tbl')
 
@@ -2227,9 +2230,9 @@ return win_float
 
 end,
 
-["plenary.window.init"] = function()
+["plenary.window"] = function()
 --------------------
--- Module: 'plenary.window.init'
+-- Module: 'plenary.window'
 --------------------
 
 local window = {}
