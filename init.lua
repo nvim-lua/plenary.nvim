@@ -13,9 +13,9 @@ do
 -- Modules part begin --
 ------------------------
 
-["lua.plenary.debug_utils"] = function()
+["plenary.debug_utils"] = function()
 --------------------
--- Module: 'lua.plenary.debug_utils'
+-- Module: 'plenary.debug_utils'
 --------------------
 local debug_utils = {}
 
@@ -34,9 +34,9 @@ return debug_utils
 
 end,
 
-["lua.plenary.functional"] = function()
+["plenary.functional"] = function()
 --------------------
--- Module: 'lua.plenary.functional'
+-- Module: 'plenary.functional'
 --------------------
 local f = {}
 
@@ -97,9 +97,9 @@ return f
 
 end,
 
-["lua.plenary.init"] = function()
+["plenary.init"] = function()
 --------------------
--- Module: 'lua.plenary.init'
+-- Module: 'plenary.init'
 --------------------
 PLENARY_DEBUG = PLENARY_DEBUG == nil and true or PLENARY_DEBUG
 
@@ -124,9 +124,9 @@ return plenary
 
 end,
 
-["lua.plenary.job"] = function()
+["plenary.job"] = function()
 --------------------
--- Module: 'lua.plenary.job'
+-- Module: 'plenary.job'
 --------------------
 local vim = vim
 local uv = vim.loop
@@ -437,9 +437,9 @@ return Job
 
 end,
 
-["lua.plenary.log"] = function()
+["plenary.log"] = function()
 --------------------
--- Module: 'lua.plenary.log'
+-- Module: 'plenary.log'
 --------------------
 -- log.lua
 --
@@ -611,9 +611,9 @@ return log
 
 end,
 
-["lua.plenary.lsp.override"] = function()
+["plenary.lsp.override"] = function()
 --------------------
--- Module: 'lua.plenary.lsp.override'
+-- Module: 'plenary.lsp.override'
 --------------------
 local vim = vim
 
@@ -648,9 +648,9 @@ return M
 
 end,
 
-["lua.plenary.neorocks.init"] = function()
+["plenary.neorocks.init"] = function()
 --------------------
--- Module: 'lua.plenary.neorocks.init'
+-- Module: 'plenary.neorocks.init'
 --------------------
 local Job = require('plenary.job')
 local Path = require('plenary.path')
@@ -1037,9 +1037,9 @@ return neorocks
 
 end,
 
-["lua.plenary.neorocks.scheduler"] = function()
+["plenary.neorocks.scheduler"] = function()
 --------------------
--- Module: 'lua.plenary.neorocks.scheduler'
+-- Module: 'plenary.neorocks.scheduler'
 --------------------
 local Job = require('plenary.job')
 
@@ -1088,9 +1088,9 @@ return scheduler
 
 end,
 
-["lua.plenary.nvim_meta"] = function()
+["plenary.nvim_meta"] = function()
 --------------------
--- Module: 'lua.plenary.nvim_meta'
+-- Module: 'plenary.nvim_meta'
 --------------------
 local get_lua_version = function()
   if jit then
@@ -1113,9 +1113,9 @@ return {
 
 end,
 
-["lua.plenary.path"] = function()
+["plenary.path"] = function()
 --------------------
--- Module: 'lua.plenary.path'
+-- Module: 'plenary.path'
 --------------------
 --- Path.lua
 ---
@@ -1274,9 +1274,9 @@ return path
 
 end,
 
-["lua.plenary.popup"] = function()
+["plenary.popup"] = function()
 --------------------
--- Module: 'lua.plenary.popup'
+-- Module: 'plenary.popup'
 --------------------
 --- popup.lua
 ---
@@ -1491,9 +1491,9 @@ return popup
 
 end,
 
-["lua.plenary.profile"] = function()
+["plenary.profile"] = function()
 --------------------
--- Module: 'lua.plenary.profile'
+-- Module: 'plenary.profile'
 --------------------
 local profile = {}
 
@@ -1509,9 +1509,9 @@ return profile
 
 end,
 
-["lua.plenary.reload"] = function()
+["plenary.reload"] = function()
 --------------------
--- Module: 'lua.plenary.reload'
+-- Module: 'plenary.reload'
 --------------------
 local reload = {}
 
@@ -1539,9 +1539,9 @@ return reload
 
 end,
 
-["lua.plenary.run"] = function()
+["plenary.run"] = function()
 --------------------
--- Module: 'lua.plenary.run'
+-- Module: 'plenary.run'
 --------------------
 local floatwin = require("plenary.window.float")
 
@@ -1573,9 +1573,9 @@ return run
 
 end,
 
-["lua.plenary.tbl"] = function()
+["plenary.tbl"] = function()
 --------------------
--- Module: 'lua.plenary.tbl'
+-- Module: 'plenary.tbl'
 --------------------
 local tbl = {}
 
@@ -1599,9 +1599,9 @@ return tbl
 
 end,
 
-["lua.plenary.test_harness"] = function()
+["plenary.test_harness"] = function()
 --------------------
--- Module: 'lua.plenary.test_harness'
+-- Module: 'plenary.test_harness'
 --------------------
 local lu = require("luaunit")
 
@@ -1808,9 +1808,9 @@ return harness
 
 end,
 
-["lua.plenary.window.border"] = function()
+["plenary.window.border"] = function()
 --------------------
--- Module: 'lua.plenary.window.border'
+-- Module: 'plenary.window.border'
 --------------------
 local tbl = require('plenary.tbl')
 
@@ -1972,9 +1972,9 @@ return Border
 
 end,
 
-["lua.plenary.window.float"] = function()
+["plenary.window.float"] = function()
 --------------------
--- Module: 'lua.plenary.window.float'
+-- Module: 'plenary.window.float'
 --------------------
 package.loaded['plenary.tbl'] = nil
 package.loaded['plenary.window.float'] = nil
@@ -2196,9 +2196,9 @@ return win_float
 
 end,
 
-["lua.plenary.window.init"] = function()
+["plenary.window.init"] = function()
 --------------------
--- Module: 'lua.plenary.window.init'
+-- Module: 'plenary.window.init'
 --------------------
 
 local window = {}

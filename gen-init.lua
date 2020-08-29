@@ -18,14 +18,24 @@ local function all_modules(dir)
   return vim.tbl_map(function(x) return (x:gsub('%/', '%.')) end, ret)
 end
 
+vim.api.nvim_command('cd lua/')
 local command = {
   'luacc',
   '-o', 'init.lua',
-  '-i', 'lua/plenary',
+  '-i', 'plenary/',
 }
 
-for _, v in ipairs(all_modules('lua/plenary')) do
+for _, v in ipairs(all_modules('plenary')) do
   table.insert(command, v)
 end
 
-vim.fn.jobwait({vim.fn.jobstart(command)})
+vim.fn.jobwait(
+  {vim.fn.jobstart(command, {
+      on_stderr = function(_, d, _)
+        print(vim.inspect(d))
+      end;
+  })}
+)
+
+vim.api.nvim_command('!mv init.lua ../init.lua')
+vim.api.nvim_command('cd ../')
