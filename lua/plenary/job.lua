@@ -1,12 +1,14 @@
 local vim = vim
 local uv = vim.loop
 
-local log = require('plenary.log')
-
 local Job = {}
 Job.__index = Job
 
 local function close_safely(handle)
+  if not handle then
+    return
+  end
+
   if not handle:is_closing() then
     handle:close()
   end
@@ -48,15 +50,16 @@ function Job:new(o)
 
   obj.user_data = {}
 
+  obj.writer = o.writer
+
+  self._reset(obj)
+
   return setmetatable(obj, self)
 end
 
---- Send data to a job.
-function Job:send(data)
-  self.stdin:write(data)
-
-  -- TODO: I don't remember why I put this.
-  -- self.stdin:shutdown()
+function Job:_reset()
+  self.is_shutdown = nil
+  self.results = nil
 end
 
 --- Stop a job and close all handles
@@ -90,10 +93,6 @@ end
 
 function Job:_create_uv_options()
   local options = {}
-
-  self.stdin = uv.new_pipe(false)
-  self.stdout = uv.new_pipe(false)
-  self.stderr = uv.new_pipe(false)
 
   options.command = self.command
   options.args = self.args
@@ -141,7 +140,7 @@ local on_output = function(self, cb)
       start = string.find(data, "\n") or #data
       found_newline = string.find(data, "\n")
 
-      line = string.sub(data, 1, start)
+      line = string.sub(data, 1, start - 1)
       data = string.sub(data, start + 1, -1)
 
       line = line:gsub("\r", "")
@@ -170,7 +169,24 @@ local on_output = function(self, cb)
   end
 end
 
-function Job:start()
+--- Stop previous execution and add new pipes.
+--- Also regenerates pipes of writer.
+function Job:_prepare_pipes()
+  self:_stop()
+
+  if self.writer then
+    self.writer:_prepare_pipes()
+  end
+
+  self.stdin = (self.writer and self.writer.stdout) or uv.new_pipe(false)
+  self.stdout = uv.new_pipe(false)
+  self.stderr = uv.new_pipe(false)
+end
+
+--- Execute job. Should be called only after preprocessing is done.
+function Job:_execute()
+  self:_reset()
+
   local options = self:_create_uv_options()
 
   if self._user_on_start then
@@ -186,7 +202,16 @@ function Job:start()
   self.stdout:read_start(on_output(self, self._user_on_stdout))
   self.stderr:read_start(on_output(self, self._user_on_stderr))
 
+  if self.writer then
+    self.writer:_execute()
+  end
+
   return self
+end
+
+function Job:start()
+  self:_prepare_pipes()
+  self:_execute()
 end
 
 function Job:sync()
@@ -210,7 +235,18 @@ function Job:wait()
     return
   end
 
-  while not vim.wait(100, function() return not self.handle:is_active() or self.is_shutdown end, 10) do
+  while
+    not vim.wait(
+      100,
+      function() 
+        if self.is_shutdown then
+          assert(self.handle:is_closing(), "Job must be shutdown if it's closing")
+        end
+
+        return self.is_shutdown
+      end,
+      10)
+  do
   end
 
   return self
@@ -302,5 +338,11 @@ end
 function Job:add_on_exit_callback(cb)
   table.insert(self._additional_on_exit_callbacks, cb)
 end
+
+--- Send data to a job.
+function Job:send(data)
+  self.stdin:write(data)
+end
+
 
 return Job
