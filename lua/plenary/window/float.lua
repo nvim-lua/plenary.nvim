@@ -1,6 +1,3 @@
-package.loaded['plenary.tbl'] = nil
-package.loaded['plenary.window.float'] = nil
-
 local Border = require("plenary.window.border")
 local tbl = require('plenary.tbl')
 
