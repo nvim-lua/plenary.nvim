@@ -23,9 +23,12 @@ local command = {
   'luacc',
   '-o', 'init.lua',
   '-i', 'plenary/',
+  'plenary.init'
 }
 
-for _, v in ipairs(all_modules('plenary')) do
+local modules = vim.tbl_filter(function(x) return x ~= 'plenary.init' end, all_modules('plenary'))
+
+for _, v in ipairs(modules) do
   table.insert(command, v)
 end
 
