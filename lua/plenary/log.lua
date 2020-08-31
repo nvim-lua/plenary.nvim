@@ -103,31 +103,33 @@ log.new = function(config, standalone)
 
     -- Output to console
     if config.use_console then
-      local console_string = string.format(
-        "[%-6s%s] %s: %s",
-        nameupper,
-        os.date("%H:%M:%S"),
-        lineinfo,
-        msg
-      )
+      vim.schedule(function()
+        local console_string = string.format(
+          "[%-6s%s] %s: %s",
+          nameupper,
+          os.date("%H:%M:%S"),
+          lineinfo,
+          msg
+        )
 
-      if config.highlights and level_config.hl then
-        vim.cmd(string.format("echohl %s", level_config.hl))
-      end
-
-      local split_console = vim.split(console_string, "\n")
-      for _, v in ipairs(split_console) do
-        local formatted_msg = string.format("[%s] %s", config.plugin, vim.fn.escape(v, '"'))
-
-        local ok = pcall(vim.cmd, string.format([[echom "%s"]], formatted_msg))
-        if not ok then
-          vim.api.nvim_out_write(msg .. "\n")
+        if config.highlights and level_config.hl then
+          vim.cmd(string.format("echohl %s", level_config.hl))
         end
-      end
 
-      if config.highlights and level_config.hl then
-        vim.cmd "echohl NONE"
-      end
+        local split_console = vim.split(console_string, "\n")
+        for _, v in ipairs(split_console) do
+          local formatted_msg = string.format("[%s] %s", config.plugin, vim.fn.escape(v, '"'))
+
+          local ok = pcall(vim.cmd, string.format([[echom "%s"]], formatted_msg))
+          if not ok then
+            vim.api.nvim_out_write(msg .. "\n")
+          end
+        end
+
+        if config.highlights and level_config.hl then
+          vim.cmd "echohl NONE"
+        end
+      end)
     end
 
     -- Output to log file
