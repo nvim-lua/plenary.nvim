@@ -7,15 +7,10 @@ local Job = require('plenary.job')
 local fzf = Job:new {
   command = 'fzf';
 
-  writer = Job:new {
-    command = "git",
-    args = {"ls-files"},
-
-    enable_handlers = false,
-  },
+  writer = 'hello';
 
   -- Still doesn't work if you don't pass these args and just run `fzf`
-  args = {'--no-sort', '--filter', ''};
+  args = {'--no-sort', '--filter', 'he'};
 }
 
 print(vim.inspect(fzf:sync()))
