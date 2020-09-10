@@ -36,6 +36,14 @@ function f.all(f, iterable)
   return true
 end
 
+function f.if_nil(val, was_nil, was_not_nil)
+  if val == nil then
+    return was_nil
+  else
+    return was_not_nil
+  end
+end
+
 function f.select_only(n)
   return function(...)
     local x = select(n, ...)

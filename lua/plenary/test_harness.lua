@@ -79,11 +79,11 @@ end
 function harness:test_directory(test_type, directory)
   validate_test_type(test_type)
 
-  log.debug("Starting...")
+  log.info("Starting...")
   if test_type == 'busted' then
     -- Only need to make sure penlight/lfs is available, since we have slightly different busted
-    -- require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
-    -- require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
+    require('plenary.neorocks').ensure_installed('luafilesystem', 'lfs', true)
+    require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
   end
 
 
