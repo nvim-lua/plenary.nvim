@@ -43,7 +43,7 @@ end
 ---@field o.on_stderr function      : (error: string, data: string, self? Job)
 ---@field o.on_exit function        : (self, code: number, signal: number)
 ---@field o.maximum_results number  : stop processing results after this number
----@field o.writer Job              : Job that writes to stdin of this job.
+---@field o.writer Job|table|string : Job that writes to stdin of this job.
 function Job:new(o)
   local obj = {}
 
@@ -191,7 +191,9 @@ function Job:_prepare_pipes()
   self:_stop()
 
   if self.writer then
-    self.writer:_prepare_pipes()
+    if Job.is_job(self.writer) then
+      self.writer:_prepare_pipes()
+    end
   end
 
   self.stdin = (self.writer and self.writer.stdout) or uv.new_pipe(false)
@@ -221,7 +223,19 @@ function Job:_execute()
   end
 
   if self.writer then
-    self.writer:_execute()
+    if Job.is_job(self.writer) then
+      self.writer:_execute()
+    elseif type(self.writer) == 'table' and vim.tbl_islist(self.writer) then
+      for _, v in ipairs(self.writer) do
+        self.stdin:write(v .. '\n')
+      end
+      self.stdin:close()
+    elseif type(self.writer) == 'string' then
+      self.stdin:write(self.writer .. '\n')
+      self.stdin:close()
+    else
+      error('Unknown self.writer: ' .. vim.inspect(self.writer))
+    end
   end
 
   return self
