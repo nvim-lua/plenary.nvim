@@ -18,6 +18,8 @@ local fzf = Job:new {
   args = {'--no-sort', '--filter', ''};
 }
 
+print(vim.inspect(fzf:sync()))
+
 --[[
 
 fzf_job = ...
@@ -30,4 +32,3 @@ ashkan suggests potentially using `/` __div as the way to pipe them.
 result = git_job / fzf_job
 --]]
 
-print(vim.inspect(fzf:sync()))

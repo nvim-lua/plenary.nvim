@@ -22,16 +22,28 @@ local shutdown_factory = function (child)
   end
 end
 
+---@class Array
+--- Numeric table
+
+---@class Map
+--- Map-like table
+
 
 --- Create a new job
---@param o table
---@field o.command string  : Command to run
---@field o.args Array      : List of arguments to pass
---@field o.cwd string      ? Working directory for job
---@field o.env Map         : Environment
---@field o.detach callable : Function to call on detach.
---
---@field o.call_on_lines boolean? Only call callbacks on line.
+---@class Job
+---@param o table
+---@field o.command string          : Command to run
+---@field o.args Array              : List of arguments to pass
+---@field o.cwd string              : Working directory for job
+---@field o.env Map                 : Environment
+---@field o.detach function         : Function to call on detach.
+---@field o.enable_handlers boolean : If set to false, disables all callbacks associated with output
+---@field o.on_start function       : Run when starting job
+---@field o.on_stdout function      : (error: string, data: string, self? Job)
+---@field o.on_stderr function      : (error: string, data: string, self? Job)
+---@field o.on_exit function        : (self, code: number, signal: number)
+---@field o.maximum_results number  : stop processing results after this number
+---@field o.writer Job              : Job that writes to stdin of this job.
 function Job:new(o)
   local obj = {}
 
