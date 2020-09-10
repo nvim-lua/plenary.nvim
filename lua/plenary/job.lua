@@ -232,9 +232,9 @@ function Job:start()
   self:_execute()
 end
 
-function Job:sync()
+function Job:sync(timeout)
   self:start()
-  self:wait()
+  self:wait(timeout)
 
   return self:result()
 end
@@ -247,24 +247,25 @@ function Job:pid()
   return self.pid
 end
 
-function Job:wait()
+function Job:wait(timeout)
+  timeout = timeout or 5000
+
   if self.handle == nil then
     vim.api.nvim_err_writeln(vim.inspect(self))
     return
   end
 
-  while
-    not vim.wait(
-      100,
-      function() 
-        if self.is_shutdown then
-          assert(self.handle:is_closing(), "Job must be shutdown if it's closing")
-        end
+  -- Wait five seconds, or until timeout.
+  local wait_result = vim.wait(timeout, function()
+    if self.is_shutdown then
+      assert(self.handle:is_closing(), "Job must be shutdown if it's closing")
+    end
 
-        return self.is_shutdown
-      end,
-      10)
-  do
+    return self.is_shutdown
+  end, 10)
+
+  if not wait_result then
+    error(string.format("'%s %s' was unable to complete in %s ms", self.command, table.concat(self.args, " "), timeout))
   end
 
   return self
@@ -359,6 +360,10 @@ end
 
 --- Send data to a job.
 function Job:send(data)
+  if not self.stdin then
+    error("job has no 'stdin'. Have you run `job:start()` yet?")
+  end
+
   self.stdin:write(data)
 end
 
