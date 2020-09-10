@@ -1,6 +1,8 @@
 local vim = vim
 local uv = vim.loop
 
+local functional = require('plenary.functional')
+
 local Job = {}
 Job.__index = Job
 
@@ -38,6 +40,8 @@ function Job:new(o)
   obj.cwd = o.cwd
   obj.env = o.env
   obj.detach = o.detach
+
+  obj.enable_handlers = functional.if_nil(o.enable_handlers, true, o.enable_handlers)
 
   obj._user_on_start = o.on_start
   obj._user_on_stdout = o.on_stdout
@@ -199,8 +203,10 @@ function Job:_execute()
     vim.schedule_wrap(shutdown_factory(self))
   )
 
-  self.stdout:read_start(on_output(self, self._user_on_stdout))
-  self.stderr:read_start(on_output(self, self._user_on_stderr))
+  if self.enable_handlers then
+    self.stdout:read_start(on_output(self, self._user_on_stdout))
+    self.stderr:read_start(on_output(self, self._user_on_stderr))
+  end
 
   if self.writer then
     self.writer:_execute()
