@@ -45,6 +45,10 @@ end
 ---@field o.maximum_results number  : stop processing results after this number
 ---@field o.writer Job|table|string : Job that writes to stdin of this job.
 function Job:new(o)
+  if not o then
+    error(debug.traceback("Options are required for Job:new"))
+  end
+
   local obj = {}
 
   obj.command = o.command
