@@ -137,51 +137,55 @@ end
 --          Remember, to send the last line when you're done though :laugh:
 local on_output = function(self, cb)
   if not self.results then
-    self.results = {''}
+    self.results = {}
   end
 
   local results = self.results
+  local result_index = 1
 
   return function(err, data)
     if data == nil then
-      if results[#results] == '' then
-        table.remove(results, #results)
+      if results[result_index] == '' then
+        table.remove(results, result_index)
       end
 
       return
     end
 
+    local last_start = 1
+    local data_length = #data
+
     local line, start, found_newline
     repeat
-      start = string.find(data, "\n") or #data
-      found_newline = string.find(data, "\n")
+      start = string.find(data, "\n", last_start, true) or data_length
+      found_newline = start ~= data_length
 
-      line = string.sub(data, 1, start - 1)
-      data = string.sub(data, start + 1, -1)
+      line = string.sub(data, last_start, start - 1)
 
-      line = line:gsub("\r", "")
-
-      results[#results] = (results[#results] or '') .. line
+      if results[result_index] then
+        results[result_index] = results[result_index] .. line
+      else
+        results[result_index] = line
+      end
 
       if found_newline then
-        local result_number = #results
-
         if cb then
-          cb(err, results[result_number], self)
+          cb(err, results[result_index], self)
         end
 
         -- Stop processing if we've surpassed the maximum.
         if self._maximum_results then
-          if result_number > self._maximum_results then
+          if result_index > self._maximum_results then
             self:shutdown()
             return
           end
         end
 
-        table.insert(results, '')
+        result_index = result_index + 1
       end
-    until not found_newline
 
+      last_start = start + 1
+    until not found_newline
   end
 end
 
