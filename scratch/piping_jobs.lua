@@ -7,10 +7,14 @@ local Job = require('plenary.job')
 local fzf = Job:new {
   command = 'fzf';
 
-  writer = { 'hello', 'world', 'wow', 'cool' };
+  -- writer = { 'hello', 'world', 'wow', 'cool' };
+  writer = Job:new {
+    command = 'fdfind',
+    -- args = {'.', '~/'}
+  },
 
   -- Still doesn't work if you don't pass these args and just run `fzf`
-  args = {'--no-sort', '--filter', ''};
+  args = {'--no-sort', '--filter', 'neovim/src/nvim/eval'};
 }
 
 print(vim.inspect(fzf:sync()))
