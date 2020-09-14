@@ -172,11 +172,11 @@ local on_output = function(self, cb)
         results[result_index] = line
       end
 
-      if found_newline then
-        if cb then
-          cb(err, results[result_index], self)
-        end
+      if cb then
+        cb(err, results[result_index], self)
+      end
 
+      if found_newline then
         -- Stop processing if we've surpassed the maximum.
         if self._maximum_results then
           if result_index > self._maximum_results then
