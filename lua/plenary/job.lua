@@ -16,9 +16,35 @@ local function close_safely(handle)
   end
 end
 
-local shutdown_factory = function (child)
+local function yield_forever()
+  while true do
+    coroutine.yield()
+  end
+end
+
+
+local start_shutdown_check = function(child, options, code, signal)
+  uv.check_start(child._shutdown_check, function()
+    -- Wait until all the pipes are closing.
+    for _, pipe in ipairs({options.stdin, options.stdout, options.stderr}) do
+      if pipe and not uv.is_closing(pipe) then
+        return
+      end
+    end
+
+    uv.check_stop(child._shutdown_check)
+
+    child:_shutdown(code, signal)
+  end)
+end
+
+local shutdown_factory = function (child, options)
   return function(code, signal)
-    child:shutdown(code, signal)
+    if uv.is_closing(child._shutdown_check) then
+      return child:shutdown(code, signal)
+    else
+      start_shutdown_check(child, options, code, signal)
+    end
   end
 end
 
@@ -53,7 +79,7 @@ function Job:new(o)
 
   obj.command = o.command
   obj.args = o.args
-  obj.cwd = o.cwd
+  obj.cwd = o.cwd and vim.fn.expand(o.cwd)
   obj.env = o.env
   obj.detach = o.detach
 
@@ -79,7 +105,19 @@ end
 
 function Job:_reset()
   self.is_shutdown = nil
-  self.results = nil
+
+  if self._shutdown_check
+      and uv.is_active(self._shutdown_check)
+      and not uv.is_closing(self._shutdown_check) then
+    vim.api.nvim_err_writeln(debug.traceback("We may be memory leaking here. Please report to TJ."))
+  end
+  self._shutdown_check = uv.new_check()
+
+  self._stdout_reader = nil
+  self._stdout_results = {}
+
+  self._stderr_reader = nil
+  self._stderr_results = {}
 end
 
 --- Stop a job and close all handles
@@ -92,8 +130,33 @@ end
 
 --- Shutdown a job.
 function Job:shutdown(code, signal)
+  if not uv.is_active(self._shutdown_check) then
+    start_shutdown_check(self, self, code, signal)
+
+    -- TODO: This seems a bit questionable, but I'm basically waiting for a better `uv.run`.
+    --          I will have to investigate a bit more as time goes on.
+    vim.wait(10, function()
+      uv.run("nowait")
+      return uv.is_closing(self._shutdown_check)
+    end, 1)
+
+    -- vim.schedule_wrap(function() self:_stop() end)()
+  end
+
+  self:_shutdown(code, signal)
+end
+
+function Job:_shutdown(code, signal)
   self.code = code
   self.signal = signal
+
+  if self._stdout_reader then
+    self._stdout_reader(nil, nil, true)
+  end
+
+  if self._stderr_reader then
+    self._stderr_reader(nil, nil, true)
+  end
 
   if self._user_on_exit then
     self:_user_on_exit(code, signal)
@@ -137,60 +200,87 @@ function Job:_create_uv_options()
   return options
 end
 
--- TODO: Add the ability to have callback called ONLY on complete lines.
---          Remember, to send the last line when you're done though :laugh:
-local on_output = function(self, cb)
-  if not self.results then
-    self.results = {}
-  end
+local on_output = function(self, results, cb)
+  -- cb = cb or function() end
 
-  local results = self.results
-  local result_index = 1
-
-  return function(err, data)
-    if data == nil then
-      if results[result_index] == '' then
-        table.remove(results, result_index)
-      end
-
-      return
-    end
-
-    local last_start = 1
-    local data_length = #data
+  return coroutine.wrap(function(err, data, is_complete)
+    local result_index = 1
 
     local line, start, found_newline
-    repeat
-      start = string.find(data, "\n", last_start, true) or data_length
-      found_newline = start ~= data_length
 
-      line = string.sub(data, last_start, start - 1)
+    -- We repeat forever as a coroutine so that we can keep calling this.
+    while true do
+      if data then
+        local processed_index = 1
+        local data_length = #data + 1
 
-      if results[result_index] then
-        results[result_index] = results[result_index] .. line
-      else
-        results[result_index] = line
-      end
+        repeat
+          start = string.find(data, "\n", processed_index, true) or data_length
+          line = string.sub(data, processed_index, start - 1)
+          found_newline = start ~= data_length
 
-      if found_newline then
-        if cb then
-          cb(err, results[result_index], self)
-        end
+          -- Concat to last line if there was something there already.
+          --    This happens when "data" is broken into chunks and sometimes
+          --    the content is sent without any newlines.
+          if results[result_index] then
+            results[result_index] = results[result_index] .. line
 
-        -- Stop processing if we've surpassed the maximum.
-        if self._maximum_results then
-          if result_index > self._maximum_results then
-            self:shutdown()
-            return
+          -- Only put in a new line when we actually have new data to split.
+          --    This is generally only false when we do end with a new line.
+          --    It prevents putting in a "" to the end of the results.
+          elseif start ~= processed_index or found_newline then
+            results[result_index] = line
+
+          -- Otherwise, we don't need to do anything.
           end
-        end
 
-        result_index = result_index + 1
+          if found_newline then
+            if not results[result_index] then
+              vim.api.nvim_err_writeln(
+                "Broken data thing due to: "
+                .. tostring(results[result_index])
+                .. " "
+                .. tostring(data))
+
+              return
+            end
+
+            if cb then
+              cb(err, results[result_index], self)
+            end
+
+            -- Stop processing if we've surpassed the maximum.
+            if self._maximum_results then
+              if result_index > self._maximum_results then
+                -- Shutdown once we get the chance.
+                --  Can't call it here, because we'll just keep calling ourselves.
+                vim.schedule(function()
+                  self:shutdown()
+                end)
+
+                -- Make this function do nothing.
+                yield_forever()
+              end
+            end
+
+            result_index = result_index + 1
+          end
+
+          processed_index = start + 1
+        until not found_newline
       end
 
-      last_start = start + 1
-    until not found_newline
-  end
+      if cb and is_complete and not found_newline then
+        cb(err, results[result_index], self)
+      end
+
+      if data == nil then
+        yield_forever()
+      end
+
+      err, data, is_complete = coroutine.yield()
+    end
+  end)
 end
 
 --- Stop previous execution and add new pipes.
@@ -222,12 +312,18 @@ function Job:_execute()
   self.handle, self.pid = uv.spawn(
     options.command,
     options,
-    vim.schedule_wrap(shutdown_factory(self))
+    shutdown_factory(self, options)
   )
 
   if self.enable_handlers then
-    self.stdout:read_start(on_output(self, self._user_on_stdout))
-    self.stderr:read_start(on_output(self, self._user_on_stderr))
+    self._stdout_reader = on_output(self, self._stdout_results, self._user_on_stdout)
+    self.stdout:read_start(self._stdout_reader)
+
+    self._stderr_reader = on_output(self, self._stderr_results, self._user_on_stderr)
+    self.stderr:read_start(self._stderr_reader)
+  else
+    self.stdout:read_start()
+    self.stderr:read_start()
   end
 
   if self.writer then
@@ -239,7 +335,7 @@ function Job:_execute()
       end
       self.stdin:close()
     elseif type(self.writer) == 'string' then
-      self.stdin:write(self.writer .. '\n')
+      self.stdin:write(self.writer)
       self.stdin:close()
     else
       error('Unknown self.writer: ' .. vim.inspect(self.writer))
@@ -254,23 +350,29 @@ function Job:start()
   self:_execute()
 end
 
-function Job:sync(timeout)
+function Job:sync(timeout, wait_interval)
   self:start()
-  self:wait(timeout)
+  self:wait(timeout, wait_interval)
 
   return self:result()
 end
 
 function Job:result()
-  return self.results
+  return self._stdout_results
 end
+
+function Job:stdder_result()
+  return self._stderr_results
+end
+
 
 function Job:pid()
   return self.pid
 end
 
-function Job:wait(timeout)
+function Job:wait(timeout, wait_interval)
   timeout = timeout or 5000
+  wait_interval = wait_interval or 10
 
   if self.handle == nil then
     vim.api.nvim_err_writeln(vim.inspect(self))
@@ -284,10 +386,15 @@ function Job:wait(timeout)
     end
 
     return self.is_shutdown
-  end, 10)
+  end, wait_interval)
 
   if not wait_result then
-    error(string.format("'%s %s' was unable to complete in %s ms", self.command, table.concat(self.args, " "), timeout))
+    error(string.format(
+      "'%s %s' was unable to complete in %s ms",
+      self.command,
+      table.concat(self.args or {}, " "),
+      timeout
+    ))
   end
 
   return self
@@ -388,6 +495,5 @@ function Job:send(data)
 
   self.stdin:write(data)
 end
-
 
 return Job
