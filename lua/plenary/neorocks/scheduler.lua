@@ -1,5 +1,3 @@
-local Job = require('plenary.job')
-
 local scheduler = {}
 
 function scheduler:new()
@@ -36,9 +34,9 @@ function scheduler:_run_item(item)
 end
 
 function scheduler:_chain_item(item)
-  self.items[#self.items - 1]:add_on_exit_callback(function()
+  self.items[#self.items - 1]:add_on_exit_callback(vim.schedule_wrap(function()
     self:_run_item(item)
-  end)
+  end))
 end
 
 return scheduler
