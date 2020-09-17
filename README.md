@@ -142,9 +142,9 @@ Include the following somewhere in your configuration (either heredoc or sourced
 ```lua
 local neorocks = require("plenary.neorocks")
 
--- This will run a one-time setup to install hererocks and other required packages.
--- After running this, you should be able to install anything that you can install via luarocks.
-neorocks.setup_hererocks()
+-- Installs neorocks if necessary and then installs the package you need.
+--  Is not synchronous, so should be called from Neovim's command line most likely.
+neorocks.install('penlight', 'pl')
 
 -- ensure_installed(package_name, lua_name, headless)
 -- Only installs if currently not installed.
