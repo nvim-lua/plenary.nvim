@@ -6,8 +6,9 @@ local colors
 
 local isatty = io.type(io.stdout) == 'file' and term.isatty(io.stdout)
 local isWindows = package.config:sub(1,1) == '\\'
+local has_terminal = pcall(require, 'terminal')
 
-if isWindows and not os.getenv("ANSICON") or not isatty then
+if not has_terminal and (isWindows and not os.getenv("ANSICON") or not isatty) then
   colors = setmetatable({}, {__index = function() return function(s) return s end end})
 else
   colors = require 'term.colors'
@@ -208,7 +209,7 @@ return function(options)
   end
 
   handler.testStart = function(element, parent)
-    io.write(runString:format(getFullName(element)))
+    -- io.write(runString:format(getFullName(element)))
     io.flush()
 
     return nil, true

@@ -361,7 +361,7 @@ function Job:result()
   return self._stdout_results
 end
 
-function Job:stdder_result()
+function Job:stderr_result()
   return self._stderr_results
 end
 

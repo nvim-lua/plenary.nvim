@@ -11,6 +11,8 @@ local headless = require("plenary.nvim_meta").is_headless
 
 local harness = {}
 
+local p_debug = false
+
 local function validate_test_type(test_type)
   if test_type ~= 'luaunit' and test_type ~= 'busted' then
     error(
@@ -29,9 +31,12 @@ local print_output = function(_, ...)
   end
 end
 
-local nvim_output = function(bufnr, ...)
-  vim.fn.nvim_buf_set_lines(bufnr, -1, -1, false, {...})
-end
+local nvim_output = vim.schedule_wrap(function(bufnr, ...)
+  for _, v in ipairs({...}) do
+    v = v:gsub("\n", ""):gsub("\r", "")
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {v})
+  end
+end)
 
 function harness:run(test_type, bufnr, win_id, ...)
   validate_test_type(test_type)
@@ -42,8 +47,10 @@ function harness:run(test_type, bufnr, win_id, ...)
 
   if win_id == nil then
     -- TODO: Could just make win be 0...?
-    local opts = win_float.default_opts()
-    win_id = vim.fn.nvim_open_win(bufnr, true, opts)
+    -- local opts = win_float.default_opts()
+    -- win_id = vim.fn.nvim_open_win(bufnr, true, opts)
+    local range_win_options = win_float.percentage_range_window(0.5, 0.70)
+    win_id = range_win_options.win_id
   end
 
   vim.fn.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
@@ -86,10 +93,19 @@ function harness:test_directory(test_type, directory)
     require('plenary.neorocks').ensure_installed('penlight', 'pl', true)
   end
 
+  local res = win_float.percentage_range_window(0.95, 0.70, {winblend = 3})
 
-  local res = win_float.centered()
+  vim.api.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
+  vim.api.nvim_buf_set_option(res.bufnr, 'filetype', 'terminal')
+
+  vim.api.nvim_win_set_option(res.win_id, 'winhl', 'Normal:Normal')
+  vim.api.nvim_win_set_option(res.win_id, 'conceallevel', 3)
+  vim.api.nvim_win_set_option(res.win_id, 'concealcursor', 'n')
+
+  if res.border_win_id then
+    vim.api.nvim_win_set_option(res.border_win_id, 'winhl', 'Normal:Normal')
+  end
   vim.cmd('mode')
-  vim.fn.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
 
   local outputter
   if headless then
@@ -112,20 +128,20 @@ function harness:test_directory(test_type, directory)
           )
         },
         -- Can be turned on to debug
-        on_stdout = function(...)
-          if p_debug then
-            print("STDOUT:", ...)
-          end
+        on_stdout = function(_, data)
+          data = data:gsub("\n", ""):gsub("\r", "")
+          -- outputter(res.bufnr, data)
         end,
-        on_stderr = function(...)
-          if p_debug then
-            print("STDERR:", ...)
-          end
+        on_stderr = function(_, data)
+          data = data:gsub("\n", ""):gsub("\r", "")
+          -- outputter(res.bufnr, data)
         end,
-        on_exit = function(j_self, _, _)
+
+        on_exit = vim.schedule_wrap(function(j_self, _, _)
+          outputter(res.bufnr, unpack(j_self:stderr_result()))
           outputter(res.bufnr, unpack(j_self:result()))
           vim.cmd('mode')
-        end
+        end)
       })
     end,
     paths
@@ -196,7 +212,7 @@ function harness:setup_busted()
     return
   end
 
-  require('busted.runner')({output='plainTerminal'}, 3)
+  require('busted.runner')({output='gtest'}, 3)
 end
 
 return harness
