@@ -4,17 +4,17 @@ require('plenary.reload').reload_module('plenary')
 
 local Job = require('plenary.job')
 
-local fzf = Job:new {
-  command = 'fzf';
+-- fdfind | fzf --no-sort
 
-  -- writer = { 'hello', 'world', 'wow', 'cool' };
+local fzf = Job:new {
   writer = Job:new {
     command = 'fdfind',
-    -- args = {'.', '~/'}
   },
 
+  command = 'fzf';
+
   -- Still doesn't work if you don't pass these args and just run `fzf`
-  args = {'--no-sort', '--filter', 'neovim/src/nvim/eval'};
+  args = {'--no-sort', '--filter', 'action'};
 }
 
 print(vim.inspect(fzf:sync()))
