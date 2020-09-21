@@ -1,24 +1,20 @@
 local vim = vim
 local uv = vim.loop
 
-local functional = require('plenary.functional')
+local F = require('plenary.functional')
 
 local Job = {}
 Job.__index = Job
 
-local function close_safely(handle)
+local function close_safely(j, key)
+  local handle = j[key]
+
   if not handle then
     return
   end
 
   if not handle:is_closing() then
     handle:close()
-  end
-end
-
-local function yield_forever()
-  while true do
-    coroutine.yield()
   end
 end
 
@@ -35,6 +31,10 @@ local start_shutdown_check = function(child, options, code, signal)
     uv.check_stop(child._shutdown_check)
 
     child:_shutdown(code, signal)
+
+    -- Remove left over references
+    child._shutdown_check = nil
+    child = nil
   end)
 end
 
@@ -62,7 +62,6 @@ end
 ---@field o.args Array              : List of arguments to pass
 ---@field o.cwd string              : Working directory for job
 ---@field o.env Map                 : Environment
----@field o.detach function         : Function to call on detach.
 ---@field o.enable_handlers boolean : If set to false, disables all callbacks associated with output
 ---@field o.on_start function       : Run when starting job
 ---@field o.on_stdout function      : (error: string, data: string, self? Job)
@@ -75,15 +74,32 @@ function Job:new(o)
     error(debug.traceback("Options are required for Job:new"))
   end
 
+  if not o.command then
+    error(debug.traceback("'command' is required for Job:new"))
+  end
+
   local obj = {}
 
   obj.command = o.command
   obj.args = o.args
   obj.cwd = o.cwd and vim.fn.expand(o.cwd)
   obj.env = o.env
-  obj.detach = o.detach
 
-  obj.enable_handlers = functional.if_nil(o.enable_handlers, true, o.enable_handlers)
+  -- enable_handlers: Do you want to do ANYTHING with the stdout/stderr of the proc
+  obj.enable_handlers = F.if_nil(o.enable_handlers, true, o.enable_handlers)
+
+  -- enable_recording: Do you want to record stdout/stderr into a table.
+  --                    Since it cannot be enabled when enable_handlers is false,
+  --                    we try and make sure they are associated correctly.
+  obj.enable_recording = F.if_nil(
+    F.if_nil(o.enable_recording, o.enable_handlers, o.enable_recording),
+    true,
+    o.enable_recording
+  )
+
+  if not obj.enable_handlers and obj.enable_recording then
+    error("[plenary.job] Cannot record items but disable handlers")
+  end
 
   obj._user_on_start = o.on_start
   obj._user_on_stdout = o.on_stdout
@@ -113,19 +129,28 @@ function Job:_reset()
   end
   self._shutdown_check = uv.new_check()
 
-  self._stdout_reader = nil
-  self._stdout_results = {}
+  self.stdin = nil
+  self.stdout = nil
+  self.stderr = nil
 
+  self._stdout_reader = nil
   self._stderr_reader = nil
-  self._stderr_results = {}
+
+  if self.enable_recording then
+    self._stdout_results = {}
+    self._stderr_results = {}
+  else
+    self._stdout_results = nil
+    self._stderr_results = nil
+  end
 end
 
 --- Stop a job and close all handles
 function Job:_stop()
-  close_safely(self.stdin)
-  close_safely(self.stderr)
-  close_safely(self.stdout)
-  close_safely(self.handle)
+  close_safely(self, "stdin")
+  close_safely(self, "stderr")
+  close_safely(self, "stdout")
+  close_safely(self, "handle")
 end
 
 --- Shutdown a job.
@@ -137,10 +162,8 @@ function Job:shutdown(code, signal)
     --          I will have to investigate a bit more as time goes on.
     vim.wait(10, function()
       uv.run("nowait")
-      return uv.is_closing(self._shutdown_check)
+      return self._shutdown_check == nil or uv.is_closing(self._shutdown_check)
     end, 1)
-
-    -- vim.schedule_wrap(function() self:_stop() end)()
   end
 
   self:_shutdown(code, signal)
@@ -151,11 +174,11 @@ function Job:_shutdown(code, signal)
   self.signal = signal
 
   if self._stdout_reader then
-    self._stdout_reader(nil, nil, true)
+    pcall(self._stdout_reader, nil, nil, true)
   end
 
   if self._stderr_reader then
-    self._stderr_reader(nil, nil, true)
+    pcall(self._stderr_reader, nil, nil, true)
   end
 
   if self._user_on_exit then
@@ -166,12 +189,20 @@ function Job:_shutdown(code, signal)
     v(self, code, signal)
   end
 
-  self.stdout:read_stop()
-  self.stderr:read_stop()
+  if self.stdout then
+    self.stdout:read_stop()
+  end
+
+  if self.stderr then
+    self.stderr:read_stop()
+  end
 
   self:_stop()
 
   self.is_shutdown = true
+
+  self._stdout_reader = nil
+  self._stderr_reader = nil
 end
 
 function Job:_create_uv_options()
@@ -179,34 +210,19 @@ function Job:_create_uv_options()
 
   options.command = self.command
   options.args = self.args
-  options.stdio = {
-    self.stdin,
-    self.stdout,
-    self.stderr
-  }
+  options.stdio = { self.stdin, self.stdout, self.stderr }
 
-  if self.cwd then
-    options.cwd = self.cwd
-  end
-
-  if self.env then
-    options.env = self.env
-  end
-
-  if self.detach then
-    options.detach = self.detach
-  end
+  if self.cwd then options.cwd = self.cwd end
+  if self.env then options.env = self.env end
 
   return options
 end
 
-local on_output = function(self, results, cb)
-  -- cb = cb or function() end
-
+local on_output = function(self, result_key, cb)
   return coroutine.wrap(function(err, data, is_complete)
     local result_index = 1
 
-    local line, start, found_newline
+    local line, start, result_line, found_newline
 
     -- We repeat forever as a coroutine so that we can keep calling this.
     while true do
@@ -222,60 +238,65 @@ local on_output = function(self, results, cb)
           -- Concat to last line if there was something there already.
           --    This happens when "data" is broken into chunks and sometimes
           --    the content is sent without any newlines.
-          if results[result_index] then
-            results[result_index] = results[result_index] .. line
+          if result_line then
+            -- results[result_index] = results[result_index] .. line
+            result_line = result_line .. line
 
           -- Only put in a new line when we actually have new data to split.
           --    This is generally only false when we do end with a new line.
           --    It prevents putting in a "" to the end of the results.
           elseif start ~= processed_index or found_newline then
-            results[result_index] = line
+            -- results[result_index] = line
+            result_line = line
 
           -- Otherwise, we don't need to do anything.
           end
 
           if found_newline then
-            if not results[result_index] then
-              vim.api.nvim_err_writeln(
-                "Broken data thing due to: "
-                .. tostring(results[result_index])
-                .. " "
-                .. tostring(data))
+            if not result_line then
+              return vim.api.nvim_err_writeln(
+                "Broken data thing due to: " .. tostring(result_line) .. " " .. tostring(data)
+              )
+            end
+
+            if self.enable_recording then
+              self[result_key][result_index] = result_line
+            end
+
+            if cb then
+              cb(err, result_line, self)
+            end
+
+            -- Stop processing if we've surpassed the maximum.
+            if self._maximum_results and result_index > self._maximum_results then
+              -- Shutdown once we get the chance.
+              --  Can't call it here, because we'll just keep calling ourselves.
+              vim.schedule(function()
+                self:shutdown()
+              end)
 
               return
             end
 
-            if cb then
-              cb(err, results[result_index], self)
-            end
-
-            -- Stop processing if we've surpassed the maximum.
-            if self._maximum_results then
-              if result_index > self._maximum_results then
-                -- Shutdown once we get the chance.
-                --  Can't call it here, because we'll just keep calling ourselves.
-                vim.schedule(function()
-                  self:shutdown()
-                end)
-
-                -- Make this function do nothing.
-                yield_forever()
-              end
-            end
-
             result_index = result_index + 1
+            result_line = nil
           end
 
           processed_index = start + 1
         until not found_newline
       end
 
-      if cb and is_complete and not found_newline then
-        cb(err, results[result_index], self)
+      if self.enable_recording then
+        self[result_key][result_index] = result_line
       end
 
-      if data == nil then
-        yield_forever()
+      -- If we didn't get a newline on the last execute, send the final results.
+      if cb and is_complete and not found_newline then
+        cb(err, result_line, self)
+      end
+
+      if data == nil or is_complete then
+        return
       end
 
       err, data, is_complete = coroutine.yield()
@@ -291,18 +312,22 @@ function Job:_prepare_pipes()
   if self.writer then
     if Job.is_job(self.writer) then
       self.writer:_prepare_pipes()
+      self.stdin = self.writer.stdout
+    elseif self.writer.write then
+      self.stdin = self.writer
     end
   end
 
-  self.stdin = (self.writer and self.writer.stdout) or uv.new_pipe(false)
+  if not self.stdin then
+    self.stdin = uv.new_pipe(false)
+  end
+
   self.stdout = uv.new_pipe(false)
   self.stderr = uv.new_pipe(false)
 end
 
 --- Execute job. Should be called only after preprocessing is done.
 function Job:_execute()
-  self:_reset()
-
   local options = self:_create_uv_options()
 
   if self._user_on_start then
@@ -315,15 +340,16 @@ function Job:_execute()
     shutdown_factory(self, options)
   )
 
+  if not self.handle then
+    error(debug.traceback("Failed to spawn process: " .. vim.inspect(self)))
+  end
+
   if self.enable_handlers then
-    self._stdout_reader = on_output(self, self._stdout_results, self._user_on_stdout)
+    self._stdout_reader = on_output(self, "_stdout_results", self._user_on_stdout)
     self.stdout:read_start(self._stdout_reader)
 
-    self._stderr_reader = on_output(self, self._stderr_results, self._user_on_stderr)
+    self._stderr_reader = on_output(self, "_stderr_results", self._user_on_stderr)
     self.stderr:read_start(self._stderr_reader)
-  else
-    self.stdout:read_start()
-    self.stderr:read_start()
   end
 
   if self.writer then
@@ -337,6 +363,8 @@ function Job:_execute()
     elseif type(self.writer) == 'string' then
       self.stdin:write(self.writer)
       self.stdin:close()
+    elseif self.writer.write then
+      self.stdin = self.writer
     else
       error('Unknown self.writer: ' .. vim.inspect(self.writer))
     end
@@ -346,6 +374,7 @@ function Job:_execute()
 end
 
 function Job:start()
+  self:_reset()
   self:_prepare_pipes()
   self:_execute()
 end
@@ -354,14 +383,16 @@ function Job:sync(timeout, wait_interval)
   self:start()
   self:wait(timeout, wait_interval)
 
-  return self:result()
+  return self.enable_recording and self:result() or nil
 end
 
 function Job:result()
+  assert(self.enable_recording, "'enabled_recording' is not enabled for this job.")
   return self._stdout_results
 end
 
 function Job:stderr_result()
+  assert(self.enable_recording, "'enabled_recording' is not enabled for this job.")
   return self._stderr_results
 end
 
@@ -382,7 +413,7 @@ function Job:wait(timeout, wait_interval)
   -- Wait five seconds, or until timeout.
   local wait_result = vim.wait(timeout, function()
     if self.is_shutdown then
-      assert(self.handle:is_closing(), "Job must be shutdown if it's closing")
+      assert(not self.handle or self.handle:is_closing(), "Job must be shutdown if it's closing")
     end
 
     return self.is_shutdown
@@ -437,24 +468,25 @@ end
 local _request_id = 0
 local _request_status = {}
 
+function Job:and_then(next_job)
+  self:add_on_exit_callback(vim.schedule_wrap(function()
+    next_job:start()
+  end))
+end
+
 function Job.chain(...)
   _request_id = _request_id + 1
   _request_status[_request_id] = false
 
   local jobs = {...}
 
-  for index, job in ipairs(jobs) do
-    if index ~= 1 then
-      local prev_job = jobs[index - 1]
-      local original_on_exit = prev_job._user_on_exit
-      prev_job._user_on_exit = function(self, err, data)
-        if original_on_exit then
-          original_on_exit(self, err, data)
-        end
+  for index = 2, #jobs do
+    local prev_job = jobs[index - 1]
+    local job = jobs[index]
 
-        job:start()
-      end
-    end
+    prev_job:add_on_exit_callback(vim.schedule_wrap(function()
+      job:start()
+    end))
   end
 
   local last_on_exit = jobs[#jobs]._user_on_exit
