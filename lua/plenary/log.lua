@@ -143,10 +143,12 @@ log.new = function(config, standalone)
   end
 
   for i, x in ipairs(config.modes) do
+    -- log.info("these", "are", "separated")
     obj[x.name] = function(...)
       return log_at_level(i, x, make_string, ...)
     end
 
+    -- log.fmt_info("These are %s strings", "formatted")
     obj[("fmt_%s" ):format(x.name)] = function()
       return log_at_level(i, x, function(...)
         local passed = {...}
@@ -156,6 +158,13 @@ log.new = function(config, standalone)
           table.insert(inspected, vim.inspect(v))
         end
         return string.format(fmt, unpack(inspected))
+      end)
+    end
+
+    -- log.lazy_info(expensive_to_calculate)
+    obj[("lazy_%s" ):format(x.name)] = function()
+      return log_at_level(i, x, function(f)
+        return f()
       end)
     end
   end

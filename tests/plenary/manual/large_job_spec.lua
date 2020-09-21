@@ -3,14 +3,6 @@ require('plenary.reload').reload_module('plenary')
 local Job = require('plenary.job')
 local profiler = require('plenary.profile.lua_profiler')
 
-if false then
-  OLD_INSPECT = OLD_INSPECT or vim.inspect
-
-  vim.inspect = function(...)
-    error(OLD_INSPECT({...}))
-  end
-end
-
 profiler.start()
 
 local start = vim.fn.reltime()
@@ -45,3 +37,6 @@ if finish == nil then
 else
   print("finished in:", vim.fn.reltimestr(finish))
 end
+
+collectgarbage()
+print(collectgarbage("count"))
