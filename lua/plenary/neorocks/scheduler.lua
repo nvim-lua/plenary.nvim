@@ -12,7 +12,7 @@ end
 
 function scheduler:insert(item)
   if not item then
-    return
+    return item
   end
 
   table.insert(self.items, item)
@@ -22,6 +22,8 @@ function scheduler:insert(item)
   else
     self:_chain_item(item)
   end
+
+  return item
 end
 
 function scheduler:_run_item(item)
