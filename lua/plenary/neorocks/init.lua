@@ -65,15 +65,15 @@ neorocks.job_with_display_output = function(title_text, command, args)
     on_stdout = outputter,
     on_stderr = outputter,
 
-    on_exit = vim.schedule_wrap(function(self, signal)
-      -- if not vim.tbl_isempty(self._additional_on_exit_callbacks) then
-      --   return
-      -- end
-
+    on_exit = vim.schedule_wrap(function(self, code)
       local bufnr = self.user_data.views.bufnr
       if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
-      vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {"", ("="):rep(40), "  Success! Leave window to close.", ("="):rep(40)})
+      if code == 0 then
+        vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {"", ("="):rep(40), "  Success! <Enter> to close.", ("="):rep(40)})
+      else
+        vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {"", ("="):rep(40), "  Failed to complete. <Enter> to close.", ("="):rep(40)})
+      end
 
       local win_id = self.user_data.views.win_id
       if not vim.api.nvim_win_is_valid(win_id) then return end
@@ -81,6 +81,7 @@ neorocks.job_with_display_output = function(title_text, command, args)
       local final_row = #vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
       vim.api.nvim_win_set_cursor(win_id, {final_row, 0})
 
+      vim.api.nvim_buf_set_keymap(bufnr, 'n', '<CR>', ':quit<CR>', {silent = true, noremap = true})
     end)
   }
 end
@@ -296,7 +297,7 @@ neorocks.install = function(package_name, lua_name, force)
     return
   end
 
-  neorocks.scheduler:insert(neorocks._get_install_job(package_name))
+  return neorocks.scheduler:insert(neorocks._get_install_job(package_name))
 end
 
 neorocks.ensure_installed = function(package_name, lua_name)
@@ -317,7 +318,7 @@ neorocks.ensure_installed = function(package_name, lua_name)
     return
   end
 
-  neorocks.install(package_name, lua_name)
+  neorocks.install(package_name, lua_name):wait(60000, 100, true)
 end
 
 neorocks.remove = function(package_name)

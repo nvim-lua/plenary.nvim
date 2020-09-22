@@ -401,7 +401,7 @@ function Job:pid()
   return self.pid
 end
 
-function Job:wait(timeout, wait_interval)
+function Job:wait(timeout, wait_interval, should_redraw)
   timeout = timeout or 5000
   wait_interval = wait_interval or 10
 
@@ -412,6 +412,10 @@ function Job:wait(timeout, wait_interval)
 
   -- Wait five seconds, or until timeout.
   local wait_result = vim.wait(timeout, function()
+    if should_redraw then
+      vim.cmd [[redraw!]]
+    end
+
     if self.is_shutdown then
       assert(not self.handle or self.handle:is_closing(), "Job must be shutdown if it's closing")
     end
@@ -450,19 +454,15 @@ end
 function Job.join(...)
   local jobs_to_wait = {...}
 
-  while true do
-    if #jobs_to_wait == 0 then
-      break
+  return vim.wait(5000, function()
+    for index, current_job in ipairs(jobs_to_wait) do
+      if current_job.is_shutdown then
+        table.remove(jobs_to_wait, index)
+      end
     end
 
-    local current_job = jobs_to_wait[1]
-    if current_job.is_shutdown then
-      table.remove(jobs_to_wait, 1)
-    end
-
-    -- vim.cmd.sleep(10)
-    vim.cmd("sleep 100m")
-  end
+    return #jobs_to_wait == 0
+  end)
 end
 
 local _request_id = 0
