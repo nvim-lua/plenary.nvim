@@ -319,7 +319,7 @@ function Job:_prepare_pipes()
   end
 
   if not self.stdin then
-    self.stdin = uv.new_pipe(false)
+    self.stdin = nil
   end
 
   self.stdout = uv.new_pipe(false)
