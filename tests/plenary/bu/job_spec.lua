@@ -166,10 +166,13 @@ describe('Job', function()
       local fzf = Job:new {
         writer = Job:new {
           command = 'fdfind',
+          cwd = vim.fn.expand("~/plugins/plenary.nvim/"),
         },
 
         command = 'fzf';
         args = {'--filter', 'job.lua'};
+
+        cwd = vim.fn.expand("~/plugins/plenary.nvim/"),
 
         on_stdout = function(_, line) table.insert(stdout_results, line) end
       }
