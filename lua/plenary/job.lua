@@ -227,6 +227,8 @@ local on_output = function(self, result_key, cb)
     -- We repeat forever as a coroutine so that we can keep calling this.
     while true do
       if data then
+        data = data:gsub("\r", "")
+
         local processed_index = 1
         local data_length = #data + 1
 
