@@ -84,6 +84,10 @@ function Job:new(o)
   obj.args = o.args
   obj.cwd = o.cwd and vim.fn.expand(o.cwd)
   obj.env = o.env
+  if o.interactive == nil then
+    obj.interactive = true
+  else
+    obj.interactive = o.interactive
 
   -- enable_handlers: Do you want to do ANYTHING with the stdout/stderr of the proc
   obj.enable_handlers = F.if_nil(o.enable_handlers, true, o.enable_handlers)
@@ -319,7 +323,7 @@ function Job:_prepare_pipes()
   end
 
   if not self.stdin then
-    self.stdin = nil
+    self.stdin = (self.interactive == true) and uv.new_pipe(false) or nil
   end
 
   self.stdout = uv.new_pipe(false)
