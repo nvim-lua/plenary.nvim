@@ -423,7 +423,7 @@ function Job:wait(timeout, wait_interval, should_redraw)
     end
 
     return self.is_shutdown
-  end, wait_interval)
+  end, wait_interval, not should_redraw)
 
   if not wait_result then
     error(string.format(
