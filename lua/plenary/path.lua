@@ -3,8 +3,7 @@
 --- Goal: Create objects that are extremely similar to Python's `Path` Objects.
 --- Reference: https://docs.python.org/3/library/pathlib.html
 
-local vim = vim
-local luv = require('luv')  -- TODO: Might want to consider more luv, less vim for some of these.
+local uv = vim.loop
 
 local path = {}
 
@@ -136,7 +135,7 @@ function path:rmdir()
         return
     end
 
-    luv.fs_rmdir(self:absolute())
+    uv.fs_rmdir(self:absolute())
 end
 
 function path:is_dir()
@@ -149,6 +148,22 @@ function path:open()
 end
 
 function path:close()
+end
+
+function path:read()
+  local fd = assert(uv.fs_open(self:absolute(), "r", 438))
+  local stat = assert(uv.fs_fstat(fd))
+  local data = assert(uv.fs_read(fd, stat.size, 0))
+  assert(uv.fs_close(fd))
+
+  return data
+end
+
+function path:readlines()
+  local data = self:read()
+
+  data = data:gsub("\r", "")
+  return vim.split(data, "\n")
 end
 
 return path
