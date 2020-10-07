@@ -28,7 +28,10 @@ function Border._create_lines(content_win_options, border_win_options)
   local topright = (right_enabled and border_win_options.topright) or ''
 
   if border_win_options.title then
-    local title = border_win_options.title == '' and border_win_options.title or string.format(" %s ", border_win_options.title)
+    local title = border_win_options.title
+    if title ~= '' then
+      title = string.format(" %s ", title)
+    end
     local title_len = string.len(title)
 
     local midpoint = math.floor(content_win_options.width / 2)
