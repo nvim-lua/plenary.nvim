@@ -88,6 +88,7 @@ function Job:new(o)
     obj.interactive = true
   else
     obj.interactive = o.interactive
+  end
 
   -- enable_handlers: Do you want to do ANYTHING with the stdout/stderr of the proc
   obj.enable_handlers = F.if_nil(o.enable_handlers, true, o.enable_handlers)
@@ -323,7 +324,7 @@ function Job:_prepare_pipes()
   end
 
   if not self.stdin then
-    self.stdin = (self.interactive == true) and uv.new_pipe(false) or nil
+    self.stdin = self.interactive and uv.new_pipe(false) or nil
   end
 
   self.stdout = uv.new_pipe(false)
