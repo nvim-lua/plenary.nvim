@@ -2,11 +2,12 @@ local pretty = require 'pl.pretty'
 local term = require 'term'
 local io = io
 
+local headless = require("plenary.nvim_meta").is_headless
 local colors
 
 local isatty = io.type(io.stdout) == 'file' and term.isatty(io.stdout)
 local isWindows = package.config:sub(1,1) == '\\'
-local has_terminal = pcall(require, 'terminal')
+local has_terminal = pcall(require, 'terminal') and not headless
 
 if not has_terminal and (isWindows and not os.getenv("ANSICON") or not isatty) then
   colors = setmetatable({}, {__index = function() return function(s) return s end end})
