@@ -456,10 +456,10 @@ end
 function Job.join(...)
   local jobs_to_wait = {...}
 
-  return vim.wait(5000, function()
-    for index, current_job in ipairs(jobs_to_wait) do
+  return vim.wait(10000, function()
+    for index, current_job in pairs(jobs_to_wait) do
       if current_job.is_shutdown then
-        table.remove(jobs_to_wait, index)
+        jobs_to_wait[index] = nil
       end
     end
 

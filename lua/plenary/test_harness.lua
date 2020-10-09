@@ -154,14 +154,18 @@ function harness:test_directory(test_type, directory)
 
   log.debug("...Waiting")
   Job.join(unpack(jobs))
+  vim.wait(100)
   log.debug("Done...")
 
   if headless then
-    if f.any(function(_, v) return v.code ~= 0 end, jobs) then
+    if f.any(function(_, v)
+      return v.code ~= 0
+    end, jobs) then
       os.exit(1)
     end
 
-    vim.cmd('qa!')
+    os.exit(0)
+    -- vim.cmd('qa!')
   end
 end
 

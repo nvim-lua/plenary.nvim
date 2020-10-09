@@ -216,7 +216,8 @@ return function(options, level)
 
   busted.publish({ 'exit' })
 
-  if options.standalone or failures > 0 or errors > 0 then
+  if failures > 0 or errors > 0 then
     -- exit(failures + errors, forceExit)
+    os.exit(failures + errors)
   end
 end
