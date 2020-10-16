@@ -98,7 +98,7 @@ log.new = function(config, standalone)
     local nameupper = level_config.name:upper()
 
     local msg = message_maker(...)
-    local info = debug.getinfo(2, "Sl")
+    local info = debug.getinfo(config.info_level or 2, "Sl")
     local lineinfo = info.short_src .. ":" .. info.currentline
 
     -- Output to console
@@ -134,9 +134,11 @@ log.new = function(config, standalone)
 
     -- Output to log file
     if config.use_file then
-      local fp = io.open(outfile, "a")
-      local str = string.format("[%-6s%s] %s: %s\n",
-      nameupper, os.date(), lineinfo, msg)
+      local fp = assert(io.open(outfile, "a"))
+      local str = string.format(
+        "[%-6s%s] %s: %s\n",
+        nameupper, os.date(), lineinfo, msg
+      )
       fp:write(str)
       fp:close()
     end
@@ -162,10 +164,20 @@ log.new = function(config, standalone)
     end
 
     -- log.lazy_info(expensive_to_calculate)
-    obj[("lazy_%s" ):format(x.name)] = function()
+    obj[("lazy_%s"):format(x.name)] = function()
       return log_at_level(i, x, function(f)
         return f()
       end)
+    end
+
+    -- log.file_info("do not print")
+    obj[("file_%s"):format(x.name)] = function(vals, override)
+      local original_console = config.use_console
+      config.use_console = false
+      config.info_level = override.info_level
+      log_at_level(i, x, make_string, unpack(vals))
+      config.use_console = original_console
+      config.info_level = nil
     end
   end
 
