@@ -21,19 +21,17 @@ end
 
 local start_shutdown_check = function(child, options, code, signal)
   uv.check_start(child._shutdown_check, function()
-    -- Wait until all the pipes are closing.
-    for _, pipe in ipairs({options.stdin, options.stdout, options.stderr}) do
-      if pipe and not uv.is_closing(pipe) then
-        return
-      end
+    if not child:_pipes_are_closed(options) then
+      return
     end
 
+    -- Wait until all the pipes are closing.
     uv.check_stop(child._shutdown_check)
+    child._shutdown_check = nil
 
     child:_shutdown(code, signal)
 
     -- Remove left over references
-    child._shutdown_check = nil
     child = nil
   end)
 end
@@ -153,23 +151,32 @@ function Job:_stop()
   close_safely(self, "handle")
 end
 
+function Job:_pipes_are_closed(options)
+  for _, pipe in ipairs({options.stdin, options.stdout, options.stderr}) do
+    if pipe and not uv.is_closing(pipe) then
+      return false
+    end
+  end
+
+  return true
+end
+
 --- Shutdown a job.
 function Job:shutdown(code, signal)
   if not uv.is_active(self._shutdown_check) then
-    start_shutdown_check(self, self, code, signal)
-
-    -- TODO: This seems a bit questionable, but I'm basically waiting for a better `uv.run`.
-    --          I will have to investigate a bit more as time goes on.
-    vim.wait(10, function()
-      uv.run("nowait")
-      return self._shutdown_check == nil or uv.is_closing(self._shutdown_check)
-    end, 1)
+    vim.wait(1000, function()
+      return self:_pipes_are_closed(self) and self.is_shutdown
+    end, 1, true)
   end
 
   self:_shutdown(code, signal)
 end
 
 function Job:_shutdown(code, signal)
+  if self.is_shutdown then
+    return
+  end
+
   self.code = code
   self.signal = signal
 

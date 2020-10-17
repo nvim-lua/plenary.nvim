@@ -383,4 +383,36 @@ describe('Job', function()
       assert(not ok, "Should not allow invalid executables")
     end)
   end)
+
+  describe('on_exit', function()
+    it('should only be called once for wait', function()
+      local count = 0
+
+      local job = Job:new{
+        command = "ls",
+        on_exit = function(...)
+          count = count + 1
+        end,
+      }
+      job:start()
+      job:wait()
+
+      assert.are.same(count, 1)
+    end)
+
+    it('should only be called once for shutdown', function()
+      local count = 0
+
+      local job = Job:new{
+        command = "ls",
+        on_exit = function(...)
+          count = count + 1
+        end,
+      }
+      job:start()
+      job:shutdown()
+
+      assert.are.same(count, 1)
+    end)
+  end)
 end)
