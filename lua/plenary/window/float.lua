@@ -80,8 +80,8 @@ function win_float.centered_with_top_win(top_text, options)
 
   minor_win_opts.height = #top_text
 
-  local minor_bufnr = vim.fn.nvim_create_buf(false, true)
-  local minor_win_id = vim.fn.nvim_open_win(minor_bufnr, true, minor_win_opts)
+  local minor_bufnr = vim.api.nvim_create_buf(false, true)
+  local minor_win_id = vim.api.nvim_open_win(minor_bufnr, true, minor_win_opts)
 
   vim.cmd('setlocal nocursorcolumn')
   vim.fn.nvim_win_set_option(minor_win_id, 'winblend', options.winblend)

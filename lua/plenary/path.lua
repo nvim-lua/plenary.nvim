@@ -18,7 +18,14 @@ local S_IF = {
 
 local path = {}
 
-path.sep = package.config:sub(1, 1)
+path.sep = (function()
+  if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
+    return '/'
+  else
+    return '\\'
+  end
+end)()
+
 path.S_IF = S_IF
 
 local band = function(reg, value)
@@ -31,7 +38,9 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
-local Path = {}
+local Path = {
+  path = path,
+}
 
 Path.__index = Path
 
@@ -84,7 +93,7 @@ function Path:new(...)
   -- TODO: Should probably remove and dumb stuff like double seps, periods in the middle, etc.
   local sep = path.sep
   if type(path_input) == 'table' then
-    sep = path_input.sep
+    sep = path_input.sep or path.sep
     path_input.sep = nil
   end
 
@@ -102,7 +111,7 @@ function Path:new(...)
       end
     end
 
-    path_string = table.concat(path_objs, self._sep)
+    path_string = table.concat(path_objs, sep)
   else
     assert(type(path_input) == 'string', vim.inspect(path_input))
     path_string = path_input
@@ -234,4 +243,4 @@ function Path:readlines()
   return vim.split(data, "\n")
 end
 
-return Path, path
+return Path

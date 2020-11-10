@@ -6,7 +6,7 @@ local run = require('plenary.run')
 local window_float = require('plenary.window.float')
 
 -- TODO: We should consider not making windows when headless.
--- local headless = require('plenary.nvim_meta').is_headless
+local headless = require('plenary.nvim_meta').is_headless
 
 local neorocks = {}
 
@@ -19,12 +19,22 @@ neorocks.job_with_display_output = function(title_text, command, args)
     title_text = {title_text}
   end
 
+  if headless then
+    io.write(command .. '\n')
+    io.write(vim.inspect(args) .. '\n')
+  end
+
   local outputter = vim.schedule_wrap(function(_, data, self)
     if data == nil then
       return
     end
 
     if not self then
+      return
+    end
+
+    if headless then
+      io.write(data .. '\n')
       return
     end
 
@@ -159,6 +169,7 @@ neorocks._get_setup_job = function(force, opts)
       {
         neorocks._hererocks_file:absolute(),
         "--verbose",
+        force and "-i" or "",
         "-j",
         lua_version.jit,
         "-r",
@@ -166,6 +177,25 @@ neorocks._get_setup_job = function(force, opts)
         install_location:absolute()
       }
     )
+  else
+    error("Unsupported version")
+  end
+end
+
+neorocks.setup = function(force, quit)
+  vim.fn.mkdir(neorocks._base_path:absolute(), "p")
+  quit = (quit == nil and true) or quit
+  neorocks.scheduler:insert(neorocks._get_setup_job(force))
+
+  if quit then
+    neorocks.scheduler:insert {
+      start = function()
+        vim.cmd [[qa!]]
+      end,
+
+      add_on_exit_callback = function()
+      end,
+    }
   end
 end
 
@@ -234,7 +264,7 @@ end
 
 --- Get the string to source hererocks
 neorocks._source_string = function(install_location)
-  local user_shell = os.getenv("SHELL")
+  local user_shell = os.getenv("SHELL") or "bash"
   local shell = user_shell:gmatch("([^/]*)$")()
   if shell == "fish" then
     return source_activate(install_location, 'activate.fish')
@@ -289,7 +319,7 @@ neorocks._get_install_job = function(package_name)
   return neorocks._get_luarocks_job(string.format('install %s', package_name))
 end
 
-neorocks.install = function(package_name, lua_name, force)
+neorocks.install = function(package_name, lua_name, force, should_quit)
   neorocks.scheduler:insert(neorocks._get_setup_job())
 
   if not force and neorocks.is_package_installed(package_name, lua_name) then
@@ -297,7 +327,24 @@ neorocks.install = function(package_name, lua_name, force)
     return
   end
 
-  return neorocks.scheduler:insert(neorocks._get_install_job(package_name))
+  local install_job = neorocks.scheduler:insert(neorocks._get_install_job(package_name))
+
+  if headless and should_quit == nil then
+    should_quit = true
+  end
+
+  if should_quit then
+    neorocks.scheduler:insert {
+      start = function()
+        vim.cmd [[qa!]]
+      end,
+
+      add_on_exit_callback = function()
+      end,
+    }
+  end
+
+  return install_job
 end
 
 neorocks.ensure_installed = function(package_name, lua_name)

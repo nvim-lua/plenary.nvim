@@ -1,6 +1,7 @@
 require('plenary.test_harness'):setup_busted()
 
 local Path = require("plenary.path")
+local path = Path.path
 
 describe('Path', function()
   it('should find valid files', function()
@@ -37,6 +38,13 @@ describe('Path', function()
 
   it('can join paths with paths', function()
     assert.are.same(Path:new("lua", "plenary"), Path:new("lua", Path:new("plenary")))
+  end)
+
+  it('inserts slashes', function()
+    assert.are.same(
+    'lua' .. path.sep .. 'plenary',
+      Path:new("lua", "plenary").filename
+    )
   end)
 
   describe('.exists()', function()
@@ -112,7 +120,7 @@ describe('Path', function()
       assert(not p:exists())
     end)
 
-    it('can create nested directories', function()
+    pending('can create nested directories', function()
       local p = Path:new("impossible", "dir")
       assert(pcall(p.mkdir, p, { parents = true }))
       assert(p:exists())
