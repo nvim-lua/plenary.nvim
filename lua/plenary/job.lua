@@ -370,13 +370,21 @@ function Job:_execute()
     if Job.is_job(self.writer) then
       self.writer:_execute()
     elseif type(self.writer) == 'table' and vim.tbl_islist(self.writer) then
-      for _, v in ipairs(self.writer) do
-        self.stdin:write(v .. '\n')
+      local writer_len = #self.writer
+      for i, v in ipairs(self.writer) do
+        self.stdin:write(v)
+        if i ~= writer_len then
+          self.stdin:write('\n')
+        else
+          self.stdin:write('\n', function()
+            self.stdin:close()
+          end)
+        end
       end
-      self.stdin:close()
     elseif type(self.writer) == 'string' then
-      self.stdin:write(self.writer)
-      self.stdin:close()
+      self.stdin:write(self.writer, function()
+        self.stdin:close()
+      end)
     elseif self.writer.write then
       self.stdin = self.writer
     else
