@@ -1,5 +1,17 @@
 local f = {}
 
+function f.run(fun, xs)
+  if xs then
+    local nxs = vim.tbl_count(xs)
+    if (nxs > 0) then
+      for i = 1, nxs do
+        fun(xs[i])
+      end
+      return nil
+    end
+  end
+end
+
 function f.map(fun, iter)
   local results = {}
   for _, v in pairs(iter) do
@@ -7,6 +19,33 @@ function f.map(fun, iter)
   end
 
   return results
+end
+
+function f.kv_pairs(t)
+  local results = {}
+  for k, v in pairs(t) do
+    table.insert(results, {k,v})
+  end
+  return results
+end
+
+function f.kv_map(fun, t)
+  return vim.tbl_map(fun, f.kv_pairs(t))
+end
+
+function f.concat(...)
+  local result = {}
+  local function gen(xs)
+    return f.run(function(x)
+      return table.insert(result, x)
+    end, xs)
+  end
+  f.run(gen, {...})
+  return result
+end
+
+function f.join(array, sep)
+  return table.concat(vim.tbl_map(tostring, array), sep)
 end
 
 function f.partial(fun, ...)
