@@ -36,6 +36,16 @@ end)
 
 local Job = require('plenary.job')
 
+local has_all_executables = function(execs)
+  for _, e in ipairs(execs) do
+    if vim.fn.executable(e) == 0 then
+      return false
+    end
+  end
+
+  return true
+end
+
 describe('Job', function()
   describe('> cat manually >', function()
     it('should split simple stdin', function()
@@ -133,11 +143,11 @@ describe('Job', function()
     end)
 
     it('should match larger systemlist', function()
-      local results = vim.fn.systemlist('fdfind')
+      local results = vim.fn.systemlist('find')
       local stdout_results = {}
 
       local job = Job:new {
-        command = 'fdfind',
+        command = 'find',
 
         on_stdout = function(_, line) table.insert(stdout_results, line) end
       }
@@ -159,7 +169,11 @@ describe('Job', function()
   end)
 
   describe('.writer', function()
-    it('should allow using things like fzf', function()
+    pending('should allow using things like fzf', function()
+      if not has_all_executables { 'fzf', 'fdfind' } then
+        return
+      end
+
       local stdout_results = {}
 
       local fzf = Job:new {
@@ -185,6 +199,10 @@ describe('Job', function()
     end)
 
     it('should work with a table', function()
+      if not has_all_executables { 'fzf' } then
+        return
+      end
+
       local stdout_results = {}
 
       local fzf = Job:new {
@@ -206,6 +224,10 @@ describe('Job', function()
     end)
 
     it('should work with a string', function()
+      if not has_all_executables { 'fzf' } then
+        return
+      end
+
       local stdout_results = {}
 
       local fzf = Job:new {
@@ -227,6 +249,10 @@ describe('Job', function()
     end)
 
     it('should work with a pipe', function()
+      if not has_all_executables { 'fzf' } then
+        return
+      end
+
       local input_pipe = vim.loop.new_pipe(false)
 
       local stdout_results = {}
@@ -258,6 +284,10 @@ describe('Job', function()
     end)
 
     it('should work with a pipe, but no final newline', function()
+      if not has_all_executables { 'fzf' } then
+        return
+      end
+
       local input_pipe = vim.loop.new_pipe(false)
 
       local stdout_results = {}

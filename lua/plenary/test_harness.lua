@@ -111,6 +111,7 @@ function harness.test_directory(directory, minimal_init)
   log.debug("Running...")
   for _, j in ipairs(jobs) do
     j:start()
+    log.debug("... Completed job number", i)
   end
 
   -- TODO: Probably want to let people know when we've completed everything.
