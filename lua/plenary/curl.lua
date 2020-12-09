@@ -1,54 +1,11 @@
 local F = require('plenary.functional')
 local J = require('plenary.job')
+local P = require('plenary.path')
 local c = { util = {}, parse = {}, api = {} }
 local util, parse, api = c.util, c.parse, c.api
 
 -- Utils ----------------------------------------------------
 -------------------------------------------------------------
-
-util.expand = function(path)
-  local expanded
-  if string.find(path, "~") then
-    expanded = string.gsub(path, "^~", vim.loop.os_homedir())
-  elseif string.find(path, "^%.") then
-    expanded = vim.loop.fs_realpath(path)
-    if expanded == nil then
-     expanded = vim.fn.fnamemodify(path, ":p")
-   end
-  elseif string.find(path, "%$") then
-    local rep = string.match(path, "([^%$][^/]*)")
-    local val = os.getenv(rep)
-    if val then
-      expanded = string.gsub(string.gsub(path, rep, val), "%$", "")
-    else
-      expanded = nil
-    end
-  else
-    expanded = path
-  end
-  return expanded and expanded or error("Path not valid")
-end
-
-util.isfile = function(path)
-  local stat = vim.loop.fs_stat(util.expand(path))
-  if stat then
-    return stat.type == "file" and true or nil
-  end
-end
-
-util.readfile = function(path)
-  local f, err = io.open(path, "rb")
-  assert(not err, err)
-  local content = vim.split(f:read("a"), "\n")
-  f:close()
-  local lines = {}
-  for _, line in pairs(content) do
-    if ("" ~= line) then
-      table.insert(lines, line)
-    end
-  end
-  return lines
-end
 
 util.url_encode = function(str)
   if type(str) ~= "number" then
@@ -136,7 +93,7 @@ end
 
 parse.curl_in_file = function(p)
   if not p then return end
-  return {"-d", "@" .. util.expand(p) }
+  return {"-d", "@" .. P.expand(P.new(p)) }
 end
 
 parse.curl_auth = function(xs)
@@ -164,7 +121,7 @@ parse.curl_opts = function(opts)
     local b = opts.body; opts.body = nil
     if type(b) == "table" then
       opts.data = b
-    elseif util.isfile(b) then
+    elseif P.is_file(P.new(b)) then
       opts.in_file = b
     elseif type(b) == "string" then
       opts.raw = b
@@ -194,7 +151,7 @@ end
 ------------------------------------------------------------
 
 parse.response = function(lines, dump_path, code)
-  local headers = util.readfile(dump_path)
+  local headers = P.readlines(P.new(dump_path))
   local status = tonumber(string.match(headers[1], "([%w+]%d+)"))
   local body = F.join(lines, "\n")
 

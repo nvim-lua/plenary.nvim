@@ -1,5 +1,3 @@
-require('plenary.test_harness'):setup_busted()
-
 local curl = require('plenary.curl')
 local incl = function(p, s)
   return (nil ~= string.find(s, p))
