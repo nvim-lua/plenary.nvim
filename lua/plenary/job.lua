@@ -476,14 +476,18 @@ end
 function Job.join(...)
   local jobs_to_wait = {...}
 
+  local num_jobs = #jobs_to_wait
+  local completed = 0
+
   return vim.wait(10000, function()
     for index, current_job in pairs(jobs_to_wait) do
       if current_job.is_shutdown then
         jobs_to_wait[index] = nil
+        completed = completed + 1
       end
     end
 
-    return #jobs_to_wait == 0
+    return num_jobs == completed
   end)
 end
 
