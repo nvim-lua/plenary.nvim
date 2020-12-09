@@ -1,5 +1,3 @@
-require('plenary.test_harness'):setup_busted()
-
 local Path = require("plenary.path")
 local path = Path.path
 
