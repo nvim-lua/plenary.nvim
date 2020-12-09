@@ -217,7 +217,7 @@ neorocks._get_package_paths = function()
 
   local gen_pattern = function(directory)
     return string.format(
-    "%s?.lua;%s&/init.lua",
+    "%s/?.lua;%s/?/init.lua",
     directory,
     directory
   )
@@ -247,7 +247,7 @@ neorocks.setup_paths = function()
 
   local install_cpath = install_location:joinpath("lib", "lua", lua_version.lua)
   local match_install_cpath = string.format(
-    "%s?.so",
+    "%s/?.so",
     install_cpath:absolute()
   )
   if not string.find(package.cpath, match_install_cpath, 1, true) then
