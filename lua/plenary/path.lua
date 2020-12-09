@@ -165,7 +165,7 @@ function Path:exists()
   return not vim.tbl_isempty(self:_stat())
 end
 
-function path:expand()
+function Path:expand()
   -- TODO support windows
   local expanded
   if string.find(self.filename, "~") then
