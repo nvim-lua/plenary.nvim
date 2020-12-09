@@ -111,7 +111,7 @@ mod.describe = function(desc, func)
   results.errs = {}
 
   print("\n" .. HEADER)
-  print("Testing: ", debug.getinfo(1, 'Sl').source)
+  print("Testing: ", debug.getinfo(2, 'Sl').source)
 
   describe = mod.inner_describe
   local ok, msg = call_inner(desc, func)
