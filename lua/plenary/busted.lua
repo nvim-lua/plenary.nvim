@@ -59,7 +59,8 @@ local call_inner = function(desc, func)
   local ok, msg = xpcall(func, function(msg)
     -- debug.traceback
     -- return vim.inspect(get_trace(nil, 3, msg))
-    return get_trace(nil, 3, msg).traceback
+    local trace = get_trace(nil, 3, msg)
+    return trace.message .. "\n" .. trace.traceback
   end)
   pop_description()
 
