@@ -1,0 +1,30 @@
+name: default
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: date +%F > todays-date
+      - name: Restore cache for today's nightly.
+        uses: actions/cache@v1.0.0
+        with:
+          path: _neovim
+          key: ${{ runner.os }}-nightly-${{ hashFiles('todays-date') }}
+      - name: Setup from neovim nightly and run test
+        run: |
+          curl -OL https://raw.githubusercontent.com/norcalli/bot-ci/master/scripts/github-actions-setup.sh
+          source github-actions-setup.sh nightly-x64
+          make test
+  appimage:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run the tests
+        run: |
+          make appimage
