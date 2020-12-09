@@ -27,4 +27,4 @@ jobs:
       - uses: actions/checkout@v2
       - name: Run the tests
         run: |
-        make appimage
+          make appimage
