@@ -71,11 +71,11 @@ describe('Path', function()
 
   describe('.is_file()', function()
     it('should not allow directories', function()
-      assert.are.same(false, Path:new("lua"):is_file())
+      assert.are.same(true, not Path:new("lua"):is_file())
     end)
 
     it('should return false when the file does not exist', function()
-      assert.are.same(false, Path:new("asdf"):is_file())
+      assert.are.same(true, not Path:new("asdf"):is_file())
     end)
 
     it('should show files as file', function()

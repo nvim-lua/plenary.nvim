@@ -38,9 +38,18 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
+
 local Path = {
   path = path,
 }
+
+local check_self = function(self)
+  if type(self) == 'string' then
+    return Path:new(self)
+  end
+
+  return self
+end
 
 Path.__index = Path
 
@@ -165,6 +174,30 @@ function Path:exists()
   return not vim.tbl_isempty(self:_stat())
 end
 
+function Path:expand()
+  -- TODO support windows
+  local expanded
+  if string.find(self.filename, "~") then
+    expanded = string.gsub(self.filename, "^~", vim.loop.os_homedir())
+  elseif string.find(self.filename, "^%.") then
+    expanded = vim.loop.fs_realpath(self.filename)
+    if expanded == nil then
+     expanded = vim.fn.fnamemodify(self.filename, ":p")
+   end
+  elseif string.find(self.filename, "%$") then
+    local rep = string.match(self.filename, "([^%$][^/]*)")
+    local val = os.getenv(rep)
+    if val then
+      expanded = string.gsub(string.gsub(self.filename, rep, val), "%$", "")
+    else
+      expanded = nil
+    end
+  else
+    expanded = self.filename
+  end
+  return expanded and expanded or error("Path not valid")
+end
+
 function Path:mkdir(opts)
   opts = opts or {}
 
@@ -215,8 +248,16 @@ end
 -- }}}
 
 function Path:parents()
-  local parts = vim.split(self:absolute())
+  -- local parts = vim.split(self:absolute())
 end
+
+function Path:is_file()
+  local stat = vim.loop.fs_stat(self:expand())
+  if stat then
+    return stat.type == "file" and true or nil
+  end
+end
+
 -- TODO:
 --  Maybe I can use libuv for this?
 function Path:open()
@@ -228,7 +269,7 @@ end
 -- TODO: Asyncify this and use vim.wait in the meantime.
 --  This will allow other events to happen while we're waiting!
 function Path:read()
-  local fd = assert(uv.fs_open(self:absolute(), "r", 438))
+  local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
   local data = assert(uv.fs_read(fd, stat.size, 0))
   assert(uv.fs_close(fd))
@@ -237,6 +278,8 @@ function Path:read()
 end
 
 function Path:readlines()
+  self = check_self(self)
+
   local data = self:read()
 
   data = data:gsub("\r", "")
