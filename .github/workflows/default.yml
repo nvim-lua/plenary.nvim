@@ -32,4 +32,10 @@ jobs:
           #       brew install ninja libtool automake pkg-config gettext
           #   - name: Run test with building Nvim
           #     run: |
-          #       make test
+          #       make test#
+  appimage:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+        make appimage
