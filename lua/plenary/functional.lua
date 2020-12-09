@@ -9,6 +9,22 @@ function f.map(fun, iter)
   return results
 end
 
+function f.kv_pairs(t)
+  local results = {}
+  for k, v in pairs(t) do
+    table.insert(results, {k,v})
+  end
+  return results
+end
+
+function f.kv_map(fun, t)
+  return vim.tbl_map(fun, f.kv_pairs(t))
+end
+
+function f.join(array, sep)
+  return table.concat(vim.tbl_map(tostring, array), sep)
+end
+
 function f.partial(fun, ...)
   local args = {...}
   return function(...)
