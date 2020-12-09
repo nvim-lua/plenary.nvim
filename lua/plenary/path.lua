@@ -38,9 +38,18 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
+
 local Path = {
   path = path,
 }
+
+local check_self = function(self)
+  if type(self) == 'string' then
+    return Path:new(self)
+  end
+
+  return self
+end
 
 Path.__index = Path
 
@@ -269,6 +278,8 @@ function Path:read()
 end
 
 function Path:readlines()
+  self = check_self(self)
+
   local data = self:read()
 
   data = data:gsub("\r", "")

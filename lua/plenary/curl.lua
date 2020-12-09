@@ -151,7 +151,7 @@ end
 ------------------------------------------------------------
 
 parse.response = function(lines, dump_path, code)
-  local headers = P.readlines(P.new(dump_path))
+  local headers = P.readlines(dump_path)
   local status = tonumber(string.match(headers[1], "([%w+]%d+)"))
   local body = F.join(lines, "\n")
 
