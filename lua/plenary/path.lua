@@ -269,6 +269,8 @@ end
 -- TODO: Asyncify this and use vim.wait in the meantime.
 --  This will allow other events to happen while we're waiting!
 function Path:read()
+  self = check_self(self)
+
   local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
   local data = assert(uv.fs_read(fd, stat.size, 0))

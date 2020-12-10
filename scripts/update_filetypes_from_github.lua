@@ -1,19 +1,25 @@
-local lyaml = require'lyaml'
+local lyaml = require('lyaml')
 
-local read_file = function(filepath)
-  local fd = vim.loop.fs_open(filepath, "r", 438)
-  if fd == nil then return '' end
-  local stat = assert(vim.loop.fs_fstat(fd))
-  local data = assert(vim.loop.fs_read(fd, stat.size, 0))
+local Path = require('plenary.path')
+local curl = require('plenary.curl')
+
+local write_file = function(path, string)
+  local fd = assert(vim.loop.fs_open(path, "w", 438))
+  assert(vim.loop.fs_write(fd, string, 0))
   assert(vim.loop.fs_close(fd))
-  return data
+end
+
+if not Path:new("build/languages.yml"):exists() then
+  local languages_yml = curl.get('https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml').body
+  write_file("build/languages.yml", languages_yml)
 end
 
 local parse_file = function()
-  local yml_string = read_file('files.yml')
+  local yml_string = Path:new("build/languages.yml"):read()
   local yml_table = lyaml.load(yml_string)
   local output = {}
   local intervention = {}
+
   local vim_filetypes = vim.fn.getcompletion('', 'filetype')
 
   for k, v in pairs(yml_table) do
@@ -47,19 +53,14 @@ local parse_file = function()
         end
       end
     else
-      table.insert(intervention, 'Needs manual intervention for ' .. k)
+      table.insert(intervention, vim.inspect(v))
     end
   end
 
-  return vim.inspect(output), vim.fn.join(intervention, '\n')
-end
-
-local write_file = function(path, string)
-  local fd = assert(vim.loop.fs_open(path, "w", 438))
-  assert(vim.loop.fs_write(fd, string, 0))
-  assert(vim.loop.fs_close(fd))
+  return 'return ' .. vim.inspect(output), vim.fn.join(intervention, '\n')
 end
 
 local res, intervention = parse_file()
-write_file('filetypes.lua', res)
+P(intervention)
+write_file('./data/plenary/filetypes/base.lua', res)
 -- write_file('intervention.txt', intervention)
