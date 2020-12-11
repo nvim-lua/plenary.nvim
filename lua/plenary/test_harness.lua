@@ -34,12 +34,13 @@ function harness.test_directory_command(command)
   return harness.test_directory(split_string[1], split_string[2])
 end
 
-function harness.test_directory(directory, minimal_init)
+function harness.test_directory(directory, minimal_init, opts)
   print("Starting...")
+  opts = opts or {winopts = {winblend = 3}}
 
   local res = {}
   if not headless then
-    res = win_float.percentage_range_window(0.95, 0.70, {winblend = 3})
+    res = win_float.percentage_range_window(0.95, 0.70, opts.winopts)
 
     vim.api.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
     vim.api.nvim_buf_set_option(res.bufnr, 'filetype', 'terminal')
