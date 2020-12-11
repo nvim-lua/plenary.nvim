@@ -122,22 +122,22 @@ local parse_file = function()
 
   local add_extension = function(ext, filetype, priority)
     -- If we have a better match, don't do it.
-    if output[ext] then
-      if overeager_filetypes[output[ext].filetype] then
-        log.debug("Overager:", output[ext].filetype)
-      elseif output[ext].priority > priority then
+    if output.extension[ext] then
+      if overeager_filetypes[output.extension[ext].filetype] then
+        log.debug("Overager:", output.extension[ext].filetype)
+      elseif output.extension[ext].priority > priority then
         log.debug(
           "Skipping:", ext, filetype, priority,
-          "due to existing:", output[ext].priority, output[ext].filetype
+          "due to existing:", output.extension[ext].priority, output.extension[ext].filetype
         )
 
         return
       else
         log.debug(
           "Override:", ext, filetype, priority,
-          "due to existing:", output[ext].priority, output[ext].filetype
+          "due to existing:", output.extension[ext].priority, output.extension[ext].filetype
         )
-      end 
+      end
     end
 
     output.extension[ext] = {

@@ -147,7 +147,7 @@ function Path:_stat()
   -- if not self._absolute then return {} end
 
   -- if not self._stat_result then
-  --   self._stat_result = 
+  --   self._stat_result =
   -- end
 
   -- return self._stat_result
@@ -274,6 +274,76 @@ function Path:read()
   local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
   local data = assert(uv.fs_read(fd, stat.size, 0))
+  assert(uv.fs_close(fd))
+
+  return data
+end
+
+function Path:head(lines)
+  lines = lines or 10
+  self = check_self(self)
+  local chunk_size = 256
+
+  local fd = assert(uv.fs_open(self:expand(), "r", 438))
+  local stat = assert(uv.fs_fstat(fd))
+  if stat.type ~= 'file' then return nil end
+
+  local data = ''
+  local index, count = 0, 0
+  while count < lines and index < stat.size do
+    local read_chunk = assert(uv.fs_read(fd, chunk_size, index))
+
+    local i = 0
+    for char in read_chunk:gmatch"." do
+      if char == '\n' then
+        count = count + 1
+        if count >= lines then break end
+      end
+      index = index + 1
+      i = i + 1
+    end
+    data = data .. read_chunk:sub(1, i)
+  end
+  assert(uv.fs_close(fd))
+
+  -- Remove potential newline at end of file
+  if data:sub(-1) == '\n' then data = data:sub(1, -2) end
+
+  return data
+end
+
+function Path:tail(lines)
+  lines = lines or 10
+  self = check_self(self)
+  local chunk_size = 256
+
+  local fd = assert(uv.fs_open(self:expand(), "r", 438))
+  local stat = assert(uv.fs_fstat(fd))
+  if stat.type ~= 'file' then return nil end
+
+  local data = ''
+  local index, count = stat.size - 1, 0
+  while count < lines and index > 0 do
+    local real_index = index - chunk_size
+    if real_index < 0 then
+      chunk_size = chunk_size + real_index
+      real_index = 0
+    end
+
+    local read_chunk = assert(uv.fs_read(fd, chunk_size, real_index))
+
+    local i = #read_chunk
+    while i > 0 do
+      local char = read_chunk:sub(i, i)
+      if char == '\n' then
+        count = count + 1
+        if count >= lines then break end
+      end
+      index = index - 1
+      i = i - 1
+    end
+    data = read_chunk:sub(i + 1, #read_chunk) .. data
+  end
   assert(uv.fs_close(fd))
 
   return data

@@ -1,16 +1,17 @@
-local path = require('plenary.path').path
+local Path = require('plenary.path')
 
-local os_sep = path.sep
+local os_sep = Path.path.sep
 
 local filetype = {}
 
 local filetype_table = {
   extension = {},
   file_name = {},
+  shebang = {},
 }
 
 filetype.add_table = function(new_filetypes)
-  local valid_keys = {'extension', 'file_name'}
+  local valid_keys = {'extension', 'file_name', 'shebang'}
   local new_keys = {}
   for k, _ in pairs(new_filetypes) do
     new_keys[k] = true
@@ -30,6 +31,10 @@ filetype.add_table = function(new_filetypes)
 
   if new_filetypes.file_name then
     filetype_table.file_name = vim.tbl_extend("force", filetype_table.file_name, new_filetypes.file_name)
+  end
+
+  if new_filetypes.shebang then
+    filetype_table.shebang = vim.tbl_extend("force", filetype_table.shebang, new_filetypes.shebang)
   end
 end
 
@@ -55,22 +60,71 @@ filetype._get_extension = function(filename)
   end
 end
 
-
-filetype.detect = function(filepath)
-  filepath = filepath:lower()
-
-  local ext = filetype._get_extension(filepath)
-  local match = ext and filetype_table.extension[ext]
-  if match then return match end
-
-  local split_path = vim.split(filepath, os_sep, true)
-  local fname = split_path[#split_path]
-  match = filetype_table.file_name[fname]
-  if match then return match end
-
+filetype._parse_modeline = function(tail)
+  if tail:find('vim:') then
+    return tail:match('.*:ft=([^: ]*):.*$') or ''
+  end
   return ''
 end
 
+filetype._parse_shebang = function(head)
+  if head:sub(1, 2) == '#!' then
+    local match = filetype_table.shebang[head:sub(3, #head)]
+    if match then return match end
+  end
+  return ''
+end
+
+filetype.detect_from_extension = function(filepath)
+  local ext = filetype._get_extension(filepath)
+  ext = ext and ext:lower()
+  local match = ext and filetype_table.extension[ext]
+  if match then return match end
+  return ''
+end
+
+filetype.detect_from_name = function(filepath)
+  filepath = filepath:lower()
+  local split_path = vim.split(filepath, os_sep, true)
+  local fname = split_path[#split_path]
+  local match = filetype_table.file_name[fname]
+  if match then return match end
+  return ''
+end
+
+filetype.detect_from_modeline = function(filepath)
+  local tail = Path:new(filepath):tail(1)
+  return filetype._parse_modeline(tail)
+end
+
+filetype.detect_from_shebang = function(filepath)
+  local head = Path:new(filepath):head(1)
+  return filetype._parse_shebang(head)
+end
+
+filetype.detect = function(filepath, opts)
+  opts = opts or {}
+  opts.fs_access = opts.fs_access or true
+
+  local match = filetype.detect_from_name(filepath)
+  if match ~= '' then return match end
+
+  match = filetype.detect_from_extension(filepath)
+
+  if opts.fs_access then
+    if match == '' then
+      match = filetype.detect_from_shebang(filepath)
+      if match ~= '' then return match end
+    end
+
+    if match == 'text' or match == '' then
+      match = filetype.detect_from_modeline(filepath)
+      if match ~= '' then return match end
+    end
+  end
+
+  return match
+end
 
 filetype.add_file("base")
 filetype.add_file("builtin")
