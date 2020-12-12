@@ -30,14 +30,16 @@ end)
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
-  local opts = assert(loadstring('return ' .. split_string[2]))()
+  local directory = table.remove(split_string, 1)
 
-  return harness.test_directory(split_string[1], opts)
+  local opts = assert(loadstring('return ' .. table.concat(split_string, " ")))()
+
+  return harness.test_directory(directory, opts)
 end
 
 function harness.test_directory(directory, opts)
   print("Starting...")
-  opts = vim.tbl_extend('force', {winopts = {winblend = 3}}, opts)
+  opts = vim.tbl_deep_extend('force', {winopts = {winblend = 3}}, opts or {})
 
   local res = {}
   if not headless then
