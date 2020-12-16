@@ -30,16 +30,20 @@ end)
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
+  local directory = table.remove(split_string, 1)
 
-  return harness.test_directory(split_string[1], split_string[2])
+  local opts = assert(loadstring('return ' .. table.concat(split_string, " ")))()
+
+  return harness.test_directory(directory, opts)
 end
 
-function harness.test_directory(directory, minimal_init)
+function harness.test_directory(directory, opts)
   print("Starting...")
+  opts = vim.tbl_deep_extend('force', {winopts = {winblend = 3}}, opts or {})
 
   local res = {}
   if not headless then
-    res = win_float.percentage_range_window(0.95, 0.70, {winblend = 3})
+    res = win_float.percentage_range_window(0.95, 0.70, opts.winopts)
 
     vim.api.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
     vim.api.nvim_buf_set_option(res.bufnr, 'filetype', 'terminal')
@@ -71,11 +75,11 @@ function harness.test_directory(directory, minimal_init)
         string.format('lua require("plenary.busted").run("%s")', p:absolute())
       }
 
-      if minimal_init then
+      if opts.minimal_init ~= nil then
         table.insert(args, '--noplugin')
 
         table.insert(args, '-u')
-        table.insert(args, minimal_init)
+        table.insert(args, opts.minimal_init)
       end
 
       return Job:new {
@@ -109,7 +113,7 @@ function harness.test_directory(directory, minimal_init)
   )
 
   log.debug("Running...")
-  for _, j in ipairs(jobs) do
+  for i, j in ipairs(jobs) do
     j:start()
     log.debug("... Completed job number", i)
   end
@@ -142,8 +146,8 @@ function harness._find_files_to_run(directory)
   return f.map(Path.new, finder:sync())
 end
 
-function harness:_run_path(test_type, directory)
-  local paths = harness:_find_files_to_run(directory)
+function harness._run_path(test_type, directory)
+  local paths = harness._find_files_to_run(directory)
 
   local bufnr = 0
   local win_id = 0
