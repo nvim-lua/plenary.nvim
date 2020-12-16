@@ -13,12 +13,10 @@ local filetype_table = {
 filetype.add_table = function(new_filetypes)
   local valid_keys = {'extension', 'file_name', 'shebang'}
   local new_keys = {}
-  for k, _ in pairs(new_filetypes) do
-    new_keys[k] = true
-  end
-  for _, k in ipairs(valid_keys) do
-    new_keys[k] = nil
-  end
+
+  -- Validate keys
+  for k, _ in pairs(new_filetypes) do new_keys[k] = true end
+  for _, k in ipairs(valid_keys) do new_keys[k] = nil end
 
   for k, v in pairs(new_keys) do
     error(debug.traceback("Invalid key / value:" .. tostring(k) .. " / " .. tostring(v)))
@@ -102,6 +100,10 @@ filetype.detect_from_shebang = function(filepath)
   return filetype._parse_shebang(head)
 end
 
+--- Detect a filetype from a path.
+---
+---@param opts table: Table with optional keys
+---     - fs_access (bool, default=true): Should check a file if it exists
 filetype.detect = function(filepath, opts)
   opts = opts or {}
   opts.fs_access = opts.fs_access or true
@@ -111,7 +113,7 @@ filetype.detect = function(filepath, opts)
 
   match = filetype.detect_from_extension(filepath)
 
-  if opts.fs_access then
+  if opts.fs_access and Path:new(filepath):exists() then
     if match == '' then
       match = filetype.detect_from_shebang(filepath)
       if match ~= '' then return match end
