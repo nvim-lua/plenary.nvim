@@ -129,6 +129,120 @@ describe('Job', function()
     end)
   end)
 
+  describe('env', function()
+    it('should be possible to set one env variable with an array', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { 'A=100' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      assert.are.same(job:result(), { 'A=100' })
+      assert.are.same(job:result(), results)
+    end)
+
+    it('should be possible to set multiple env variables with an array', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { 'A=100', 'B=test' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      assert.are.same(job:result(), { 'A=100', 'B=test' })
+      assert.are.same(job:result(), results)
+    end)
+
+    it('should be possible to set one env variable with a map', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { 'A=100' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      assert.are.same(job:result(), { 'A=100' })
+      assert.are.same(job:result(), results)
+    end)
+
+    it('should be possible to set one env variable with spaces', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { 'A=This is a long env var' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      assert.are.same(job:result(), { 'A=This is a long env var' })
+      assert.are.same(job:result(), results)
+    end)
+
+    it('should be possible to set multiple env variables with a map', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { ['A'] = 100, ['B'] = 'test' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      local expected = { 'A=100', 'B=test' }
+      local found = { false, false }
+      for k, v in ipairs(job:result()) do
+        for _, w in ipairs(expected) do
+          if v == w then found[k] = true end
+        end
+      end
+
+      assert.are.same({ true, true }, found)
+      assert.are.same(job:result(), results)
+    end)
+
+    it('should be possible to set multiple env variables with both, array and map', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { ['A'] = 100, 'B=test' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      local expected = { 'A=100', 'B=test' }
+      local found = { false, false }
+      for k, v in ipairs(job:result()) do
+        for _, w in ipairs(expected) do
+          if v == w then found[k] = true end
+        end
+      end
+
+      assert.are.same({ true, true }, found)
+      assert.are.same(job:result(), results)
+    end)
+  end)
+
   describe('> simple ls >', function()
     it('should match systemlist', function()
       local ls_results = vim.fn.systemlist('ls -l')

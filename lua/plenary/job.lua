@@ -59,7 +59,7 @@ end
 ---@field o.command string          : Command to run
 ---@field o.args Array              : List of arguments to pass
 ---@field o.cwd string              : Working directory for job
----@field o.env Map                 : Environment
+---@field o.env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
 ---@field o.enable_handlers boolean : If set to false, disables all callbacks associated with output
 ---@field o.on_start function       : Run when starting job
 ---@field o.on_stdout function      : (error: string, data: string, self? Job)
@@ -81,7 +81,19 @@ function Job:new(o)
   obj.command = o.command
   obj.args = o.args
   obj.cwd = o.cwd and vim.fn.expand(o.cwd, true)
-  obj.env = o.env
+  if o.env then
+    if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
+
+    local transform = {}
+    for k, v in pairs(o.env) do
+      if type(k) == 'number' then
+        table.insert(transform, v)
+      elseif type(k) == 'string' then
+        table.insert(transform, k .. '=' .. tostring(v))
+      end
+    end
+    obj.env = transform
+  end
   if o.interactive == nil then
     obj.interactive = true
   else
