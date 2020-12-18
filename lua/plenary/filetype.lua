@@ -80,11 +80,32 @@ filetype._parse_shebang = function(head)
   return ''
 end
 
+local done_adding = false
+local extend_tbl_with_ext_eq_ft_entries = function()
+  if not done_adding then
+    if vim.in_fast_event() then return end
+    local all_valid_filetypes = vim.fn.getcompletion('', 'filetype')
+    for _, v in ipairs(all_valid_filetypes) do
+      if not filetype_table.extension[v] then
+        filetype_table.extension[v] = v
+      end
+    end
+    done_adding = true
+    return true
+  end
+end
+
 filetype.detect_from_extension = function(filepath)
   local exts = filetype._get_extension_parts(filepath)
   for _, ext in ipairs(exts) do
     local match = ext and filetype_table.extension[ext]
     if match then return match end
+  end
+  if extend_tbl_with_ext_eq_ft_entries() then
+    for _, ext in ipairs(exts) do
+      local match = ext and filetype_table.extension[ext]
+      if match then return match end
+    end
   end
   return ''
 end
