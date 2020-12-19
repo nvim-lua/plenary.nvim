@@ -80,7 +80,7 @@ function Job:new(o)
 
   obj.command = o.command
   obj.args = o.args
-  obj.cwd = o.cwd and vim.fn.expand(o.cwd)
+  obj.cwd = o.cwd and vim.fn.expand(o.cwd, true)
   obj.env = o.env
   if o.interactive == nil then
     obj.interactive = true
