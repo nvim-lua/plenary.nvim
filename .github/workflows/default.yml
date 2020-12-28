@@ -15,11 +15,24 @@ jobs:
           path: _neovim
           key: ${{ runner.os }}-x64-${{ hashFiles('todays-date') }}
 
+      - name: Prepare
+        run: |
+          sudo apt-get update
+          sudo apt-get install luarocks
+          sudo luarocks install --lua-version 5.1 luacov
+          sudo luarocks install --lua-version 5.1 luacov-coveralls
+
       - name: Run tests
         run: |
           curl -OL https://raw.githubusercontent.com/norcalli/bot-ci/master/scripts/github-actions-setup.sh
           source github-actions-setup.sh nightly-x64
           make test
+
+      # See https://github.com/moteus/luacov-coveralls/issues/21#issuecomment-574577498
+      - name: Publish coverage
+        run: luacov-coveralls
+        with:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   appimage-ubuntu:
     name: Appimage-ubuntu

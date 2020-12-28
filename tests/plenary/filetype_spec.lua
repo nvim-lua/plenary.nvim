@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local filetype = require('plenary.filetype')
 
 describe('filetype', function()

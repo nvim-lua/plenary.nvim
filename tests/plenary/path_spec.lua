@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local Path = require("plenary.path")
 local path = Path.path
 

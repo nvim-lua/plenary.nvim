@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local scan = require'plenary.scandir'
 local eq = assert.are.same
 

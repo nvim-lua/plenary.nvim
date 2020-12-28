@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local curl = require('plenary.curl')
 local eq = assert.are.same
 local incl = function(p, s)

@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local Job = require('plenary.job')
 
 local has_all_executables = function(execs)

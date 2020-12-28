@@ -1,3 +1,4 @@
+pcall(require, 'luacov')
 local eq = assert.are.same
 
 local tester_function = function()
