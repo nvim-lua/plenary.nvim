@@ -87,6 +87,46 @@ Please take a look at the new APIs and make any issues for things that aren't cl
 and make it work well :)
 
 
+### plenary.filetype
+
+Will detect the filetype based on `extension`/`special filename`/`shebang` or `modeline`
+
+- `require'plenary.filetype'.detect(filepath, opts)` is a function that does all of above and exits as soon as a filetype is found
+- `require'plenary.filetype'.detect_from_extension(filepath)`
+- `require'plenary.filetype'.detect_from_name(filepath)`
+- `require'plenary.filetype'.detect_from_modeline(filepath)`
+- `require'plenary.filetype'.detect_from_shebang(filepath)`
+
+You can add more extensions to the filetypeguesser locally:
+Create file `~/.config/nvim/data/plenary/filetypes/builtin.lua` and add following:
+```lua
+return {
+  extension = {
+    -- extension = filetype
+    -- example:
+    ['jl'] = 'julia',
+  },
+  file_name = {
+    -- special filenames, likes .bashrc
+    -- we provide a decent amount
+    -- name = filetype
+    -- example:
+    ['.bashrc'] = 'bash',
+  },
+  shebang = {
+    -- Shebangs are supported as well. Currently we provide
+    -- sh, bash, zsh, python, perl with different prefixes like
+    -- /usr/bin, /bin/, /usr/bin/env, /bin/env
+    -- shebang = filetype
+    -- example:
+    ['/usr/bin/node'] = 'javascript',
+  }
+}
+```
+
+You can also name the file like you want, the file just has to be inside the directory `data/plenary/filetypes/`
+inside your runtimepath. If you wanna do this you have to run: `:lua require'plenary.filetype'.add_file(your_desired_filename)`.
+
 ### plenary.popup
 
 `popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
