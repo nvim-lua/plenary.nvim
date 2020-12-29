@@ -20,6 +20,8 @@ return {
   extension = {
     ['fnl'] = 'fennel',
     ['janet'] = 'janet',
+    ['jsx'] = 'javascriptreact',
+    ['tsx'] = 'typescriptreact',
   },
   file_name = {
     ['showing_twitch_chat.kappa'] = 'PogChamp',
