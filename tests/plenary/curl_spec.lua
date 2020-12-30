@@ -1,16 +1,44 @@
 local curl = require('plenary.curl')
+local eq = assert.are.same
 local incl = function(p, s)
   return (nil ~= string.find(s, p))
 end
 
 describe('CURL Wrapper:', function()
-  describe('GET', function()
-    it('sends and returns object.', function()
-      local res = curl.get("https://httpbin.org/get", {
+
+  describe('request', function() -----------------------------------------------
+
+    it('sends and returns table.', function()
+      eq("table", type(curl.request{
+        url = "https://postman-echo.com/get",
+        method = "get",
+        accept = "application/json"
+      }))
+    end)
+
+    it('should accept the url as first argument.', function()
+      local res = curl.get("https://postman-echo.com/get", {
         accept = "application/json"
       })
-      assert.are.same("table", type(res)) -- returns a table
-      assert.are.same(200, res.status) -- table has response status
+      eq(200, res.status)
+    end)
+
+  end)
+
+  describe('GET', function() --------------------------------------------------
+
+    it('sends and returns table.', function()
+      eq("table", type(curl.get{
+        url = "https://postman-echo.com/get",
+        accept = "application/json"
+      }))
+    end)
+
+    it('should accept the url as first argument.', function()
+      local res = curl.get("https://postman-echo.com/get", {
+        accept = "application/json"
+      })
+      eq(200, res.status) -- table has response status
     end)
 
     it('sends encoded URL query params.', function()
@@ -19,8 +47,8 @@ describe('CURL Wrapper:', function()
         query = query
       })
 
-      assert.are.same(200, response.status)
-      assert.are.same(query, vim.fn.json_decode(response.body).args)
+      eq(200, response.status)
+      eq(query, vim.fn.json_decode(response.body).args)
     end)
 
     it('downloads files to opts.output synchronously', function()
@@ -28,25 +56,35 @@ describe('CURL Wrapper:', function()
       local loc = "/tmp/giphy2.gif"
       local res = curl.get(file, { output = loc})
 
-      assert.are.same(1, vim.fn.filereadable(loc))
-      assert.are.same(200, res.status)
-      assert.are.same(0, res.exit)
+      eq(1, vim.fn.filereadable(loc), "should exists")
+      eq(200, res.status, "should return 200")
+      eq(0, res.exit, "should have exit code of 0")
       vim.fn.delete(loc)
     end)
 
     it('downloads files to to opts.output asynchronous', function()
-      local result = nil
+      local res = nil
+      local succ = nil
+      local done = false
       local file = "https://media2.giphy.com/media/notvalid.gif"
       local loc = "/tmp/notvalid.gif"
-      local download = function(url, target)
-        return curl.get(url, {
-          output = target,
-          out = function(res)
-            if res.exit == 0 then result = true end
-          end})
-      end
-      download(file, loc)
-      assert(not result, "It should fail")
+
+      curl.get(file, {
+        output = loc,
+        callback = function(out)
+          done = true
+          succ = out.status == 200
+          res = out
+        end
+      })
+
+      vim.wait(60000, function()
+        return done
+      end)
+
+      eq(403, res.status, "It should return 403")
+      assert(not succ, "It should fail")
+
       vim.fn.delete(loc)
     end)
 
@@ -57,28 +95,31 @@ describe('CURL Wrapper:', function()
       auth = "postman:password"
       res = curl.get(url, { auth = auth })
       assert(incl("authenticated.*true", res.body))
-      assert.are.same(200, res.status)
+      eq(200, res.status)
 
       auth = "tami5:123456"
       res = curl.get(url, { auth = auth })
       assert(not incl("authenticated.*true", res.body), "it should fail")
-      assert.are.same(401, res.status)
+      eq(401, res.status)
     end)
 
     it('sends with basic-auth as table', function()
       local url = "https://postman-echo.com/basic-auth"
       local res = curl.get(url, { auth = { postman = "password" } })
       assert(incl("authenticated.*true", res.body))
-      assert.are.same(200, res.status)
+      eq(200, res.status)
     end)
+
   end)
-  describe("POST", function()
+
+  describe("POST", function() --------------------------------------------------
+
     it("sends raw string", function()
       local res = curl.post("https://postman-echo.com/post", {
         body = "John Doe"
       })
       assert(incl("John", res.body))
-      assert.are.same(200, res.status)
+      eq(200, res.status)
     end)
 
     it("sends lua table", function()
@@ -88,7 +129,7 @@ describe('CURL Wrapper:', function()
           body = "..."
         }
       })
-      assert.are.same(201, res.status)
+      eq(201, res.status)
     end)
 
     it("sends file", function()
@@ -107,36 +148,46 @@ describe('CURL Wrapper:', function()
           content_type = "application/json"
         }
       }).body
-      assert.are.same(json, vim.fn.json_decode(res).json)
+      eq(json, vim.fn.json_decode(res).json)
     end)
+
   end)
-  describe("PUT", function()
+  describe("PUT", function() --------------------------------------------------
+
     it("sends changes and get be back the new version.", function()
       local cha = { title = "New Title" }
       local res = curl.put("https://jsonplaceholder.typicode.com/posts/8",{
         body = cha
       })
-      assert.are.same(cha.title, vim.fn.json_decode(res.body).title)
-      assert.are.same(200, res.status)
+      eq(cha.title, vim.fn.json_decode(res.body).title)
+      eq(200, res.status)
     end)
+
   end)
-  describe("PATCH", function()
+
+  describe("PATCH", function() ------------------------------------------------
+
     it("sends changes and get be back the new version.", function()
       local cha = { title = "New Title" }
       local res = curl.patch("https://jsonplaceholder.typicode.com/posts/8",{
         body = cha
       })
-      assert.are.same(cha.title, vim.fn.json_decode(res.body).title)
-      assert.are.same(200, res.status)
+      eq(cha.title, vim.fn.json_decode(res.body).title)
+      eq(200, res.status)
     end)
+
   end)
-  describe("DELETE", function()
+
+  describe("DELETE", function() ------------------------------------------------
+
     it("sends delete request", function()
       local res = curl.delete("https://jsonplaceholder.typicode.com/posts/8")
-      assert.are.same(200, res.status)
+      eq(200, res.status)
     end)
+
   end)
-  describe("DEPUG", function()
+
+  describe("DEPUG", function() --------------------------------------------------
     it("dry_run return the curl command to be ran.", function()
       local res = curl.delete("https://jsonplaceholder.typicode.com/posts/8", {dry_run = true})
       assert(type(res) == "table")
