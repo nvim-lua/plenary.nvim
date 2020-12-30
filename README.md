@@ -97,8 +97,8 @@ Will detect the filetype based on `extension`/`special filename`/`shebang` or `m
 - `require'plenary.filetype'.detect_from_modeline(filepath)`
 - `require'plenary.filetype'.detect_from_shebang(filepath)`
 
-You can add more extensions to the filetypeguesser locally:
-Create file `~/.config/nvim/data/plenary/filetypes/builtin.lua` and add following:
+Add filetypes by creating a new file named `~/.config/nvim/data/plenary/filetypes/foo.lua` and register that file with
+`:lua require'plenary.filetype'.add_file('foo')`. Content of the file should look like that:
 ```lua
 return {
   extension = {
@@ -123,9 +123,6 @@ return {
   }
 }
 ```
-
-You can also name the file like you want, the file just has to be inside the directory `data/plenary/filetypes/`
-inside your runtimepath. If you wanna do this you have to run: `:lua require'plenary.filetype'.add_file(your_desired_filename)`.
 
 ### plenary.popup
 
