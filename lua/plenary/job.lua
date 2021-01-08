@@ -413,9 +413,9 @@ function Job:start()
   self:_execute()
 end
 
-function Job:sync(timeout, wait_interval)
+function Job:sync(timeout, wait_interval, should_redraw)
   self:start()
-  self:wait(timeout, wait_interval)
+  self:wait(timeout, wait_interval, should_redraw)
 
   return self.enable_recording and self:result() or nil
 end

@@ -54,14 +54,24 @@ local pop_description = function()
   current_description[#current_description] = nil
 end
 
+local execution_stack = {}
+
 local call_inner = function(desc, func)
   local desc_stack = add_description(desc)
+
+  -- Push function onto stack
+  table.insert(execution_stack, func)
+
   local ok, msg = xpcall(func, function(msg)
     -- debug.traceback
     -- return vim.inspect(get_trace(nil, 3, msg))
     local trace = get_trace(nil, 3, msg)
     return trace.message .. "\n" .. trace.traceback
   end)
+
+  -- Remove function from stack
+  execution_stack[#execution_stack] = nil
+
   pop_description()
 
   return ok, msg, desc_stack
@@ -159,6 +169,15 @@ local indent = function(msg, spaces)
 end
 
 mod.it = function(desc, func)
+  -- TODO: Should probably clean this up.
+  -- TODO: Also needs after_each
+  -- call before_each
+  for _, exec_func in ipairs(execution_stack) do
+    for _, before in ipairs(mod._before_each_map[exec_func] or {}) do
+      before()
+    end
+  end
+
   local ok, msg, desc_stack = call_inner(desc, func)
 
   local test_result = {
@@ -169,7 +188,7 @@ mod.it = function(desc, func)
   -- TODO: We should figure out how to determine whether
   -- and assert failed or whether it was an error...
 
-  local to_insert, printed
+  local to_insert
   if not ok then
     to_insert = results.fail
     test_result.msg = msg
@@ -185,8 +204,21 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
-  local _, _, desc_stack = call_inner(desc, func)
-  print(PENDING, "||", table.concat(desc_stack, " "))
+  -- TODO: Probably want to show description stack
+  -- local _, _, desc_stack = call_inner(desc, func)
+  print(PENDING, "||", desc)
+end
+
+mod._before_each_map = {}
+mod.before_each = function(func)
+  -- Add a reference to the before each for the current execution.
+  -- When we pop this off the stack later, we won't run it then!
+  local current_func = execution_stack[#execution_stack]
+  if not mod._before_each_map[current_func] then
+    mod._before_each_map[current_func] = {}
+  end
+
+  table.insert(mod._before_each_map[current_func], func)
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
@@ -196,6 +228,8 @@ describe = mod.describe
 it = mod.it
 pending = mod.pending
 assert = require("luassert")
+
+before_each = mod.before_each
 
 mod.run = function(file)
   local ok, msg = pcall(dofile, file)
