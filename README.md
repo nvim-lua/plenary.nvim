@@ -75,6 +75,9 @@ So far, the only supported busted items are:
 - `describe`
 - `it`
 - `pending`
+- `before_each`
+- `after_each`
+- `clear`
 - `assert.*` etc. (from luassert, which is bundled)
 
 OTHER NOTE:
