@@ -520,9 +520,7 @@ describe('Job', function()
     end)
 
     it('will not spawn jobs with invalid commands', function()
-      local job = Job:new { command = 'dasowlwl' }
-
-      local ok = pcall(job.sync, job)
+      local ok = pcall(Job.new, Job, { command = 'dasowlwl' })
       assert(not ok, "Should not allow invalid executables")
     end)
   end)
