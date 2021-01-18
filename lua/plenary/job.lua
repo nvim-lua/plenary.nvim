@@ -76,6 +76,10 @@ function Job:new(o)
     error(debug.traceback("'command' is required for Job:new"))
   end
 
+  if 1 ~= vim.fn.executable(o.command) then
+    error(debug.traceback(o.command..": Executable not found"))
+  end
+
   local obj = {}
 
   obj.command = o.command
