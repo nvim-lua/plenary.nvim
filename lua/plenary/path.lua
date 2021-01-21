@@ -358,4 +358,14 @@ function Path:readlines()
   return vim.split(data, "\n")
 end
 
+function Path:iter()
+  local data = self:readlines()
+  local i = 0
+  local n = table.getn(data)
+  return function()
+    i = i + 1
+    if i <= n then return data[i] end
+  end
+end
+
 return Path
