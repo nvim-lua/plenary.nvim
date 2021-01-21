@@ -5,26 +5,37 @@ local uv = vim.loop
 
 local m = {}
 
-local get_gitignore = function(path)
+local get_gitignore = function(basepath)
   local gitignore = {}
-  local p = Path:new(path .. os_sep .. '.gitignore')
-  if not p:exists() then return nil end
-  for v in p:iter() do
-    if v ~= '' then
-      local w = v:gsub('%#.*', '')
-      w = w:gsub('%.', '%%.')
-      w = w:gsub('%*', '%.%*')
-      if w ~= '' then
-        table.insert(gitignore, w)
+  local valid = false
+  for _, v in ipairs(basepath) do
+    local p = Path:new(v .. os_sep .. '.gitignore')
+    if p:exists() then
+      valid = true
+      gitignore[v] = {}
+      for l in p:iter() do
+        if l ~= '' then
+          local el = l:gsub('%#.*', '')
+          el = el:gsub('%.', '%%.')
+          el = el:gsub('%*', '%.%*')
+          if el ~= '' then
+            table.insert(gitignore[v], el)
+          end
+        end
       end
     end
   end
+  if not valid then return nil end
   return gitignore
 end
 
-local interpret_gitignore = function(gitignore, entry)
-  for _, v in ipairs(gitignore) do
-    if entry:match(v) then return false end
+local interpret_gitignore = function(gitignore, bp, entry)
+  for _, v in ipairs(bp) do
+    if entry:find(v, 1, true) then
+      for _, w in ipairs(gitignore[v]) do
+        if entry:match(w) then return false end
+      end
+    end
   end
   return true
 end
@@ -75,7 +86,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
       end
     else
       local entry = current_dir .. '/' .. name
-      if not giti or interpret_gitignore(giti, entry) then
+      if not giti or interpret_gitignore(giti, bp, entry) then
         if not msp or msp(entry) then
           table.insert(data, entry)
           if cb then cb(entry) end
@@ -93,7 +104,7 @@ end
 -- @param opts: table to change behavior
 --   opts.hidden (bool):              if true hidden files will be added
 --   opts.add_dirs (bool):            if true dirs will also be added to the results
---   opts.respect_gitignore (bool):   if true will only add files that are not ignored by the gitignore. Uses gitignore of the first path when a table is passed in(for now). Doesn't fail if gitignore is not found
+--   opts.respect_gitignore (bool):   if true will only add files that are not ignored by the git (uses each gitignore found in path table)
 --   opts.depth (int):                depth on how deep the search should go
 --   opts.search_pattern (regex):     regex for which files will be added, string or table of strings
 -- @param callback: on_stdout callback: Will be called for each element
@@ -105,7 +116,7 @@ m.scan_dir = function(path, opts, callback)
   local base_paths = vim.tbl_flatten { path }
   local next_dir = vim.tbl_flatten { path }
 
-  local gitignore = opts.respect_gitignore and get_gitignore(base_paths[1]) or nil
+  local gitignore = opts.respect_gitignore and get_gitignore(base_paths) or nil
   local match_seach_pat = opts.search_pattern and gen_search_pat(opts.search_pattern) or nil
 
   repeat
