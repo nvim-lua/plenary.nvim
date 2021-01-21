@@ -69,7 +69,7 @@ local gen_search_pat = function(pattern)
   end
 end
 
-local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp, cb)
+local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
   if opts.hidden or name:sub(1, 1) ~= '.' then
     if typ == 'directory' then
       local entry = current_dir .. '/' .. name
@@ -81,7 +81,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
       if opts.add_dirs then
         if not msp or msp(entry) then
           table.insert(data, entry)
-          if cb then cb(entry) end
+          if opts.on_insert then opts.on_insert(entry) end
         end
       end
     else
@@ -89,7 +89,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
       if not giti or interpret_gitignore(giti, bp, entry) then
         if not msp or msp(entry) then
           table.insert(data, entry)
-          if cb then cb(entry) end
+          if opts.on_insert then opts.on_insert(entry) end
         end
       end
     end
@@ -107,9 +107,9 @@ end
 --   opts.respect_gitignore (bool):   if true will only add files that are not ignored by the git (uses each gitignore found in path table)
 --   opts.depth (int):                depth on how deep the search should go
 --   opts.search_pattern (regex):     regex for which files will be added, string or table of strings
--- @param callback: on_stdout callback: Will be called for each element
+--   opts.on_insert(entry):           Will be called for each element
 -- @return array with files
-m.scan_dir = function(path, opts, callback)
+m.scan_dir = function(path, opts)
   opts = opts or {}
 
   local data = {}
@@ -126,7 +126,7 @@ m.scan_dir = function(path, opts, callback)
     while true do
       local name, typ = uv.fs_scandir_next(fd)
       if name == nil then break end
-      process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat, callback)
+      process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat)
     end
   until table.getn(next_dir) == 0
   return data
@@ -143,11 +143,9 @@ end
 --   opts.respect_gitignore (bool):   if true will only add files that are not ignored by git
 --   opts.depth (int):                depth on how deep the search should go
 --   opts.search_pattern (lua regex): depth on how deep the search should go
--- @param callback: table
---   callback.on_stdout(entry): Will be called for each element
---   callback.on_exit(content): Will be called at the end
-m.scan_dir_async = function(path, opts, callback)
-  callback = callback or {}
+--   opts.on_insert function(entry):  will be called for each element
+--   opts.on_exit function(results):  will be called at the end
+m.scan_dir_async = function(path, opts)
   opts = opts or {}
 
   local data = {}
@@ -164,10 +162,10 @@ m.scan_dir_async = function(path, opts, callback)
       while true do
         local name, typ = uv.fs_scandir_next(fd)
         if name == nil then break end
-        process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat, callback.on_stdout)
+        process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat)
       end
       if table.getn(next_dir) == 0 then
-        if callback.on_exit then callback.on_exit(data) end
+        if opts.on_exit then opts.on_exit(data) end
       else
         current_dir = table.remove(next_dir, 1)
         uv.fs_scandir(current_dir, read_dir)
@@ -302,19 +300,23 @@ end
 -- @param path: string
 --   string has to be a valid path
 -- @param opts: table to change behavior
---   opts.hidden (bool):            if true hidden files will be added
---   opts.add_dirs (bool):          if true dirs will also be added to the results, default: true
---   opts.respect_gitignore (bool): if true will only add files that are not ignored by git
---   opts.depth (int):              depth on how deep the search should go, default: 1
--- @param callback: function(results)
-m.ls_async = function(path, opts, callback)
+--   opts.hidden (bool):             if true hidden files will be added
+--   opts.add_dirs (bool):           if true dirs will also be added to the results, default: true
+--   opts.respect_gitignore (bool):  if true will only add files that are not ignored by git
+--   opts.depth (int):               depth on how deep the search should go, default: 1
+--   opts.on_exit function(results): will be called at the end (required)
+m.ls_async = function(path, opts)
   opts = opts or {}
   opts.depth = opts.depth or 1
   opts.add_dirs = opts.add_dirs or true
 
-  m.scan_dir_async(path, opts, { on_exit = function(data)
-    callback(gen_ls(data, path))
-  end })
+  local opts_copy = vim.deepcopy(opts)
+
+  opts_copy.on_exit = function(data)
+    if opts.on_exit then opts.on_exit(gen_ls(data, path)) end
+  end
+
+  m.scan_dir_async(path, opts_copy)
 end
 
 return m
