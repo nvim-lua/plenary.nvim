@@ -227,27 +227,63 @@ local gen_date = function(stat)
   return os.date('%b %d %H:%M', stat.mtime.sec)
 end
 
-local gen_id_cache = function(file)
-  if os_sep == '\\' then return nil end -- Don't have a user/group row for windows
+local get_username = (function()
+  if jit and os_sep ~= '\\' then
+    local ffi = require'ffi'
+    ffi.cdef[[
+      typedef unsigned int __uid_t;
+      typedef __uid_t uid_t;
+      typedef unsigned int __gid_t;
+      typedef __gid_t gid_t;
 
-  local result = {}
-  local p = Path:new(file)
-  if not p:exists() then return nil end
-  for v in p:iter() do
-    if v ~= '' then
-      local el = vim.split(v, ':')
-      result[tonumber(el[3])] = el[1]
+      struct passwd { char *pw_name; char *pw_passwd; __uid_t pw_uid; __gid_t pw_gid; char *pw_gecos;
+                      char *pw_dir; char *pw_shell; };
+
+      struct passwd *getpwuid(uid_t uid);
+    ]]
+
+    return function(tbl, id)
+      if tbl[id] then return tbl[id] end
+      local name = ffi.string(ffi.C.getpwuid(id).pw_name)
+      tbl[id] = name
+      return name
+    end
+  else
+    return function(_, id)
+      return id
     end
   end
+end)()
 
-  return result
-end
+local get_groupname = (function()
+  if jit and os_sep ~= '\\' then
+    local ffi = require'ffi'
+    ffi.cdef[[
+      typedef unsigned int __gid_t;
+      typedef __gid_t gid_t;
+
+      struct group { char *gr_name; char *gr_passwd; __gid_t gr_gid; char **gr_mem; };
+      struct group *getgrgid(gid_t gid);
+    ]]
+
+    return function(tbl, id)
+      if tbl[id] then return tbl[id] end
+      local name = ffi.string(ffi.C.getgrgid(id).gr_name)
+      tbl[id] = name
+      return name
+    end
+  else
+    return function(_, id)
+      return id
+    end
+  end
+end)()
 
 local gen_ls = function(data, path)
   local results = {}
 
-  local users_tbl = gen_id_cache('/etc/passwd')
-  local groups_tbl = gen_id_cache('/etc/group')
+  local users_tbl = os_sep ~= '\\' and {} or nil
+  local groups_tbl = os_sep ~= '\\' and {} or nil
 
   local insert_in_results
   if not users_tbl and not groups_tbl then
@@ -267,8 +303,8 @@ local gen_ls = function(data, path)
     insert_in_results(
       gen_permissions(stat),
       gen_size(stat),
-      users_tbl and users_tbl[stat.uid] or nil,
-      groups_tbl and groups_tbl[stat.gid] or nil,
+      get_username(users_tbl, stat.uid),
+      get_groupname(groups_tbl, stat.gid),
       gen_date(stat),
       v:sub(#path + 2, -1)
     )
