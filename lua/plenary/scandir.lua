@@ -236,10 +236,17 @@ local get_username = (function()
       typedef unsigned int __gid_t;
       typedef __gid_t gid_t;
 
-      struct passwd { char *pw_name; char *pw_passwd; __uid_t pw_uid; __gid_t pw_gid; char *pw_gecos;
-                      char *pw_dir; char *pw_shell; };
+      typedef struct {
+        char *pw_name;
+        char *pw_passwd;
+        __uid_t pw_uid;
+        __gid_t pw_gid;
+        char *pw_gecos;
+        char *pw_dir;
+        char *pw_shell;
+      } passwd;
 
-      struct passwd *getpwuid(uid_t uid);
+      passwd *getpwuid(uid_t uid);
     ]]
 
     return function(tbl, id)
@@ -262,8 +269,13 @@ local get_groupname = (function()
       typedef unsigned int __gid_t;
       typedef __gid_t gid_t;
 
-      struct group { char *gr_name; char *gr_passwd; __gid_t gr_gid; char **gr_mem; };
-      struct group *getgrgid(gid_t gid);
+      typedef struct {
+        char *gr_name;
+        char *gr_passwd;
+        __gid_t gr_gid;
+        char **gr_mem;
+      } group;
+      group *getgrgid(gid_t gid);
     ]]
 
     return function(tbl, id)
