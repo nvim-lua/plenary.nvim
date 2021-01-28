@@ -361,6 +361,26 @@ function Path:read()
   return data
 end
 
+function Path:read_async(filepath, callback)
+  vim.loop.fs_open(filepath, "r", 438, function(err_open, fd)
+    if err_open then
+      print("We tried to open this file but couldn't. We failed with following error message: " .. err_open)
+      return
+    end
+    vim.loop.fs_fstat(fd, function(err_fstat, stat)
+      assert(not err_fstat, err_fstat)
+      if stat.type ~= 'file' then return callback('') end
+      vim.loop.fs_read(fd, stat.size, 0, function(err_read, data)
+        assert(not err_read, err_read)
+        vim.loop.fs_close(fd, function(err_close)
+          assert(not err_close, err_close)
+          return callback(data)
+        end)
+      end)
+    end)
+  end)
+end
+
 function Path:head(lines)
   lines = lines or 10
   self = check_self(self)
