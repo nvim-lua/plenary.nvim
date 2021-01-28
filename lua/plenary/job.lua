@@ -52,21 +52,21 @@ end
 ---@class Map
 --- Map-like table
 
-
 --- Create a new job
+---
 ---@class Job
 ---@param o table
----@field o.command string          : Command to run
----@field o.args Array              : List of arguments to pass
----@field o.cwd string              : Working directory for job
----@field o.env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
----@field o.enable_handlers boolean : If set to false, disables all callbacks associated with output
----@field o.on_start function       : Run when starting job
----@field o.on_stdout function      : (error: string, data: string, self? Job)
----@field o.on_stderr function      : (error: string, data: string, self? Job)
----@field o.on_exit function        : (self, code: number, signal: number)
----@field o.maximum_results number  : stop processing results after this number
----@field o.writer Job|table|string : Job that writes to stdin of this job.
+---@field command string          : Command to run
+---@field args Array              : List of arguments to pass
+---@field cwd string              : Working directory for job
+---@field env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
+---@field enable_handlers boolean : If set to false, disables all callbacks associated with output
+---@field on_start function       : Run when starting job
+---@field on_stdout function      : (error: string, data: string, self? Job)
+---@field on_stderr function      : (error: string, data: string, self? Job)
+---@field on_exit function        : (self, code: number, signal: number)
+---@field maximum_results number  : stop processing results after this number
+---@field writer Job|table|string : Job that writes to stdin of this job.
 function Job:new(o)
   if not o then
     error(debug.traceback("Options are required for Job:new"))
