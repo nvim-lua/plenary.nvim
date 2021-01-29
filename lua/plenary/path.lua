@@ -224,6 +224,9 @@ function Path:mkdir(opts)
       for _, dir in ipairs(dirs) do
         if dir ~= '' then
           local joined = concat_paths(processed, dir)
+          if processed == '' and self._sep == '\\' then
+            joined = dir
+          end
           local stat = uv.fs_stat(joined) or {}
           local file_mode = stat.mode or 0
           if band(S_IF.REG, file_mode) then
@@ -315,7 +318,9 @@ function Path:is_file()
 end
 
 function Path:is_absolute()
-  -- TODO(windows)
+  if self._sep == '\\' then
+    return string.match(self.filename, '^[A-Z]:\\.*$')
+  end
   return string.sub(self.filename, 1, 1) == self._sep
 end
 -- }}}
