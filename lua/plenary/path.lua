@@ -16,7 +16,7 @@ local S_IF = {
   REG = 0x8000,
 }
 local path = {}
-path.home = vim.fn.expand('~')
+path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
