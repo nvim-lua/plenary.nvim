@@ -412,8 +412,8 @@ function Path:read()
   return data
 end
 
-function Path:read_async(filepath, callback)
-  vim.loop.fs_open(filepath, "r", 438, function(err_open, fd)
+function Path:read_async(callback)
+  vim.loop.fs_open(self.filename, "r", 438, function(err_open, fd)
     if err_open then
       print("We tried to open this file but couldn't. We failed with following error message: " .. err_open)
       return
