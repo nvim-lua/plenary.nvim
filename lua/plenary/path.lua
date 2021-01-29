@@ -232,20 +232,19 @@ function Path:normalize()
 end
 
 local shorten = (function()
-  if jit then return function(filename)
-    local ffi = require('ffi')
-    ffi.cdef [[
+  if jit then
+    local ffi = require('ffi') ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
     ]]
+    return function(filename)
+      if not filename then
+        return filename
+      end
 
-    if not filename then
-      return filename
-    end
-
-    local c_str = ffi.new("char[?]", #filename + 1)
-    ffi.copy(c_str, filename)
-    return ffi.string(ffi.C.shorten_dir(c_str))
+      local c_str = ffi.new("char[?]", #filename + 1)
+      ffi.copy(c_str, filename)
+      return ffi.string(ffi.C.shorten_dir(c_str))
     end
   end
   return function(filename)
