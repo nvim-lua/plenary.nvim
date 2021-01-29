@@ -206,22 +206,24 @@ function Path:expand()
   return expanded and expanded or error("Path not valid")
 end
 
-function Path:make_relative()
-  if self.filename:sub(1, #self._cwd) == self._cwd  then
+function Path:make_relative(cwd)
+  cwd = F.if_nil(cwd, self._cwd, cwd)
+  if self.filename:sub(1, #cwd) == cwd  then
     local offset =  0
-    -- if  self._cwd does ends in the os separator, we need to take it off
-    if self._cwd:sub(#self._cwd, #self._cwd) ~= path.separator then
+    -- if  cwd does ends in the os separator, we need to take it off
+    if cwd:sub(#cwd, #cwd) ~= path.separator then
       offset = 1
     end
 
-    self.filename = self.filename:sub(#self._cwd + 1 + offset, #self.filename)
+    self.filename = self.filename:sub(#cwd + 1 + offset, #self.filename)
   end
 
   return self.filename
 end
 
-function Path:normalize()
-  self:make_relative()
+function Path:normalize(cwd)
+  cwd = F.if_nil(cwd, self._cwd, cwd)
+  self:make_relative(cwd)
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
   -- Remove double path seps, it's annoying
