@@ -15,7 +15,6 @@ local S_IF = {
   -- S_IFREG  = 0o100000  # regular file
   REG = 0x8000,
 }
-
 local path = {}
 path.home = vim.fn.expand('~')
 
@@ -207,52 +206,55 @@ function Path:expand()
   return expanded and expanded or error("Path not valid")
 end
 
-function Path:make_relative(filepath, cwd)
-  if not cwd or not filepath then return filepath end
-
-  if filepath:sub(1, #cwd) == cwd  then
+function Path:make_relative()
+  if self.filename:sub(1, #self._cwd) == self._cwd  then
     local offset =  0
-    -- if  cwd does ends in the os separator, we need to take it off
-    if cwd:sub(#cwd, #cwd) ~= path.separator then
+    -- if  self._cwd does ends in the os separator, we need to take it off
+    if self._cwd:sub(#self._cwd, #self._cwd) ~= path.separator then
       offset = 1
     end
 
-    filepath = filepath:sub(#cwd + 1 + offset, #filepath)
+    self.filename = self.filename:sub(#self._cwd + 1 + offset, #self.filename)
   end
 
-  return filepath
+  return self.filename
 end
 
-function Path:normalize(filepath, cwd)
-  filepath = Path:make_relative(filepath, cwd)
-
+function Path:normalize()
+  self:make_relative()
   -- Substitute home directory w/ "~"
-  filepath = filepath:gsub("^" .. path.home, '~', 1)
-
+  self.filename = self.filename:gsub("^" .. path.home, '~', 1)
   -- Remove double path seps, it's annoying
-  filepath = filepath:gsub(path.sep .. path.sep, path.sep)
+  self.filename = self.filename:gsub(path.sep .. path.sep, path.sep)
+  print(self.filename)
 
-  return filepath
+  return self.filename
 end
 
-function Path:shorten(filepath)
-  if jit then
+local shorten = (function()
+  if jit then return function(filename)
     local ffi = require('ffi')
     ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
     ]]
 
-    if not filepath then
-      return filepath
+    if not filename then
+      return filename
     end
 
-    local c_str = ffi.new("char[?]", #filepath + 1)
-    ffi.copy(c_str, filepath)
+    local c_str = ffi.new("char[?]", #filename + 1)
+    ffi.copy(c_str, filename)
     return ffi.string(ffi.C.shorten_dir(c_str))
-  else
-    print('luaJIT is required')
+    end
   end
+  return function(filename)
+    return filename
+  end
+end)()
+
+function Path:shorten()
+  return shorten(self.filename)
 end
 
 function Path:mkdir(opts)
