@@ -81,7 +81,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
       if opts.add_dirs then
         if not msp or msp(entry) then
           table.insert(data, entry)
-          if opts.on_insert then opts.on_insert(entry) end
+          if opts.on_insert then opts.on_insert(entry, typ) end
         end
       end
     else
@@ -89,7 +89,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
       if not giti or interpret_gitignore(giti, bp, entry) then
         if not msp or msp(entry) then
           table.insert(data, entry)
-          if opts.on_insert then opts.on_insert(entry) end
+          if opts.on_insert then opts.on_insert(entry, typ) end
         end
       end
     end
@@ -189,7 +189,7 @@ local conv_to_octal = function(nr)
 end
 
 local type_tbl = { [1]  = 'p', [2]  = 'c', [4]  = 'd', [6]  = 'b', [10] = '-', [12] = 'l', [14] = 's' }
-local permissions_tbl = { '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
+local permissions_tbl = { [0] = '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
 local bit_tbl = { 4, 2, 1 }
 
 local gen_permissions = function(stat)
@@ -292,6 +292,8 @@ local get_groupname = (function()
 end)()
 
 local gen_ls = function(data, path)
+  if not data or table.getn(data) == 0 then return {} end
+
   local results = {}
 
   local users_tbl = os_sep ~= '\\' and {} or nil
