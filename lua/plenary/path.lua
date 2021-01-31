@@ -32,6 +32,10 @@ local band = function(reg, value)
   return bit.band(reg, value) == reg
 end
 
+local concat_paths = function(...)
+  return table.concat({...}, path.sep)
+end
+
 -- S_IFCHR  = 0o020000  # character device
 -- S_IFBLK  = 0o060000  # block device
 -- S_IFIFO  = 0o010000  # fifo (named pipe)
@@ -141,8 +145,12 @@ function Path:new(...)
   return obj
 end
 
+function Path:_fs_filename()
+  return self:absolute() or self.filename
+end
+
 function Path:_stat()
-  return uv.fs_stat(self:absolute() or self.filename) or {}
+  return uv.fs_stat(self:_fs_filename()) or {}
   -- local stat = uv.fs_stat(self:absolute())
   -- if not self._absolute then return {} end
 
@@ -166,7 +174,7 @@ function Path:absolute()
   if self:is_absolute() then
     return self.filename
   else
-    return self._absolute or table.concat({self._cwd, self.filename}, self.sep)
+    return self._absolute or table.concat({self._cwd, self.filename}, self._sep)
   end
 end
 
@@ -202,20 +210,41 @@ function Path:mkdir(opts)
   opts = opts or {}
 
   local mode = opts.mode or 448 -- 0700 -> decimal
-  local parents = F.if_nil(opts.parents, false)
-  local exists_ok = F.if_nil(opts.exists_ok, true)
+  local parents = F.if_nil(opts.parents, false, opts.parents)
+  local exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok)
 
   if not exists_ok and self:exists() then
     error("FileExistsError:" .. self:absolute())
   end
 
-  if not uv.fs_mkdir(self:absolute() or self.filename,  mode) then
+  if not uv.fs_mkdir(self:_fs_filename(),  mode) then
     if parents then
-      -- TODO: Find all the parents
-      error("Not implemented")
+      local dirs = self:_split()
+      local processed = ''
+      for _, dir in ipairs(dirs) do
+        if dir ~= '' then
+          local joined = concat_paths(processed, dir)
+          if processed == '' and self._sep == '\\' then
+            joined = dir
+          end
+          local stat = uv.fs_stat(joined) or {}
+          local file_mode = stat.mode or 0
+          if band(S_IF.REG, file_mode) then
+            error(string.format('%s is a regular file so we can\'t mkdir it', joined))
+          elseif band(S_IF.DIR, file_mode) then
+            processed = joined
+          else
+            if uv.fs_mkdir(joined, mode) then
+              processed = joined
+            else
+              error('We couldn\'t mkdir: ' .. joined)
+            end
+          end
+        end
+      end
+    else
+      error('FileNotFoundError')
     end
-
-    error('FileNotFoundError')
   end
 
   return true
@@ -227,6 +256,53 @@ function Path:rmdir()
   end
 
   uv.fs_rmdir(self:absolute())
+end
+
+function Path:touch(opts)
+  opts = opts or {}
+
+  local mode = opts.mode or 420
+  local parents = F.if_nil(opts.parents, false, opts.parents)
+
+  if self:exists() then
+    local new_time = os.time()
+    uv.fs_utime(self:_fs_filename(), new_time, new_time)
+    return
+  end
+
+  if parents then
+    Path:new(self:parents()):mkdir({ parents = true })
+  end
+
+  local fd = vim.loop.fs_open(self:_fs_filename(), "w", mode)
+  if not fd then error('Could not create file: ' .. self:_fs_filename()) end
+  vim.loop.fs_close(fd)
+
+  return true
+end
+
+function Path:rm(opts)
+  opts = opts or {}
+
+  local recursive = F.if_nil(opts.recursive, false, opts.recursive)
+  if recursive then
+    local scan = require('plenary.scandir')
+    local abs = self:absolute()
+
+    -- first unlink all files
+    scan.scan_dir(abs, { hidden = true, on_insert = function(file) uv.fs_unlink(file) end})
+
+    local dirs = scan.scan_dir(abs, { add_dirs = true })
+    -- iterate backwards to clean up remaining dirs
+    for i = #dirs, 1, -1 do
+      uv.fs_rmdir(dirs[i])
+    end
+
+    -- now only abs is missing
+    uv.fs_rmdir(abs)
+  else
+    uv.fs_unlink(self:absolute())
+  end
 end
 
 -- Path:is_* {{{
@@ -242,13 +318,19 @@ function Path:is_file()
 end
 
 function Path:is_absolute()
-  -- TODO(windows)
+  if self._sep == '\\' then
+    return string.match(self.filename, '^[A-Z]:\\.*$')
+  end
   return string.sub(self.filename, 1, 1) == self._sep
 end
 -- }}}
 
+function Path:_split()
+  return vim.split(self:absolute(), self._sep)
+end
+
 function Path:parents()
-  -- local parts = vim.split(self:absolute())
+  return self:absolute():match(string.format('^(.+)%s[^%s]+', self._sep, self._sep))
 end
 
 function Path:is_file()
