@@ -15,6 +15,7 @@ local S_IF = {
   -- S_IFREG  = 0o100000  # regular file
   REG = 0x8000,
 }
+
 local path = {}
 path.home = vim.loop.os_homedir()
 
