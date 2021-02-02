@@ -18,6 +18,9 @@ end
 
 return {
   extension = {
+    ['plist'] = 'xml',
+    ['gradle'] = 'groovy',
+    ['kt'] = 'kotlin',
     ['dart'] = 'dart',
     ['fnl'] = 'fennel',
     ['janet'] = 'janet',
