@@ -18,6 +18,7 @@ end
 
 return {
   extension = {
+    ['dart'] = 'dart',
     ['fnl'] = 'fennel',
     ['janet'] = 'janet',
     ['jsx'] = 'javascriptreact',
