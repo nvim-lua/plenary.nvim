@@ -18,6 +18,12 @@ end
 
 return {
   extension = {
+    ['ex'] = 'elixir',
+    ['exs'] = 'elixir',
+    ['plist'] = 'xml',
+    ['gradle'] = 'groovy',
+    ['kt'] = 'kotlin',
+    ['dart'] = 'dart',
     ['fnl'] = 'fennel',
     ['janet'] = 'janet',
     ['jsx'] = 'javascriptreact',
