@@ -229,7 +229,6 @@ function Path:normalize(cwd)
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
   -- Remove double path seps, it's annoying
   self.filename = self.filename:gsub(path.sep .. path.sep, path.sep)
-  print(self.filename)
 
   return self.filename
 end
