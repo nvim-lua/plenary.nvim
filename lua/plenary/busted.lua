@@ -221,8 +221,9 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
-  local _, _, desc_stack = call_inner(desc, func)
-  print(PENDING, "||", table.concat(desc_stack, " "))
+  -- local _, _, desc_stack = call_inner(desc, func)
+  -- print(PENDING, "||", table.concat(desc_stack, " "))
+  print(PENDING, "||", desc)
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
