@@ -175,62 +175,72 @@ m.scan_dir_async = function(path, opts)
   uv.fs_scandir(current_dir, read_dir)
 end
 
-local conv_to_octal = function(nr)
-  local octal = 0
-  local i = 1
+local gen_permissions = (function()
+  local conv_to_octal = function(nr)
+    local octal, i = 0, 1
 
-  while nr ~= 0 do
-    octal = octal + (nr % 8) * i
-    nr = math.floor(nr / 8)
-    i = i * 10
-  end
-
-  return octal;
-end
-
-local type_tbl = { [1]  = 'p', [2]  = 'c', [4]  = 'd', [6]  = 'b', [10] = '.', [12] = 'l', [14] = 's' }
-local permissions_tbl = { [0] = '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
-local bit_tbl = { 4, 2, 1 }
-
-local gen_permissions = function(stat)
-  local octal = string.format('%6d', conv_to_octal(stat.mode))
-  local l4 = octal:sub(#octal - 3, -1)
-  local bit = tonumber(l4:sub(1, 1))
-
-  local result = type_tbl[tonumber(octal:sub(1, 2))] or '-'
-  for i = 2, #l4 do
-    result = result .. permissions_tbl[tonumber(l4:sub(i, i))]
-    if bit - bit_tbl[i - 1] >= 0 then
-      result = result:sub(1, -2) .. (bit_tbl[i - 1] == 1 and 'T' or 'S')
-      bit = bit - bit_tbl[i - 1]
+    while nr ~= 0 do
+      octal = octal + (nr % 8) * i
+      nr = math.floor(nr / 8)
+      i = i * 10
     end
-  end
-  return result
-end
 
-local gen_size = function(stat)
-  local size = stat.size
-  for _, v in ipairs{ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z' } do
-    if math.abs(size) < 1024.0 then
-      if math.abs(size) > 9 then
-        return string.format("%3d%s", size, v)
-      else
-        return string.format("%3.1f%s", size, v)
+    return octal;
+  end
+
+  local type_tbl = { [1]  = 'p', [2]  = 'c', [4]  = 'd', [6]  = 'b', [10] = '.', [12] = 'l', [14] = 's' }
+  local permissions_tbl = { [0] = '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
+  local bit_tbl = { 4, 2, 1 }
+
+  return function(cache, mode)
+    if cache[mode] then return cache[mode] end
+
+    local octal = string.format('%6d', conv_to_octal(mode))
+    local l4 = octal:sub(#octal - 3, -1)
+    local bit = tonumber(l4:sub(1, 1))
+
+    local result = type_tbl[tonumber(octal:sub(1, 2))] or '-'
+    for i = 2, #l4 do
+      result = result .. permissions_tbl[tonumber(l4:sub(i, i))]
+      if bit - bit_tbl[i - 1] >= 0 then
+        result = result:sub(1, -2) .. (bit_tbl[i - 1] == 1 and 'T' or 'S')
+        bit = bit - bit_tbl[i - 1]
       end
     end
-    size = size / 1024.0
-  end
-  return string.format("%.1f%s", size, 'Y')
-end
 
-local current_year = os.date('%Y')
-
-local gen_date = function(stat)
-  if current_year ~= os.date('%Y', stat.mtime.sec) then
-    return os.date('%b %d  %Y', stat.mtime.sec)
+    cache[mode] = result
+    return result
   end
-  return os.date('%b %d %H:%M', stat.mtime.sec)
-end
+end)()
+
+local gen_size = (function()
+  local size_types = { '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z' }
+
+  return function(size)
+    -- TODO(conni2461): If type directory we could just return 4.0K
+    for _, v in ipairs(size_types) do
+      if math.abs(size) < 1024.0 then
+        if math.abs(size) > 9 then
+          return string.format("%3d%s", size, v)
+        else
+          return string.format("%3.1f%s", size, v)
+        end
+      end
+      size = size / 1024.0
+    end
+    return string.format("%.1f%s", size, 'Y')
+  end
+end)()
+
+local gen_date = (function()
+  local current_year = os.date('%Y')
+  return function(mtime)
+    if current_year ~= os.date('%Y', mtime) then
+      return os.date('%b %d  %Y', mtime)
+    end
+    return os.date('%b %d %H:%M', mtime)
+  end
+end)()
 
 local get_username = (function()
   if jit and os_sep ~= '\\' then
@@ -326,13 +336,12 @@ local gen_ls = function(data, path, opts)
     return file
   end
 
-  local results = {}
-  local sections = {}
+  local results, sections = {}, {}
 
   local users_tbl = os_sep ~= '\\' and {} or nil
   local groups_tbl = os_sep ~= '\\' and {} or nil
 
-  local stats = {}
+  local stats, permissions_cache = {}, {}
   for _, v in ipairs(data) do
     local stat = uv.fs_lstat(v)
     if stat then
@@ -400,11 +409,11 @@ local gen_ls = function(data, path, opts)
 
   for name, stat in pairs(stats) do
     insert_in_results(
-      gen_permissions(stat),
-      gen_size(stat),
+      gen_permissions(permissions_cache, stat.mode),
+      gen_size(stat.size),
       get_username(users_tbl, stat.uid),
       get_groupname(groups_tbl, stat.gid),
-      gen_date(stat),
+      gen_date(stat.mtime.sec),
       name:sub(#path + 2, -1)
     )
   end
