@@ -18,10 +18,33 @@ Plug 'nvim-lua/plenary.nvim'
 
 ## Modules
 
+- `plenary.job`
 - `plenary.path`
 - `plenary.context_manager`
 - `plenary.test_harness`
 - `plenary.neorocks` (This may move to packer.nvim, but I have added some improvements to use it more as a library.)
+
+### plenary.job
+
+A Lua module to interactive with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
+Define optional callbacks for `on_stdout`, `on_stderr` and `on_exit` and `start` your Job.
+
+Note: Each job has an empty environment.
+
+```lua
+local Job = require'plenary.job'
+
+Job:new({
+  command = 'rg',
+  args = { '--files' },
+  cwd = '/usr/bin',
+  env = { ['a'] = 'b' },
+  on_exit = function(j, return_val)
+    print(return_val)
+    print(j:result())
+  end,
+}):sync() -- or start()
+```
 
 ### plenary.path
 

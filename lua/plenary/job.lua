@@ -421,7 +421,7 @@ function Job:sync(timeout, wait_interval)
   self:start()
   self:wait(timeout, wait_interval)
 
-  return self.enable_recording and self:result() or nil
+  return self.enable_recording and self:result() or nil, self.code
 end
 
 function Job:result()
@@ -511,9 +511,55 @@ local _request_id = 0
 local _request_status = {}
 
 function Job:and_then(next_job)
+  self:add_on_exit_callback(function()
+    next_job:start()
+  end)
+end
+
+function Job:and_then_wrap(next_job)
   self:add_on_exit_callback(vim.schedule_wrap(function()
     next_job:start()
   end))
+end
+
+function Job:after(fn)
+  self:add_on_exit_callback(fn)
+end
+
+function Job:and_then_on_success(next_job)
+  self:add_on_exit_callback(function(_, code)
+    if code == 0 then next_job:start() end
+  end)
+end
+
+function Job:and_then_on_success_wrap(next_job)
+  self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
+    if code == 0 then next_job:start() end
+  end))
+end
+
+function Job:after_success(fn)
+  self:add_on_exit_callback(function(j, code, signal)
+    if code == 0 then fn(j, code, signal) end
+  end)
+end
+
+function Job:and_then_on_failure(next_job)
+  self:add_on_exit_callback(function(_, code)
+    if code ~= 0 then next_job:start() end
+  end)
+end
+
+function Job:and_then_on_failure_wrap(next_job)
+  self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
+    if code ~= 0 then next_job:start() end
+  end))
+end
+
+function Job:after_failure(fn)
+  self:add_on_exit_callback(function(j, code, signal)
+    if code ~= 0 then fn(j, code, signal) end
+  end)
 end
 
 function Job.chain(...)
