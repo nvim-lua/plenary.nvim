@@ -1,39 +1,3 @@
---[[
---
--- TODO: We should actually write the tests here, these are just examples.
-local Job = require('plenary.job')
-
-describe('Job', function()
-  it('should_chain_data', function()
-    local first_job = Job:new(...)
-    local second_job = Job:new(...)
-
-    -- Different options
-    first_job:chain(second_job)
-    first_job:and_then(second_job)
-    first_job:then(second_job)
-
-    Job.chain(first_job, second_job)
-
-    first_job:after(function() ... end)
-
-    -- Different kinds of things
-    -- 1. Run one job, then run another (only when finished, possibly w/ the results)
-    -- 2. Run one job, when done, run some synchronous code (just some callback, not necessarily a Job)
-    -- 3. Pipe stdout of one job, to the next job
-
-    -- Example 1:
-    -- I have a job that searches the file system for X
-    -- I have another job that determines the git status for X
-
-    -- Example 2:
-    -- I have a job that does some file system stuff
-    -- I want to prompt the user what to do when it's done
-  end)
-end)
---]]
-
-
 local Job = require('plenary.job')
 
 local has_all_executables = function(execs)
@@ -194,6 +158,22 @@ describe('Job', function()
       assert.are.same(job:result(), results)
     end)
 
+    it('should be possible to set one env variable with spaces and a map', function()
+      local results = {}
+      local job = Job:new {
+        command = 'env',
+        env = { ['A'] = 'This is a long env var' },
+        on_stdout = function(_, data)
+          table.insert(results, data)
+        end,
+      }
+
+      job:sync()
+
+      assert.are.same(job:result(), { 'A=This is a long env var' })
+      assert.are.same(job:result(), results)
+    end)
+
     it('should be possible to set multiple env variables with a map', function()
       local results = {}
       local job = Job:new {
@@ -279,6 +259,209 @@ describe('Job', function()
       job:sync()
 
       assert((vim.loop.hrtime() - start) / 1e9 < 1, "Should not take one second to complete")
+    end)
+
+    it('should return the return code as well', function()
+      local job = Job:new { command = 'false' }
+      local _, ret = job:sync()
+
+      assert.are.same(1, job.code)
+      assert.are.same(1, ret)
+    end)
+  end)
+
+  describe('chain', function()
+    it('should always run the next job when using and_then', function()
+      local results = {}
+
+      local first_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local second_job = Job:new{
+        command = 'env',
+        env = { ['b'] = '2' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local third_job = Job:new{ command = 'false' }
+
+      local fourth_job = Job:new{
+        command = 'env',
+        env = { ['c'] = '3' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      first_job:and_then(second_job)
+      second_job:and_then(third_job)
+      third_job:and_then(fourth_job)
+
+      first_job:sync()
+      second_job:wait()
+      third_job:wait()
+      fourth_job:wait()
+
+      assert.are.same({'a=1', 'b=2', 'c=3'}, results)
+      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same({'b=2'}, second_job:result())
+      assert.are.same(1, third_job.code)
+      assert.are.same({'c=3'}, fourth_job:result())
+    end)
+
+    it('should only run the next job on success when using and_then_on_success', function()
+      local results = {}
+
+      local first_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local second_job = Job:new{
+        command = 'env',
+        env = { ['b'] = '2' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local third_job = Job:new{ command = 'false' }
+
+      local fourth_job = Job:new{
+        command = 'env',
+        env = { ['c'] = '3' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      first_job:and_then_on_success(second_job)
+      second_job:and_then_on_success(third_job)
+      third_job:and_then_on_success(fourth_job)
+
+      first_job:sync()
+      second_job:wait()
+      third_job:wait()
+
+      assert.are.same({'a=1', 'b=2'}, results)
+      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same({'b=2'}, second_job:result())
+      assert.are.same(1, third_job.code)
+      assert.are.same(nil, fourth_job.handle, "Job never started")
+    end)
+
+    it('should only run the next job on failure when using and_then_on_failure', function()
+      local results = {}
+
+      local first_job = Job:new{
+        command = 'false',
+      }
+
+      local second_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local third_job = Job:new{
+        command = 'env',
+        env = { ['b'] = '2' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      first_job:and_then_on_failure(second_job)
+      second_job:and_then_on_failure(third_job)
+
+      local _, ret = first_job:sync()
+      second_job:wait()
+
+      assert.are.same(1, first_job.code)
+      assert.are.same(1, ret)
+      assert.are.same({'a=1'}, results)
+      assert.are.same({'a=1'}, second_job:result())
+      assert.are.same(nil, third_job.handle, "Job never started")
+    end)
+
+    it('should run all normal functions when using after', function()
+      local results = {}
+      local code = 0
+
+      local first_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local second_job = Job:new{ command = 'false' }
+
+      first_job:after(function() code = code + 10 end)
+      first_job:and_then(second_job)
+      second_job:after(function(_, c) code = code + c end)
+
+      first_job:sync()
+      second_job:wait()
+
+      assert.are.same({'a=1'}, results)
+      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same(1, second_job.code)
+      assert.are.same(11, code)
+    end)
+
+    it('should run only on success normal functions when using after_success', function()
+      local results = {}
+      local code = 0
+
+      local first_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local second_job = Job:new{ command = 'false' }
+      local third_job = Job:new{ command = 'true' }
+
+      first_job:after_success(function() code = code + 10 end)
+      first_job:and_then_on_success(second_job)
+      second_job:after_success(function(_, c) code = code + c end)
+      second_job:and_then_on_success(third_job)
+
+      first_job:sync()
+      second_job:wait()
+
+      assert.are.same({'a=1'}, results)
+      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same(1, second_job.code)
+      assert.are.same(10, code)
+      assert.are.same(nil, third_job.handle)
+    end)
+
+    it('should run only on failure normal functions when using after_failure', function()
+      local results = {}
+      local code = 0
+
+      local first_job = Job:new{ command = 'false' }
+
+      local second_job = Job:new{
+        command = 'env',
+        env = { ['a'] = '1' },
+        on_stdout = function(_, line) table.insert(results, line) end
+      }
+
+      local third_job = Job:new{ command = 'true' }
+
+      first_job:after_failure(function(_, c) code = code + c end)
+      first_job:and_then_on_failure(second_job)
+      second_job:after_failure(function() code = code + 10 end)
+      second_job:and_then_on_failure(third_job)
+
+      local _, ret = first_job:sync()
+      second_job:wait()
+
+      assert.are.same({'a=1'}, results)
+      assert.are.same({'a=1'}, second_job:result())
+      assert.are.same(1, ret)
+      assert.are.same(1, first_job.code)
+      assert.are.same(1, code)
+      assert.are.same(0, second_job.code)
+      assert.are.same(nil, third_job.handle)
     end)
   end)
 
