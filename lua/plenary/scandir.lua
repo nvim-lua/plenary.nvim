@@ -175,57 +175,72 @@ m.scan_dir_async = function(path, opts)
   uv.fs_scandir(current_dir, read_dir)
 end
 
-local conv_to_octal = function(nr)
-  local octal = 0
-  local i = 1
+local gen_permissions = (function()
+  local conv_to_octal = function(nr)
+    local octal, i = 0, 1
 
-  while nr ~= 0 do
-    octal = octal + (nr % 8) * i
-    nr = math.floor(nr / 8)
-    i = i * 10
-  end
-
-  return octal;
-end
-
-local type_tbl = { [1]  = 'p', [2]  = 'c', [4]  = 'd', [6]  = 'b', [10] = '-', [12] = 'l', [14] = 's' }
-local permissions_tbl = { [0] = '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
-local bit_tbl = { 4, 2, 1 }
-
-local gen_permissions = function(stat)
-  local octal = string.format('%6d', conv_to_octal(stat.mode))
-  local l4 = octal:sub(#octal - 3, -1)
-  local bit = tonumber(l4:sub(1, 1))
-
-  local result = type_tbl[tonumber(octal:sub(1, 2))] or '-'
-  for i = 2, #l4 do
-    result = result .. permissions_tbl[tonumber(l4:sub(i, i))]
-    if bit - bit_tbl[i - 1] >= 0 then
-      result = result:sub(1, -2) .. (bit_tbl[i - 1] == 1 and 't' or 's')
-      bit = bit - bit_tbl[i - 1]
+    while nr ~= 0 do
+      octal = octal + (nr % 8) * i
+      nr = math.floor(nr / 8)
+      i = i * 10
     end
-  end
-  return result
-end
 
-local gen_size = function(stat)
-  local size = stat.size
-  for _, v in ipairs{ '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z' } do
-    if math.abs(size) < 1024.0 then
-      if math.abs(size) > 9 then
-        return string.format("%3d%s", size, v)
-      else
-        return string.format("%3.1f%s", size, v)
+    return octal;
+  end
+
+  local type_tbl = { [1]  = 'p', [2]  = 'c', [4]  = 'd', [6]  = 'b', [10] = '.', [12] = 'l', [14] = 's' }
+  local permissions_tbl = { [0] = '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' }
+  local bit_tbl = { 4, 2, 1 }
+
+  return function(cache, mode)
+    if cache[mode] then return cache[mode] end
+
+    local octal = string.format('%6d', conv_to_octal(mode))
+    local l4 = octal:sub(#octal - 3, -1)
+    local bit = tonumber(l4:sub(1, 1))
+
+    local result = type_tbl[tonumber(octal:sub(1, 2))] or '-'
+    for i = 2, #l4 do
+      result = result .. permissions_tbl[tonumber(l4:sub(i, i))]
+      if bit - bit_tbl[i - 1] >= 0 then
+        result = result:sub(1, -2) .. (bit_tbl[i - 1] == 1 and 'T' or 'S')
+        bit = bit - bit_tbl[i - 1]
       end
     end
-    size = size / 1024.0
-  end
-  return string.format("%.1f%s", size, 'Y')
-end
 
-local gen_date = function(stat)
-  return os.date('%b %d %H:%M', stat.mtime.sec)
-end
+    cache[mode] = result
+    return result
+  end
+end)()
+
+local gen_size = (function()
+  local size_types = { '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z' }
+
+  return function(size)
+    -- TODO(conni2461): If type directory we could just return 4.0K
+    for _, v in ipairs(size_types) do
+      if math.abs(size) < 1024.0 then
+        if math.abs(size) > 9 then
+          return string.format("%3d%s", size, v)
+        else
+          return string.format("%3.1f%s", size, v)
+        end
+      end
+      size = size / 1024.0
+    end
+    return string.format("%.1f%s", size, 'Y')
+  end
+end)()
+
+local gen_date = (function()
+  local current_year = os.date('%Y')
+  return function(mtime)
+    if current_year ~= os.date('%Y', mtime) then
+      return os.date('%b %d  %Y', mtime)
+    end
+    return os.date('%b %d %H:%M', mtime)
+  end
+end)()
 
 local get_username = (function()
   if jit and os_sep ~= '\\' then
@@ -256,7 +271,10 @@ local get_username = (function()
       return name
     end
   else
-    return function(_, id)
+    return function(tbl, id)
+      if not tbl then return id end
+      if tbl[id] then return tbl[id] end
+      tbl[id] = tostring(id)
       return id
     end
   end
@@ -285,45 +303,140 @@ local get_groupname = (function()
       return name
     end
   else
-    return function(_, id)
+    return function(tbl, id)
+      if not tbl then return id end
+      if tbl[id] then return tbl[id] end
+      tbl[id] = tostring(id)
       return id
     end
   end
 end)()
 
-local gen_ls = function(data, path)
-  if not data or table.getn(data) == 0 then return {} end
+local get_max_len = function(tbl)
+  if not tbl then return 0 end
+  local max_len = 0
+  for _, v in pairs(tbl) do
+    if #v > max_len then
+      max_len = #v
+    end
+  end
+  return max_len
+end
 
-  local results = {}
+local gen_ls = function(data, path, opts)
+  if not data or table.getn(data) == 0 then return {}, {} end
+
+  local check_link = function(per, file)
+    if per:sub(1, 1) == 'l' then
+      local resolved = uv.fs_realpath(path .. os_sep .. file)
+      if not resolved then return file end
+      if resolved:sub(1, #path) == path then resolved = resolved:sub(#path + 2, -1) end
+      return string.format('%s -> %s', file, resolved)
+    end
+    return file
+  end
+
+  local results, sections = {}, {}
 
   local users_tbl = os_sep ~= '\\' and {} or nil
   local groups_tbl = os_sep ~= '\\' and {} or nil
 
-  local insert_in_results
-  if not users_tbl and not groups_tbl then
-    insert_in_results = function(...)
-      local args = {...}
-      table.insert(results, string.format('%10s %5s  %s  %s', args[1], args[2], args[5], args[6]))
-    end
-  else
-    insert_in_results = function(...)
-      table.insert(results, string.format('%10s %5s %s %s  %s  %s', ...))
+  local stats, permissions_cache = {}, {}
+  for _, v in ipairs(data) do
+    local stat = uv.fs_lstat(v)
+    if stat then
+      stats[v] = stat
+      get_username(users_tbl, stat.uid)
+      get_groupname(groups_tbl, stat.gid)
     end
   end
 
-  for _, v in ipairs(data) do
-    local stat = Path:new(v):_stat()
+  local insert_in_results = (function()
+    if not users_tbl and not groups_tbl then
+      local section_spacing_tbl = { [5] = 2, [6] = 0 }
 
+      return function(...)
+        local args = {...}
+        local section = {
+          { start_index = 01, end_index = 11 }, -- permissions, hardcoded indexes
+          { start_index = 12, end_index = 17 }, -- size, hardcoded indexes
+        }
+        local cur_index = 19
+        for k = 5, 6 do
+          local v = section_spacing_tbl[k]
+          local end_index = cur_index + #args[k]
+          table.insert(section, { start_index = cur_index, end_index = end_index })
+          cur_index = end_index + v
+        end
+        table.insert(sections, section)
+        table.insert(results, string.format('%10s %5s  %s  %s', args[1], args[2], args[5], check_link(args[1], args[6])))
+      end
+    else
+      local max_user_len = get_max_len(users_tbl)
+      local max_group_len = get_max_len(groups_tbl)
+
+      local section_spacing_tbl = {
+        [3] = { max = max_user_len, add = 1 },
+        [4] = { max = max_group_len, add = 2 },
+        [5] = { add = 2 }, [6] = { add = 0 }
+      }
+      local fmt_str = '%10s %5s %-' .. max_user_len .. 's %-' .. max_group_len ..'s  %s  %s'
+
+      return function(...)
+        local args = {...}
+        local section = {
+          { start_index = 01, end_index = 11 }, -- permissions, hardcoded indexes
+          { start_index = 12, end_index = 17 }, -- size, hardcoded indexes
+        }
+        local cur_index = 18
+        for k = 3, 6 do
+          local v = section_spacing_tbl[k]
+          local end_index = cur_index + #args[k]
+          table.insert(section, { start_index = cur_index, end_index = end_index })
+          if v.max then
+            cur_index = cur_index + v.max + v.add
+          else
+            cur_index = end_index + v.add
+          end
+        end
+        table.insert(sections, section)
+        table.insert(results,
+          string.format(fmt_str, args[1], args[2], args[3], args[4], args[5], check_link(args[1], args[6]))
+        )
+      end
+    end
+  end)()
+
+  for name, stat in pairs(stats) do
     insert_in_results(
-      gen_permissions(stat),
-      gen_size(stat),
+      gen_permissions(permissions_cache, stat.mode),
+      gen_size(stat.size),
       get_username(users_tbl, stat.uid),
       get_groupname(groups_tbl, stat.gid),
-      gen_date(stat),
-      v:sub(#path + 2, -1)
+      gen_date(stat.mtime.sec),
+      name:sub(#path + 2, -1)
     )
   end
-  return results
+
+  if opts and opts.group_directories_first then
+    local sorted_results = {}
+    local sorted_sections = {}
+    for k, v in ipairs(results) do
+      if v:sub(1, 1) == 'd' then
+        table.insert(sorted_results, v)
+        table.insert(sorted_sections, sections[k])
+      end
+    end
+    for k, v in ipairs(results) do
+      if v:sub(1, 1) ~= 'd' then
+        table.insert(sorted_results, v)
+        table.insert(sorted_sections, sections[k])
+      end
+    end
+    return sorted_results, sorted_sections
+  else
+    return results, sections
+  end
 end
 
 --- m.ls
@@ -331,10 +444,11 @@ end
 -- @param path: string
 --   string has to be a valid path
 -- @param opts: table to change behavior
---   opts.hidden (bool):            if true hidden files will be added
---   opts.add_dirs (bool):          if true dirs will also be added to the results, default: true
---   opts.respect_gitignore (bool): if true will only add files that are not ignored by git
---   opts.depth (int):              depth on how deep the search should go, default: 1
+--   opts.hidden (bool):                  if true hidden files will be added
+--   opts.add_dirs (bool):                if true dirs will also be added to the results, default: true
+--   opts.respect_gitignore (bool):       if true will only add files that are not ignored by git
+--   opts.depth (int):                    depth on how deep the search should go, default: 1
+--   opts.group_directories_first (bool): same as real ls
 -- @return array with formatted output
 m.ls = function(path, opts)
   opts = opts or {}
@@ -342,7 +456,7 @@ m.ls = function(path, opts)
   opts.add_dirs = opts.add_dirs or true
   local data = m.scan_dir(path, opts)
 
-  return gen_ls(data, path)
+  return gen_ls(data, path, opts)
 end
 
 --- m.ls_async
@@ -350,11 +464,12 @@ end
 -- @param path: string
 --   string has to be a valid path
 -- @param opts: table to change behavior
---   opts.hidden (bool):             if true hidden files will be added
---   opts.add_dirs (bool):           if true dirs will also be added to the results, default: true
---   opts.respect_gitignore (bool):  if true will only add files that are not ignored by git
---   opts.depth (int):               depth on how deep the search should go, default: 1
---   opts.on_exit function(results): will be called at the end (required)
+--   opts.hidden (bool):                  if true hidden files will be added
+--   opts.add_dirs (bool):                if true dirs will also be added to the results, default: true
+--   opts.respect_gitignore (bool):       if true will only add files that are not ignored by git
+--   opts.depth (int):                    depth on how deep the search should go, default: 1
+--   opts.group_directories_first (bool): same as real ls
+--   opts.on_exit function(results):      will be called at the end (required)
 m.ls_async = function(path, opts)
   opts = opts or {}
   opts.depth = opts.depth or 1
@@ -363,7 +478,7 @@ m.ls_async = function(path, opts)
   local opts_copy = vim.deepcopy(opts)
 
   opts_copy.on_exit = function(data)
-    if opts.on_exit then opts.on_exit(gen_ls(data, path)) end
+    if opts.on_exit then opts.on_exit(gen_ls(data, path, opts_copy)) end
   end
 
   m.scan_dir_async(path, opts_copy)
