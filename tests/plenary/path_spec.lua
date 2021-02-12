@@ -93,6 +93,35 @@ describe('Path', function()
     end)
   end)
 
+  describe(':make_relative', function()
+    it('can take absoluate paths and make them relative to the cwd', function()
+      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(relative, 'lua/plenary/path.lua')
+    end)
+
+    it('can take absoluate paths and make them relative to a given path', function()
+      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
+      local relative = Path:new(absolute):make_relative(vim.loop.cwd() .. '/lua')
+      assert.are.same(relative, 'plenary/path.lua')
+    end)
+  end)
+
+  describe(':normalize', function()
+    it('can take paths with double separators change them to single separators', function()
+      local orig = 'lua//plenary/path.lua'
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, 'lua/plenary/path.lua')
+    end)
+    -- this may be redundant since normalize just calls make_relative which is tested above
+    it('can take absolute paths with double seps'
+      .. 'and make them relative with single seps', function()
+      local orig = vim.loop.cwd() .. '/lua//plenary/path.lua'
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, 'lua/plenary/path.lua')
+    end)
+  end)
+
   describe('mkdir / rmdir', function()
     it('can create and delete directories', function()
       local p = Path:new("_dir_not_exist")
