@@ -402,7 +402,7 @@ end
 
 -- TODO: Asyncify this and use vim.wait in the meantime.
 --  This will allow other events to happen while we're waiting!
-function Path:read()
+function Path:_read()
   self = check_self(self)
 
   local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
@@ -413,7 +413,7 @@ function Path:read()
   return data
 end
 
-function Path:read_async(callback)
+function Path:_read_async(callback)
   vim.loop.fs_open(self.filename, "r", 438, function(err_open, fd)
     if err_open then
       print("We tried to open this file but couldn't. We failed with following error message: " .. err_open)
@@ -431,6 +431,13 @@ function Path:read_async(callback)
       end)
     end)
   end)
+end
+
+function Path:read(callback)
+  if callback then
+    return self:_read_async(callback)
+  end
+  return self:_read()
 end
 
 function Path:head(lines)
