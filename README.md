@@ -54,8 +54,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 
 ### plenary.scandir
 
-A Lua module for fast recursive file operations. Offers a recursive scan over a directory, similar to unix `find` or `fd`.
-It should be faster than running unix `find` running in a `plenary.job` and as fast as `fd` in a `plenary.job`.
+`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scan over a given directory, or a set of directories. 
 
 It offers a wide range of opts for limiting the depth, show hidden and more. We also have a async version with callbacks for `on_insert(file, typ)` (also available for sync version) and `on_exit(files)`.
 
