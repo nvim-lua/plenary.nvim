@@ -17,6 +17,7 @@ local S_IF = {
 }
 
 local path = {}
+path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
@@ -206,6 +207,57 @@ function Path:expand()
   return expanded and expanded or error("Path not valid")
 end
 
+function Path:make_relative(cwd)
+  cwd = F.if_nil(cwd, self._cwd, cwd)
+  if self.filename:sub(1, #cwd) == cwd  then
+    local offset =  0
+    -- if  cwd does ends in the os separator, we need to take it off
+    if cwd:sub(#cwd, #cwd) ~= path.separator then
+      offset = 1
+    end
+
+    self.filename = self.filename:sub(#cwd + 1 + offset, #self.filename)
+  end
+
+  return self.filename
+end
+
+function Path:normalize(cwd)
+  cwd = F.if_nil(cwd, self._cwd, cwd)
+  self:make_relative(cwd)
+  -- Substitute home directory w/ "~"
+  self.filename = self.filename:gsub("^" .. path.home, '~', 1)
+  -- Remove double path seps, it's annoying
+  self.filename = self.filename:gsub(path.sep .. path.sep, path.sep)
+
+  return self.filename
+end
+
+local shorten = (function()
+  if jit then
+    local ffi = require('ffi') ffi.cdef [[
+    typedef unsigned char char_u;
+    char_u *shorten_dir(char_u *str);
+    ]]
+    return function(filename)
+      if not filename then
+        return filename
+      end
+
+      local c_str = ffi.new("char[?]", #filename + 1)
+      ffi.copy(c_str, filename)
+      return ffi.string(ffi.C.shorten_dir(c_str))
+    end
+  end
+  return function(filename)
+    return filename
+  end
+end)()
+
+function Path:shorten()
+  return shorten(self.filename)
+end
+
 function Path:mkdir(opts)
   opts = opts or {}
 
@@ -350,7 +402,7 @@ end
 
 -- TODO: Asyncify this and use vim.wait in the meantime.
 --  This will allow other events to happen while we're waiting!
-function Path:read()
+function Path:_read()
   self = check_self(self)
 
   local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
@@ -359,6 +411,33 @@ function Path:read()
   assert(uv.fs_close(fd))
 
   return data
+end
+
+function Path:_read_async(callback)
+  vim.loop.fs_open(self.filename, "r", 438, function(err_open, fd)
+    if err_open then
+      print("We tried to open this file but couldn't. We failed with following error message: " .. err_open)
+      return
+    end
+    vim.loop.fs_fstat(fd, function(err_fstat, stat)
+      assert(not err_fstat, err_fstat)
+      if stat.type ~= 'file' then return callback('') end
+      vim.loop.fs_read(fd, stat.size, 0, function(err_read, data)
+        assert(not err_read, err_read)
+        vim.loop.fs_close(fd, function(err_close)
+          assert(not err_close, err_close)
+          return callback(data)
+        end)
+      end)
+    end)
+  end)
+end
+
+function Path:read(callback)
+  if callback then
+    return self:_read_async(callback)
+  end
+  return self:_read()
 end
 
 function Path:head(lines)
