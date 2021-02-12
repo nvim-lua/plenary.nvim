@@ -20,8 +20,10 @@ Plug 'nvim-lua/plenary.nvim'
 
 - `plenary.job`
 - `plenary.path`
+- `plenary.scandir`
 - `plenary.context_manager`
 - `plenary.test_harness`
+- `plenary.filetype`
 - `plenary.neorocks` (This may move to packer.nvim, but I have added some improvements to use it more as a library.)
 
 ### plenary.job
@@ -49,6 +51,20 @@ Job:new({
 ### plenary.path
 
 A Lua module that implements a bunch of the things from `pathlib` from Python, so that paths are easy to work with.
+
+### plenary.scandir
+
+`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scan over a given directory, or a set of directories.
+
+It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
+
+```lua
+local scan = require'plenary.scandir`
+scan.scan_dir('.', { hidden = true, depth = 2 })
+```
+
+This module also offers `ls -la` sync and async functions that will return a formated string for all files in the directory.
+Why? Just for fun
 
 ### plenary.context_manager
 

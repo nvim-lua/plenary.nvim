@@ -20,10 +20,14 @@ local path = {}
 path.home = vim.loop.os_homedir()
 
 path.sep = (function()
-  if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
-    return '/'
+  if jit then
+    if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
+      return '/'
+    else
+      return '\\'
+    end
   else
-    return '\\'
+    return package.config:sub(1, 1)
   end
 end)()
 
@@ -326,9 +330,9 @@ function Path:touch(opts)
     Path:new(self:parents()):mkdir({ parents = true })
   end
 
-  local fd = vim.loop.fs_open(self:_fs_filename(), "w", mode)
+  local fd = uv.fs_open(self:_fs_filename(), "w", mode)
   if not fd then error('Could not create file: ' .. self:_fs_filename()) end
-  vim.loop.fs_close(fd)
+  uv.fs_close(fd)
 
   return true
 end
@@ -386,7 +390,7 @@ function Path:parents()
 end
 
 function Path:is_file()
-  local stat = vim.loop.fs_stat(self:expand())
+  local stat = uv.fs_stat(self:expand())
   if stat then
     return stat.type == "file" and true or nil
   end
@@ -398,6 +402,16 @@ function Path:open()
 end
 
 function Path:close()
+end
+
+function Path:write(txt, flag, mode)
+  assert(flag, [[Path:write_text requires a flag! For example: 'w' or 'a']])
+
+  mode = mode or 438
+
+  local fd = assert(uv.fs_open(self:expand(), flag, mode))
+  assert(uv.fs_write(fd, txt, -1))
+  assert(uv.fs_close(fd))
 end
 
 -- TODO: Asyncify this and use vim.wait in the meantime.
