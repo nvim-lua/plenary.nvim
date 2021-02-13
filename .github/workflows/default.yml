@@ -3,9 +3,21 @@ name: default
 on: [push, pull_request]
 
 jobs:
-  x64-ubuntu:
-    name: X64-ubuntu
-    runs-on: ubuntu-20.04
+  native:
+    name: native
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15]
+        include:
+          - os: ubuntu-20.04
+            url: https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz
+            manager: sudo apt
+            packages: fd-find
+          - os: macos-10.15
+            url: https://github.com/neovim/neovim/releases/download/nightly/nvim-macos.tar.gz
+            manager: brew
+            packages: fd
     steps:
       - uses: actions/checkout@v2
       - run: date +%F > todays-date
@@ -13,12 +25,22 @@ jobs:
         uses: actions/cache@v2
         with:
           path: _neovim
-          key: ${{ runner.os }}-x64-${{ hashFiles('todays-date') }}
+          key: ${{ matrix.os }}-${{ hashFiles('todays-date') }}
+
+      - name: Prepare
+        run: |
+          ${{ matrix.manager }} install ${{ matrix.packages }}
+          test -d _neovim || {
+            mkdir -p _neovim
+            curl -sL ${{ matrix.url }} | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+          }
+          git clone --depth 1 https://github.com/neovim/neovim
 
       - name: Run tests
         run: |
-          curl -OL https://raw.githubusercontent.com/norcalli/bot-ci/master/scripts/github-actions-setup.sh
-          source github-actions-setup.sh nightly-x64
+          export PATH="${PWD}/_neovim/bin:${PATH}"
+          export VIM="${PWD}/_neovim/share/nvim/runtime"
+          nvim --version
           make test
 
   appimage-ubuntu:
@@ -35,6 +57,7 @@ jobs:
 
       - name: Prepare
         run: |
+          sudo apt install fd-find
           test -d build || {
             mkdir -p build
             wget https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
@@ -44,5 +67,5 @@ jobs:
 
       - name: Run tests
         run: |
-            export PATH="${PWD}/build/:${PATH}"
-            make test
+          export PATH="${PWD}/build/:${PATH}"
+          make test

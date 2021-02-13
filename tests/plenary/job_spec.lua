@@ -237,11 +237,12 @@ describe('Job', function()
     end)
 
     it('should match larger systemlist', function()
-      local results = vim.fn.systemlist('find')
+      local results = vim.fn.systemlist('find .')
       local stdout_results = {}
 
       local job = Job:new {
         command = 'find',
+        args = { '.' },
 
         on_stdout = function(_, line) table.insert(stdout_results, line) end
       }
