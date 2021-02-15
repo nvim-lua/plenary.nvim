@@ -262,6 +262,16 @@ function Path:shorten()
   return shorten(self.filename)
 end
 
+function Path:shorten_len(len)
+  if len then
+    local components = {}
+    for match in (self.filename..self.sep):gmatch("(.-)"..self.sep) do
+        table.insert(components, match);
+    end
+  end
+  return shorten(self.filename)
+end
+
 function Path:mkdir(opts)
   opts = opts or {}
 
