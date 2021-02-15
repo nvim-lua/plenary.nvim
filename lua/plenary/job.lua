@@ -52,21 +52,21 @@ end
 ---@class Map
 --- Map-like table
 
-
 --- Create a new job
+---
 ---@class Job
 ---@param o table
----@field o.command string          : Command to run
----@field o.args Array              : List of arguments to pass
----@field o.cwd string              : Working directory for job
----@field o.env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
----@field o.enable_handlers boolean : If set to false, disables all callbacks associated with output
----@field o.on_start function       : Run when starting job
----@field o.on_stdout function      : (error: string, data: string, self? Job)
----@field o.on_stderr function      : (error: string, data: string, self? Job)
----@field o.on_exit function        : (self, code: number, signal: number)
----@field o.maximum_results number  : stop processing results after this number
----@field o.writer Job|table|string : Job that writes to stdin of this job.
+---@field command string          : Command to run
+---@field args Array              : List of arguments to pass
+---@field cwd string              : Working directory for job
+---@field env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
+---@field enable_handlers boolean : If set to false, disables all callbacks associated with output
+---@field on_start function       : Run when starting job
+---@field on_stdout function      : (error: string, data: string, self? Job)
+---@field on_stderr function      : (error: string, data: string, self? Job)
+---@field on_exit function        : (self, code: number, signal: number)
+---@field maximum_results number  : stop processing results after this number
+---@field writer Job|table|string : Job that writes to stdin of this job.
 function Job:new(o)
   if not o then
     error(debug.traceback("Options are required for Job:new"))
@@ -421,7 +421,7 @@ function Job:sync(timeout, wait_interval)
   self:start()
   self:wait(timeout, wait_interval)
 
-  return self.enable_recording and self:result() or nil
+  return self.enable_recording and self:result() or nil, self.code
 end
 
 function Job:result()
@@ -511,9 +511,55 @@ local _request_id = 0
 local _request_status = {}
 
 function Job:and_then(next_job)
+  self:add_on_exit_callback(function()
+    next_job:start()
+  end)
+end
+
+function Job:and_then_wrap(next_job)
   self:add_on_exit_callback(vim.schedule_wrap(function()
     next_job:start()
   end))
+end
+
+function Job:after(fn)
+  self:add_on_exit_callback(fn)
+end
+
+function Job:and_then_on_success(next_job)
+  self:add_on_exit_callback(function(_, code)
+    if code == 0 then next_job:start() end
+  end)
+end
+
+function Job:and_then_on_success_wrap(next_job)
+  self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
+    if code == 0 then next_job:start() end
+  end))
+end
+
+function Job:after_success(fn)
+  self:add_on_exit_callback(function(j, code, signal)
+    if code == 0 then fn(j, code, signal) end
+  end)
+end
+
+function Job:and_then_on_failure(next_job)
+  self:add_on_exit_callback(function(_, code)
+    if code ~= 0 then next_job:start() end
+  end)
+end
+
+function Job:and_then_on_failure_wrap(next_job)
+  self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
+    if code ~= 0 then next_job:start() end
+  end))
+end
+
+function Job:after_failure(fn)
+  self:add_on_exit_callback(function(j, code, signal)
+    if code ~= 0 then fn(j, code, signal) end
+  end)
 end
 
 function Job.chain(...)

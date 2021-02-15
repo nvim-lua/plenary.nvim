@@ -43,6 +43,8 @@ local mod = {}
 
 local results = {}
 local current_description = {}
+local current_before_each = {}
+local current_after_each = {}
 
 local add_description = function(desc)
   table.insert(current_description, desc)
@@ -54,14 +56,26 @@ local pop_description = function()
   current_description[#current_description] = nil
 end
 
+local add_new_each = function()
+  current_before_each[current_description[#current_description]] = {}
+  current_after_each[current_description[#current_description]] = {}
+end
+
+local clear_last_each = function()
+  current_before_each[current_description[#current_description]] = nil
+  current_after_each[current_description[#current_description]] = nil
+end
+
 local call_inner = function(desc, func)
   local desc_stack = add_description(desc)
+  add_new_each()
   local ok, msg = xpcall(func, function(msg)
     -- debug.traceback
     -- return vim.inspect(get_trace(nil, 3, msg))
     local trace = get_trace(nil, 3, msg)
     return trace.message .. "\n" .. trace.traceback
   end)
+  clear_last_each()
   pop_description()
 
   return ok, msg, desc_stack
@@ -148,6 +162,18 @@ mod.inner_describe = function(desc, func)
   end
 end
 
+mod.before_each = function(fn)
+  table.insert(current_before_each[current_description[#current_description]], fn)
+end
+
+mod.after_each = function(fn)
+  table.insert(current_after_each[current_description[#current_description]], fn)
+end
+
+mod.clear = function()
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+end
+
 local indent = function(msg, spaces)
   if spaces == nil then
     spaces = 4
@@ -158,8 +184,18 @@ local indent = function(msg, spaces)
 
 end
 
+local run_each = function(tbl)
+  for _, v in pairs(tbl) do
+    for _, w in ipairs(v) do
+      if type(w) == 'function' then w() end
+    end
+  end
+end
+
 mod.it = function(desc, func)
+  run_each(current_before_each)
   local ok, msg, desc_stack = call_inner(desc, func)
+  run_each(current_after_each)
 
   local test_result = {
     descriptions = desc_stack,
@@ -185,8 +221,9 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
-  local _, _, desc_stack = call_inner(desc, func)
-  print(PENDING, "||", table.concat(desc_stack, " "))
+  -- local _, _, desc_stack = call_inner(desc, func)
+  -- print(PENDING, "||", table.concat(desc_stack, " "))
+  print(PENDING, "||", desc)
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
@@ -195,6 +232,9 @@ _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
 describe = mod.describe
 it = mod.it
 pending = mod.pending
+before_each = mod.before_each
+after_each = mod.after_each
+clear = mod.clear
 assert = require("luassert")
 
 mod.run = function(file)

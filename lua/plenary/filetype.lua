@@ -51,10 +51,17 @@ filetype.add_file = function(filename)
   end
 end
 
-filetype._get_extension = function(filename)
-  local ext_with_period = filename:match("^.+(%..+)$")
-  if ext_with_period then
-    return ext_with_period:sub(2)
+local filename_regex = "[^" .. os_sep .. "].*"
+filetype._get_extension_parts = function(filename)
+  local current_match = filename:match(filename_regex)
+  local possibilities = {}
+  while current_match do
+    current_match = current_match:match("[^.]%.(.*)")
+    if current_match then
+      table.insert(possibilities, current_match:lower())
+    else
+      return possibilities
+    end
   end
 end
 
@@ -73,11 +80,33 @@ filetype._parse_shebang = function(head)
   return ''
 end
 
+local done_adding = false
+local extend_tbl_with_ext_eq_ft_entries = function()
+  if not done_adding then
+    if vim.in_fast_event() then return end
+    local all_valid_filetypes = vim.fn.getcompletion('', 'filetype')
+    for _, v in ipairs(all_valid_filetypes) do
+      if not filetype_table.extension[v] then
+        filetype_table.extension[v] = v
+      end
+    end
+    done_adding = true
+    return true
+  end
+end
+
 filetype.detect_from_extension = function(filepath)
-  local ext = filetype._get_extension(filepath)
-  ext = ext and ext:lower()
-  local match = ext and filetype_table.extension[ext]
-  if match then return match end
+  local exts = filetype._get_extension_parts(filepath)
+  for _, ext in ipairs(exts) do
+    local match = ext and filetype_table.extension[ext]
+    if match then return match end
+  end
+  if extend_tbl_with_ext_eq_ft_entries() then
+    for _, ext in ipairs(exts) do
+      local match = ext and filetype_table.extension[ext]
+      if match then return match end
+    end
+  end
   return ''
 end
 

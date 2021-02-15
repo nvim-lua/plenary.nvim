@@ -18,13 +18,22 @@ end
 
 return {
   extension = {
+    ['ex'] = 'elixir',
+    ['exs'] = 'elixir',
+    ['plist'] = 'xml',
+    ['gradle'] = 'groovy',
+    ['kt'] = 'kotlin',
+    ['dart'] = 'dart',
     ['fnl'] = 'fennel',
     ['janet'] = 'janet',
     ['jsx'] = 'javascriptreact',
     ['tsx'] = 'typescriptreact',
+    ['jl'] = 'julia',
+    ['coffee'] = 'coffee',
+    ['_coffee'] = 'coffee',
   },
   file_name = {
-    ['showing_twitch_chat.kappa'] = 'PogChamp',
+    ['cakefile'] = 'coffee',
   },
   shebang = shebang
 }
