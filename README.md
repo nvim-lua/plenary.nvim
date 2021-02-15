@@ -213,6 +213,7 @@ neorocks.ensure_installed('lua-cjson', 'cjson')
 
 Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
 
+You may disable `neorocks` if necessary (e.g. if you are using another Luarocks provider and don't want to pay the startup cost of `neorocks` setup) by setting `g:plenary_disable_neorocks = v:true`.
 
 ### Bundled with:
 
