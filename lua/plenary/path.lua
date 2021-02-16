@@ -265,9 +265,19 @@ end
 function Path:shorten_len(len)
   if len then
     local components = {}
-    for match in (self.filename..self.sep):gmatch("(.-)"..self.sep) do
+    for match in (self.filename..path.sep):gmatch("(.-)"..path.sep) do
         table.insert(components, match);
     end
+    final_path = ""
+    for _, component in pairs(components) do
+      if #component > len then
+        final_path = final_path .. string.sub(component, 1, len)
+      else
+        final_path = final_path .. component
+      end
+      final_path = final_path .. path.sep
+    end
+    return string.sub(final_path, 1, #final_path - (len+1)) .. components[#components]
   end
   return shorten(self.filename)
 end
