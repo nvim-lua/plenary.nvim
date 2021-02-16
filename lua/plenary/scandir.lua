@@ -72,7 +72,7 @@ end
 local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
   if opts.hidden or name:sub(1, 1) ~= '.' then
     if typ == 'directory' then
-      local entry = current_dir .. '/' .. name
+      local entry = current_dir .. os_sep .. name
       if opts.depth then
         table.insert(next_dir, handle_depth(bp, entry, opts.depth))
       else
@@ -85,7 +85,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
         end
       end
     else
-      local entry = current_dir .. '/' .. name
+      local entry = current_dir .. os_sep .. name
       if not giti or interpret_gitignore(giti, bp, entry) then
         if not msp or msp(entry) then
           table.insert(data, entry)

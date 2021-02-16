@@ -1,11 +1,14 @@
 local Path = require("plenary.path")
 local Job = require("plenary.job")
+local scan = require("plenary.scandir")
 
 local f = require("plenary.functional")
 local log = require("plenary.log")
 local win_float = require("plenary.window.float")
 
 local headless = require("plenary.nvim_meta").is_headless
+local os_sep = Path.path.sep
+local is_windows = os_sep == '\\'
 
 local harness = {}
 
@@ -31,6 +34,11 @@ end)
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
   local directory = table.remove(split_string, 1)
+  if is_windows then
+    for k, v in ipairs(split_string) do
+      split_string[k] = v:gsub('\\', '\\\\')
+    end
+  end
 
   local opts = assert(loadstring('return ' .. table.concat(split_string, " ")))()
 
@@ -80,6 +88,12 @@ function harness.test_directory(directory, opts)
 
         table.insert(args, '-u')
         table.insert(args, opts.minimal_init)
+      end
+      -- PLEASE SOMEONE TELL ME WHY WE NEED TO DO THAT?!?
+      if is_windows then
+        for k, v in ipairs(args) do
+          args[k] = v:gsub('\\', '/')
+        end
       end
 
       return Job:new {
@@ -140,12 +154,10 @@ function harness.test_directory(directory, opts)
 end
 
 function harness._find_files_to_run(directory)
-  local finder = Job:new {
-    command = 'find',
-    args = {directory, '-type', 'f', '-name', '*_spec.lua'},
-  }
-
-  return f.map(Path.new, finder:sync())
+  if directory:sub(#directory, -1) == os_sep then
+    directory = directory:sub(1, -2)
+  end
+  return f.map(Path.new, scan.scan_dir(directory, { search_pattern = '.*%_spec%.lua' }))
 end
 
 function harness._run_path(test_type, directory)

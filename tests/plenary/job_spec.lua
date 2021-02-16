@@ -10,6 +10,16 @@ local has_all_executables = function(execs)
   return true
 end
 
+local contains = function(a, b)
+  local found = 0
+  for _, v in ipairs(a) do
+    for _, w in ipairs(b) do
+      if v == w then found = found + 1 end
+    end
+  end
+  return found == #b
+end
+
 describe('Job', function()
   describe('> cat manually >', function()
     it('should split simple stdin', function()
@@ -106,7 +116,7 @@ describe('Job', function()
 
       job:sync()
 
-      assert.are.same(job:result(), { 'A=100' })
+      assert.are.same(true, contains(job:result(), { 'A=100' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -122,7 +132,7 @@ describe('Job', function()
 
       job:sync()
 
-      assert.are.same(job:result(), { 'A=100', 'B=test' })
+      assert.are.same(true, contains(job:result(), { 'A=100', 'B=test' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -138,7 +148,7 @@ describe('Job', function()
 
       job:sync()
 
-      assert.are.same(job:result(), { 'A=100' })
+      assert.are.same(true, contains(job:result(), { 'A=100' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -154,7 +164,7 @@ describe('Job', function()
 
       job:sync()
 
-      assert.are.same(job:result(), { 'A=This is a long env var' })
+      assert.are.same(true, contains(job:result(), { 'A=This is a long env var' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -170,7 +180,7 @@ describe('Job', function()
 
       job:sync()
 
-      assert.are.same(job:result(), { 'A=This is a long env var' })
+      assert.are.same(true, contains(job:result(), { 'A=This is a long env var' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -186,15 +196,7 @@ describe('Job', function()
 
       job:sync()
 
-      local expected = { 'A=100', 'B=test' }
-      local found = { false, false }
-      for k, v in ipairs(job:result()) do
-        for _, w in ipairs(expected) do
-          if v == w then found[k] = true end
-        end
-      end
-
-      assert.are.same({ true, true }, found)
+      assert.are.same(true, contains(job:result(), { 'A=100', 'B=test' }))
       assert.are.same(job:result(), results)
     end)
 
@@ -210,15 +212,7 @@ describe('Job', function()
 
       job:sync()
 
-      local expected = { 'A=100', 'B=test' }
-      local found = { false, false }
-      for k, v in ipairs(job:result()) do
-        for _, w in ipairs(expected) do
-          if v == w then found[k] = true end
-        end
-      end
-
-      assert.are.same({ true, true }, found)
+      assert.are.same(true, contains(job:result(), { 'A=100', 'B=test' }))
       assert.are.same(job:result(), results)
     end)
   end)
@@ -304,11 +298,11 @@ describe('Job', function()
       third_job:wait()
       fourth_job:wait()
 
-      assert.are.same({'a=1', 'b=2', 'c=3'}, results)
-      assert.are.same({'a=1'}, first_job:result())
-      assert.are.same({'b=2'}, second_job:result())
+      assert.are.same(true, contains(results, { 'a=1', 'b=2', 'c=3' }))
+      assert.are.same(true, contains(first_job:result(), { 'a=1' }))
+      assert.are.same(true, contains(second_job:result(), { 'b=2' }))
       assert.are.same(1, third_job.code)
-      assert.are.same({'c=3'}, fourth_job:result())
+      assert.are.same(true, contains(fourth_job:result(), { 'c=3' }))
     end)
 
     it('should only run the next job on success when using and_then_on_success', function()
@@ -342,9 +336,9 @@ describe('Job', function()
       second_job:wait()
       third_job:wait()
 
-      assert.are.same({'a=1', 'b=2'}, results)
-      assert.are.same({'a=1'}, first_job:result())
-      assert.are.same({'b=2'}, second_job:result())
+      assert.are.same(true, contains(results, { 'a=1', 'b=2' }))
+      assert.are.same(true, contains(first_job:result(), { 'a=1' }))
+      assert.are.same(true, contains(second_job:result(), { 'b=2' }))
       assert.are.same(1, third_job.code)
       assert.are.same(nil, fourth_job.handle, "Job never started")
     end)
@@ -376,8 +370,8 @@ describe('Job', function()
 
       assert.are.same(1, first_job.code)
       assert.are.same(1, ret)
-      assert.are.same({'a=1'}, results)
-      assert.are.same({'a=1'}, second_job:result())
+      assert.are.same(true, contains(results, { 'a=1' }))
+      assert.are.same(true, contains(second_job:result(), { 'a=1' }))
       assert.are.same(nil, third_job.handle, "Job never started")
     end)
 
@@ -400,8 +394,8 @@ describe('Job', function()
       first_job:sync()
       second_job:wait()
 
-      assert.are.same({'a=1'}, results)
-      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same(true, contains(results, { 'a=1' }))
+      assert.are.same(true, contains(first_job:result(), { 'a=1' }))
       assert.are.same(1, second_job.code)
       assert.are.same(11, code)
     end)
@@ -427,8 +421,8 @@ describe('Job', function()
       first_job:sync()
       second_job:wait()
 
-      assert.are.same({'a=1'}, results)
-      assert.are.same({'a=1'}, first_job:result())
+      assert.are.same(true, contains(results, { 'a=1' }))
+      assert.are.same(true, contains(first_job:result(), { 'a=1' }))
       assert.are.same(1, second_job.code)
       assert.are.same(10, code)
       assert.are.same(nil, third_job.handle)
@@ -456,8 +450,8 @@ describe('Job', function()
       local _, ret = first_job:sync()
       second_job:wait()
 
-      assert.are.same({'a=1'}, results)
-      assert.are.same({'a=1'}, second_job:result())
+      assert.are.same(true, contains(results, { 'a=1' }))
+      assert.are.same(true, contains(second_job:result(), { 'a=1' }))
       assert.are.same(1, ret)
       assert.are.same(1, first_job.code)
       assert.are.same(1, code)

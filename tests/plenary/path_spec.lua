@@ -109,16 +109,16 @@ describe('Path', function()
 
   describe(':normalize', function()
     it('can take paths with double separators change them to single separators', function()
-      local orig = 'lua//plenary/path.lua'
+      local orig = 'lua' .. path.sep .. path.sep .. 'plenary' .. path.sep .. 'path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, 'lua' .. path.sep .. 'plenary' .. path.sep .. 'path.lua')
     end)
     -- this may be redundant since normalize just calls make_relative which is tested above
     it('can take absolute paths with double seps'
       .. 'and make them relative with single seps', function()
-      local orig = vim.loop.cwd() .. '/lua//plenary/path.lua'
+      local orig = vim.loop.cwd() .. path.sep .. 'lua' .. path.sep .. path.sep .. 'plenary' .. path.sep .. 'path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, 'lua' .. path.sep .. 'plenary' .. path.sep .. 'path.lua')
     end)
   end)
 
@@ -219,14 +219,14 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
 
     it('should read the first line of file', function()
       local p = Path:new('LICENSE')
       local data = p:head(1)
       local should = [[MIT License]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
 
     it('head should max read whole file', function()
@@ -253,7 +253,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
 
     it('should read tail of file', function()
@@ -269,14 +269,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
 
     it('should read the last line of file', function()
       local p = Path:new('LICENSE')
       local data = p:tail(1)
       local should = [[SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
 
     it('tail should max read whole file', function()
@@ -303,7 +303,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data:gsub("\r", ""))
     end)
   end)
 end)

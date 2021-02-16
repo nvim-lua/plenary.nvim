@@ -34,7 +34,6 @@ jobs:
             mkdir -p _neovim
             curl -sL ${{ matrix.url }} | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
           }
-          git clone --depth 1 https://github.com/neovim/neovim
 
       - name: Run tests
         run: |
@@ -68,4 +67,28 @@ jobs:
       - name: Run tests
         run: |
           export PATH="${PWD}/build/:${PATH}"
+          make test
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # TODO(conni2461): Cache
+      - name: Prepare
+        run: |
+          curl -sL https://github.com/neovim/neovim/releases/download/nightly/nvim-win64.zip --output nvim-win64.zip
+          unzip nvim-win64.zip
+          rm nvim-win64.zip
+
+          curl -sL https://github.com/sharkdp/fd/releases/download/v8.2.1/fd-v8.2.1-x86_64-pc-windows-msvc.zip --output fd.zip
+          unzip fd.zip
+          rm fd.zip
+
+      - name: Run tests
+        run: |
+          $env:Path += ";Neovim/bin/;Fd/"
+          nvim --version
+          # nvim --headless --noplugin -u scripts/minimal.vim -c "PlenaryBustedFile tests/plenary/simple_busted_spec.lua"
           make test
