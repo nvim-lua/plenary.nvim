@@ -47,7 +47,7 @@ function win_float.centered(options)
 
   local win_opts = win_float.default_opts(options)
 
-  local bufnr = vim.fn.nvim_create_buf(false, true)
+  local bufnr = options.bufnr or vim.fn.nvim_create_buf(false, true)
   local win_id = vim.fn.nvim_open_win(bufnr, true, win_opts)
 
   vim.cmd('setlocal nocursorcolumn')
