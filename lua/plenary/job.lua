@@ -491,11 +491,18 @@ end
 --- Wait for all jobs to complete
 function Job.join(...)
   local jobs_to_wait = {...}
+  local num_jobs = table.getn(jobs_to_wait)
 
-  local num_jobs = #jobs_to_wait
+  -- last entry can be timeout
+  local timeout
+  if type(jobs_to_wait[num_jobs]) == "number" then
+    timeout = table.remove(jobs_to_wait, num_jobs)
+    num_jobs = num_jobs - 1
+  end
+
   local completed = 0
 
-  return vim.wait(10000, function()
+  return vim.wait(timeout or 10000, function()
     for index, current_job in pairs(jobs_to_wait) do
       if current_job.is_shutdown then
         jobs_to_wait[index] = nil
