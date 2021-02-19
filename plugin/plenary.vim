@@ -16,4 +16,5 @@ function! s:write_and_run_testfile() abort
     return
 endfunction
 
-nnoremap <Plug>PlenaryTestFile :call <sid>write_and_run_testfile()<CR>
+nnoremap <Plug>PlenaryWriteAndRunTestFile :call <sid>write_and_run_testfile()<CR>
+nnoremap <Plug>PlenaryTestFile :lua require('plenary.test_harness').test_directory(vim.fn.expand("%:p"))<CR>
