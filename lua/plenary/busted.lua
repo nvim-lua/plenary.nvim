@@ -81,42 +81,37 @@ local call_inner = function(desc, func)
   return ok, msg, desc_stack
 end
 
-local color_table = {
-  yellow = 33,
-  green = 32,
-  red = 31,
+local ansi_color_table = {
+   purple = 35,
+   yellow = 33,
+   green = 32,
+   red = 31,
 }
 
 local color_string = function(color, str)
   if not is_headless then
+     -- This is never being called
     return str
   end
 
   return string.format("%s[%sm%s%s[%sm",
     string.char(27),
-    color_table[color] or 0,
+    ansi_color_table[color] or 0,
     str,
     string.char(27),
     0
   )
 end
 
-local SUCCESS = color_string("green", "Success")
-local FAIL = color_string("red", "Fail")
-local PENDING = color_string("yellow", "Pending")
-
 local HEADER = string.rep("=", 40)
 
-mod.format_results = function(res)
-  local num_pass = #res.pass
-  local num_fail = #res.fail
-  local num_errs = #res.errs
+mod.format_results = function(result)
 
-  print("")
-  print(color_string("green", "Success: "), num_pass)
-  print(color_string("red", "Failed : "), num_fail)
-  print(color_string("red", "Errors : "), num_errs)
-  print(HEADER)
+  local num_pass = color_string("green", #result.pass)
+  local num_fail = color_string("red", #result.fail)
+  local num_errs = color_string("purple", #result.errs)
+
+  print(string.format(" %s successes /  %s failures / %s errors", num_pass, num_fail, num_errs))
 end
 
 mod.describe = function(desc, func)
