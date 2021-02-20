@@ -103,7 +103,11 @@ local color_string = function(color, str)
   )
 end
 
-local HEADER = string.rep("=", 40)
+local SUCCESS = color_string("green", "Success")
+local FAIL = color_string("red", "Failure")
+local PENDING = color_string("yellow", "Pending")
+
+local HORIZONTALRULER = string.rep("─", 80)
 
 mod.format_results = function(result)
 
@@ -119,8 +123,8 @@ mod.describe = function(desc, func)
   results.fail = {}
   results.errs = {}
 
-  print("\n" .. HEADER)
-  print("Testing: ", debug.getinfo(2, 'Sl').source)
+     print("\n" .. HORIZONTALRULER .."\n ")
+  -- print("Testing: ", debug.getinfo(2, 'Sl').source)
 
   describe = mod.inner_describe
   local ok, msg = call_inner(desc, func)
@@ -205,7 +209,8 @@ mod.it = function(desc, func)
     to_insert = results.fail
     test_result.msg = msg
 
-    print(FAIL, "||", table.concat(test_result.descriptions, " "))
+    print(FAIL, " → ", "spec/foo/bar_spec.lua @ 7")
+    print(table.concat(test_result.descriptions, "\n"))
     print(indent(msg, 12))
   else
     to_insert = results.pass
@@ -236,10 +241,10 @@ mod.run = function(file)
   local ok, msg = pcall(dofile, file)
 
   if not ok then
-    print(HEADER)
+    print(HORIZONTALRULER)
     print("FAILED TO LOAD FILE")
     print(color_string("red", msg))
-    print(HEADER)
+    print(HORIZONTALRULER)
     os.exit(2)
   end
 
