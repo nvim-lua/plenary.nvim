@@ -136,10 +136,15 @@ describe('Path', function()
       local short_path = Path:new(long_path):shorten(2)
       assert.are.same(short_path, '/th/is/a/lo/path')
 
-
-      long_path = 'this/is/a/long/path' -- without the leading /
+      -- without the leading /
+      long_path = 'this/is/a/long/path'
       short_path = Path:new(long_path):shorten(3)
-      assert.are.same(short_path, '/thi/is/a/lon/path')
+      assert.are.same(short_path, 'thi/is/a/lon/path')
+
+      -- where len is greater than the length of the final component
+      long_path = 'this/is/an/extremely/long/path'
+      short_path = Path:new(long_path):shorten(5)
+      assert.are.same(short_path, 'this/is/an/extre/long/path')
     end)
   end)
 

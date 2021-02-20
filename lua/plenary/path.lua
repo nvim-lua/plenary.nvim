@@ -247,9 +247,13 @@ local function shorten_len(filename, len)
     table.insert(final_path_components, path.sep)
     final_match = match
   end
-  print(vim.inspect(final_path_components))
-  local final_path = table.concat(final_path_components)
-  return string.sub(final_path, 1, #final_path - (len+1)) .. final_match
+
+  local l = #final_path_components -- so that we don't need to keep calculating length
+  table.remove(final_path_components, l) -- remove final slash
+  table.remove(final_path_components, l-1) -- remvove shortened final component
+  table.insert(final_path_components, final_match) -- insert full final component
+
+  return table.concat(final_path_components)
 end
 
 local shorten = (function()
