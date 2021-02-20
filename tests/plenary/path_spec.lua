@@ -130,11 +130,16 @@ describe('Path', function()
     end)
   end)
 
-  describe(':shorten_len', function()
+  describe(':shorten', function()
     it('can shorten a path components to a given length', function()
       local long_path = '/this/is/a/long/path'
-      local short_path = Path:new(long_path):shorten_len(2)
+      local short_path = Path:new(long_path):shorten(2)
       assert.are.same(short_path, '/th/is/a/lo/path')
+
+
+      long_path = 'this/is/a/long/path' -- without the leading /
+      short_path = Path:new(long_path):shorten(3)
+      assert.are.same(short_path, '/thi/is/a/lon/path')
     end)
   end)
 

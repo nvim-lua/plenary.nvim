@@ -7,8 +7,6 @@ local uv = vim.loop
 
 local F = require('plenary.functional')
 
-
-
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -237,6 +235,23 @@ function Path:normalize(cwd)
   return self.filename
 end
 
+local function shorten_len(filename, len)
+  local final_match
+  local final_path_components = {}
+  for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
+    if #match > len then
+      table.insert(final_path_components, #final_path_components, string.sub(match, 1, len))
+    else
+      table.insert(final_path_components, #final_path_components, match)
+    end
+    table.insert(final_path_components, #final_path_components, path.sep)
+    final_match = match
+  end
+  print(vim.inspect(final_path_components))
+  local final_path = table.concat(final_path_components)
+  return string.sub(final_path, 1, #final_path - (len+1)) .. final_match
+end
+
 local shorten = (function()
   if jit then
     local ffi = require('ffi') ffi.cdef [[
@@ -254,28 +269,13 @@ local shorten = (function()
     end
   end
   return function(filename)
-    return filename
+    shorten_len(filename, 1)
   end
 end)()
 
-function Path:shorten()
-  return shorten(self.filename)
-end
-
-function Path:shorten_len(len)
+function Path:shorten(len)
   if len then
-    local final_match
-    local final_path = ""
-    for match in (self.filename..path.sep):gmatch("(.-)"..path.sep) do
-      if #match > len then
-        final_path = final_path .. string.sub(match, 1, len)
-      else
-        final_path = final_path .. match
-      end
-      final_path = final_path .. path.sep
-      final_match = match
-    end
-    return string.sub(final_path, 1, #final_path - (len+1)) .. final_match
+    return shorten_len(self.filename, len)
   end
   return shorten(self.filename)
 end
