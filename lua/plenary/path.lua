@@ -278,7 +278,8 @@ local shorten = (function()
 end)()
 
 function Path:shorten(len)
-  if len then
+  if len and len == 0 then error("len must be at least 1") end
+  if len and len > 1 then
     return shorten_len(self.filename, len)
   end
   return shorten(self.filename)
