@@ -240,11 +240,11 @@ local function shorten_len(filename, len)
   local final_path_components = {}
   for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
     if #match > len then
-      table.insert(final_path_components, #final_path_components, string.sub(match, 1, len))
+      table.insert(final_path_components, string.sub(match, 1, len))
     else
-      table.insert(final_path_components, #final_path_components, match)
+      table.insert(final_path_components, match)
     end
-    table.insert(final_path_components, #final_path_components, path.sep)
+    table.insert(final_path_components, path.sep)
     final_match = match
   end
   print(vim.inspect(final_path_components))
