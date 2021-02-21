@@ -23,7 +23,7 @@
 -- Line number:
 --      @ 7
 -- Description:
---      Extract and return the properties of a test project 
+--      Extract and return the properties of a test project
 --      get_project_path() : Should return the path of a Csharp project
 -- Message:
 --      Expected objects to be equal.
@@ -35,4 +35,7 @@
 
 local M = {}
 
+M.run = function(file)
+
+end
 return M
