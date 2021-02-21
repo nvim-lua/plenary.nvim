@@ -278,7 +278,7 @@ local shorten = (function()
 end)()
 
 function Path:shorten(len)
-  if len and len == 0 then error("len must be at least 1") end
+  assert(len ~= 0, 'len must be at least 1')
   if len and len > 1 then
     return shorten_len(self.filename, len)
   end
