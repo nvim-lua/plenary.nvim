@@ -61,18 +61,18 @@ function harness.test_directory(directory, opts)
   local outputter = headless and print_output or nvim_output
 
   local paths = harness._find_files_to_run(directory)
-  for _, p in ipairs(paths) do
-    outputter(res.bufnr, "Scheduling: " .. p.filename)
+  for _, path in ipairs(paths) do
+    outputter(res.bufnr, "Scheduling: " .. path.filename)
   end
 
   local path_len = #paths
 
   local jobs = f.map(
-    function(p)
+    function(path)
       local args = {
         '--headless',
         '-c',
-        string.format('lua require("plenary.busted").run("%s")', p:absolute())
+        string.format('lua require("plenary.busted").run("%s")', path:absolute())
       }
 
       if opts.minimal_init ~= nil then
@@ -152,11 +152,11 @@ function harness._run_path(test_type, directory)
   local bufnr = 0
   local win_id = 0
 
-  for _, p in pairs(paths) do
+  for _, path in pairs(paths) do
     print(" ")
-    print("Loading Tests For: ", p:absolute(), "\n")
+    print("Loading Tests For: ", path:absolute(), "\n")
 
-    local ok, _ = pcall(function() dofile(p:absolute()) end)
+    local ok, _ = pcall(function() dofile(path:absolute()) end)
 
     if not ok then
       print("Failed to load file")
