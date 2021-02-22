@@ -120,35 +120,16 @@ mod.format_results = function(res)
 end
 
 mod.describe = function(desc, func)
-  results.pass = {}
-  results.fail = {}
-  results.errs = {}
-
-  print("\n" .. HEADER)
-  print("Testing: ", debug.getinfo(2, 'Sl').source)
+  results.pass  = results.pass or {}
+  results.fail  = results.fail or {}
+  results.errs  = results.errs or {}
+  results.fatal = results.fatal or {}
 
   describe = mod.inner_describe
   local ok, msg = call_inner(desc, func)
   describe = mod.describe
 
-  mod.format_results(results)
-
-  if not ok then
-    print("We had an unexpected error: ", msg, vim.inspect(results))
-    if is_headless then
-      os.exit(2)
-    end
-  elseif #results.fail > 0 then
-    print("Tests Failed. Exit: 1")
-
-    if is_headless then
-      os.exit(1)
-    end
-  else
-    if is_headless then
-      os.exit(0)
-    end
-  end
+  table.insert(results.fatal, msg)
 end
 
 mod.inner_describe = function(desc, func)
@@ -221,9 +202,9 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
-  -- local _, _, desc_stack = call_inner(desc, func)
-  -- print(PENDING, "||", table.concat(desc_stack, " "))
-  print(PENDING, "||", desc)
+  local curr_stack = vim.deepcopy(current_description)
+  table.insert(curr_stack, desc)
+  print(PENDING, "||", table.concat(curr_stack, " "))
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
@@ -238,6 +219,9 @@ clear = mod.clear
 assert = require("luassert")
 
 mod.run = function(file)
+  print("\n" .. HEADER)
+  print("Testing: ", file)
+
   local ok, msg = pcall(dofile, file)
 
   if not ok then
@@ -245,10 +229,40 @@ mod.run = function(file)
     print("FAILED TO LOAD FILE")
     print(color_string("red", msg))
     print(HEADER)
-    os.exit(2)
+    if is_headless then
+      os.exit(2)
+    else
+      return
+    end
   end
 
-  os.exit(0)
+  -- If nothing runs (empty file without top level describe)
+  if not results.pass then
+    if is_headless then
+      os.exit(0)
+    else
+      return
+    end
+  end
+
+  mod.format_results(results)
+
+  if #results.fatal ~= 0 then
+    print("We had an unexpected error: ", vim.inspect(results.fatal), vim.inspect(results))
+    if is_headless then
+      os.exit(2)
+    end
+  elseif #results.fail > 0 then
+    print("Tests Failed. Exit: 1")
+
+    if is_headless then
+      os.exit(1)
+    end
+  else
+    if is_headless then
+      os.exit(0)
+    end
+  end
 end
 
 return mod
