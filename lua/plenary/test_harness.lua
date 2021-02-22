@@ -9,7 +9,7 @@ local headless = require("plenary.nvim_meta").is_headless
 
 local harness = {}
 
-local print_output = vim.schedule_wrap(function(_, ...)
+local cli_output = vim.schedule_wrap(function(_, ...)
   for _, v in ipairs({...}) do
     io.stdout:write(tostring(v))
     io.stdout:write("\n")
@@ -38,7 +38,7 @@ function harness.test_directory_command(command)
 end
 
 function harness.test_directory(directory, opts)
-  print("Starting...")
+  print("Starting...\n")
   opts = vim.tbl_deep_extend('force', {winopts = {winblend = 3}}, opts or {})
 
   local res = {}
@@ -58,7 +58,7 @@ function harness.test_directory(directory, opts)
     vim.cmd('mode')
   end
 
-  local outputter = headless and print_output or nvim_output
+  local outputter = headless and cli_output or nvim_output
 
   local paths = harness._find_files_to_run(directory)
   for _, path in ipairs(paths) do

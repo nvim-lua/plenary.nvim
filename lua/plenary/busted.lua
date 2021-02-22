@@ -70,10 +70,9 @@ local call_inner = function(desc, func)
   local desc_stack = add_description(desc)
   add_new_each()
   local ok, msg = xpcall(func, function(msg)
-    -- debug.traceback
-    -- return vim.inspect(get_trace(nil, 3, msg))
     local trace = get_trace(nil, 3, msg)
-    return trace.message .. "\n" .. trace.traceback
+    -- return trace.message .. "\n" .. trace.traceback
+    return trace.message
   end)
   clear_last_each()
   pop_description()
@@ -82,6 +81,7 @@ local call_inner = function(desc, func)
 end
 
 local ansi_color_table = {
+   cyan = 36,
    purple = 35,
    yellow = 33,
    green = 32,
@@ -89,18 +89,25 @@ local ansi_color_table = {
 }
 
 local color_string = function(color, str)
-  if not is_headless then
-     -- This is never being called
-    return str
-  end
+   if not is_headless then
+      -- This is never being called
+      return str
+   end
 
-  return string.format("%s[%sm%s%s[%sm",
-    string.char(27),
-    ansi_color_table[color] or 0,
-    str,
-    string.char(27),
+   return string.format("%s[%sm%s%s[%sm",
+   string.char(27),
+   ansi_color_table[color] or 0,
+   str,
+   string.char(27),
     0
   )
+end
+
+local bold_string = function(str)
+   local ansi_bold = "\027[1m"
+   local ansi_clear = "\027[0m"
+
+   return ansi_bold .. str .. ansi_clear
 end
 
 local SUCCESS = color_string("green", "Success")
@@ -203,18 +210,18 @@ mod.it = function(desc, func)
 
   -- TODO: We should figure out how to determine whether
   -- and assert failed or whether it was an error...
-
   local to_insert, printed
   if not ok then
     to_insert = results.fail
     test_result.msg = msg
 
-    print(FAIL, " → ", "spec/foo/bar_spec.lua @ 7")
-    print(table.concat(test_result.descriptions, "\n"))
-    print(indent(msg, 12))
+    print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7"))
+    print(bold_string(table.concat(test_result.descriptions, "\n")))
+    print(indent("\n" .. msg, 7))
   else
-    to_insert = results.pass
-    print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+    -- No need to show passing tests
+    -- to_insert = results.pass
+    -- print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
   end
 
   table.insert(to_insert, test_result)
