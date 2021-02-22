@@ -123,8 +123,10 @@ function harness.test_directory(directory, opts)
     return
   end
 
+  table.insert(jobs, 50000)
   log.debug("...Waiting")
   Job.join(unpack(jobs))
+  table.remove(jobs, table.getn(jobs))
   vim.wait(100)
   log.debug("Done...")
 
