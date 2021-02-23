@@ -7,6 +7,5 @@ end
 
 describe('spawning', function()
   it('should work simple', function()
-    local future = 
   end)
 end)

@@ -1,6 +1,6 @@
-local a = require('async/async')
+local a = require('plenary.async.async')
 local co = coroutine
-local VecDeque = require('async/helpers').VecDeque
+local VecDeque = require('plenary.async.helpers').VecDeque
 local uv = vim.loop
 
 local M = {}

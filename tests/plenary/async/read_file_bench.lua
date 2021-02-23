@@ -63,6 +63,8 @@ local second_bench = function()
   end
 end
 
+-- both result in times between 0.02 and 0.05
+
 -- first_bench()()
 
--- second_bench()
+second_bench()
