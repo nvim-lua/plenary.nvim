@@ -2,32 +2,65 @@ local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
 
-local function get_trace(element, level, msg)
-  local function trimTrace(info)
-    local index = info.traceback:find('\n%s*%[C]')
-    info.traceback = info.traceback:sub(1, index)
-    return info
-  end
-  level = level or  3
+-- local function get_trace(element, level, msg)
+--   local function trimTrace(info)
+--      -- print("info : " .. info.traceback)
+--     -- local index = info.traceback:find('\n%s*%[C]')
+--    local start_index = info.traceback:find('/')
+--    local end_index = info.traceback:find(': in')
+--     print("start : " .. start_index .. " index: " .. end_index)
+--     info.traceback = info.traceback:sub(start_index, end_index)
+--     print(info.traceback)
+--     return info
+--   end
+--   level = level or  3
 
-  local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
-  local info = debug.getinfo(level, 'Sl')
-  while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
-        (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
-    level = level + 1
-    info = debug.getinfo(level, 'Sl')
-  end
+--   local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
+--   local info = debug.getinfo(level, 'Sl')
+--   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
+--         (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+--     level = level + 1
+--     info = debug.getinfo(level, 'Sl')
+--   end
 
-  info.traceback = debug.traceback('', level)
-  info.message = msg
+--   info.traceback = debug.traceback('', level)
+--   info.message = msg
 
-  -- local file = busted.getFile(element)
-  local file = false
-  return file and file.getTrace(file.name, info) or trimTrace(info)
+--   -- local file = busted.getFile(element)
+--   -- local file = false
+-- local file = false
+--   -- return file and file.getTrace(file.name, info) or trimTrace(info)
+--    return trimTrace(info)
+-- end
+
+local function get_file_and_line_number(msg)
+
+   local function trimTrace(info)
+      local start_index = info.traceback:find('/')
+      local end_index = info.traceback:find(': in')
+      print("start : " .. start_index .. " index: " .. end_index)
+      info.traceback = info.traceback:sub(start_index, end_index)
+      print(info.traceback)
+      return info
+   end
+   level = level or  3
+
+   local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
+   local info = debug.getinfo(level, 'Sl')
+   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
+      (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+      level = level + 1
+      info = debug.getinfo(level, 'Sl')
+   end
+
+   info.traceback = debug.traceback('', level)
+   info.message = msg
+
+   return trimTrace(info)
 end
 
-
-
+--[[ is_headless is always true
+-- running in nvim or in terminal --]]
 local is_headless = require('plenary.nvim_meta').is_headless
 
 local print = function(...)
@@ -70,8 +103,8 @@ local call_inner = function(desc, func)
   local desc_stack = add_description(desc)
   add_new_each()
   local ok, msg = xpcall(func, function(msg)
-    local trace = get_trace(nil, 3, msg)
-    -- return trace.message .. "\n" .. trace.traceback
+    -- local trace = get_trace(nil, 3, msg)
+    -- -- return trace.message .. "\n" .. trace.traceback
     return trace.message
   end)
   clear_last_each()
@@ -110,7 +143,7 @@ local bold_string = function(str)
    return ansi_bold .. str .. ansi_clear
 end
 
-local SUCCESS = color_string("green", "Success")
+-- local SUCCESS = color_string("green", "Success")
 local FAIL = color_string("red", "Failure")
 local PENDING = color_string("yellow", "Pending")
 
@@ -215,8 +248,11 @@ mod.it = function(desc, func)
     to_insert = results.fail
     test_result.msg = msg
 
-    print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7"))
-    print(bold_string(table.concat(test_result.descriptions, "\n")))
+--     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
+
+local filename = get_file_and_line_number()
+   print(FAIL, " → " .. color_string("cyan", filename.traceback) .. "\n")
+    print(bold_string(table.concat(test_result.descriptions)))
     print(indent("\n" .. msg, 7))
   else
     -- No need to show passing tests
