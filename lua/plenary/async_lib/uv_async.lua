@@ -14,6 +14,9 @@ local function add(tbl, name)
 end
 
 local fn_names = {
+  'close', -- close a handle
+
+  -- filesystem operations
   'fs_open',
   'fs_read',
   'fs_close',
@@ -24,7 +27,6 @@ local fn_names = {
   -- 'fs_mkstemp',
   'fs_rmdir',
   'fs_scandir',
-  'fs_scandir_next',
   'fs_stat',
   'fs_fstat',
   'fs_lstat',
@@ -66,6 +68,17 @@ local fn_names = {
 
   -- pipe
   'pipe_connect',
+
+  -- udp
+  'udp_send',
+  'udp_recv_start',
+
+  -- fs event (wip make into async await event)
+  -- fs poll event (wip make into async await event)
+  
+  -- dns
+  'getaddrinfo',
+  'getnameinfo',
 }
 
 for _, fn_name in ipairs(fn_names) do
