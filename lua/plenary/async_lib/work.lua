@@ -3,14 +3,14 @@ local uv = vim.loop
 
 local M = {}
 
-local function is_threadarg(t)
+function M.is_threadarg(t)
   return type(t) == "nil" or type(t) == "boolean" or type(t) == "number" or type(t) == "string" or type(t) == "userdata"
 end
 
 function M.validate_threadargs(...)
   for arg in ipairs({...}) do
-    if not is_threadarg(arg) then
-      error(string.format('%s was not a threadarg', arg))
+    if not M.is_threadarg(arg) then
+      error('Was not a threadarg')
     end
   end
 end
@@ -27,7 +27,7 @@ function M.work_wrap(func)
     M.validate_threadargs(unpack(args))
 
     local work = uv.new_work(func, callback)
-    work:queue(unpack(args))
+    uv.queue_work(work, unpack(args))
   end
 end
 
@@ -41,7 +41,12 @@ end
 
 M.string = {}
 
-M.string.match = M.async_work_wrap(string.match)
-M.string.find = M.async_work_wrap(string.find)
+M.string.match = M.async_work_wrap(function(...)
+  return string.match(...)
+end)
+
+M.string.find = M.async_work_wrap(function(...)
+  return string.find(...)
+end)
 
 return M

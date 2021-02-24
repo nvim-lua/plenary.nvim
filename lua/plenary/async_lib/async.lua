@@ -1,6 +1,7 @@
 local co = coroutine
 local uv = vim.loop
 
+--- WIP idle stuff
 local thread_loop = function(thread, callback)
   local idle = uv.new_idle()
   idle:start(function()
@@ -15,27 +16,31 @@ local thread_loop = function(thread, callback)
 end
 
 -- use with wrap
-local pong = function(func, callback)
+local execute = function(func, callback)
   assert(type(func) == "function", "type error :: expected func")
   local thread = co.create(func)
-  local step
-  step = function(...)
+
+  local next
+  next = function(...)
     local res = {co.resume(thread, ...)}
     local stat = res[1]
     local ret = {select(2, unpack(res))}
-    assert(stat, "Status should be true")
+
+    assert(stat, string.format("The coroutine failed with this message: %s", ret[1]))
+
     if co.status(thread) == "dead" then
       (callback or function() end)(unpack(ret))
     else
       assert(#ret == 1, "expected a single return value")
       assert(type(ret[1]) == "function", "type error :: expected func")
-      ret[1](step)
+      ret[1](next)
     end
   end
-  step()
+
+  next()
 end
 
--- use with pong, creates thunk factory
+-- use with execute, creates thunk factory
 local wrap = function(func)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
 
@@ -48,30 +53,33 @@ local wrap = function(func)
   end
 end
 
+--- WIP
 local thread_loop_async = wrap(thread_loop)
 
 -- many thunks -> single thunk
 local join = function(thunks)
-  local len = #thunks
-  local done = 0
-  local acc = {}
-
   local thunk = function(step)
+    local len = #thunks
+    local results = {}
+    local done = 0
+
     if len == 0 then
       return step()
     end
     for i, tk in ipairs(thunks) do
       assert(type(tk) == "function", "thunk must be function")
       local callback = function(...)
-        acc[i] = {...}
+        results[i] = {...}
         done = done + 1
         if done == len then
-          step(unpack(acc))
+          -- step(unpack(results))
+          step(results)
         end
       end
       tk(callback)
     end
   end
+
   return thunk
 end
 
@@ -100,13 +108,14 @@ end
 local async = function(func)
   return function(...)
     local args = {...}
-    return wrap(pong)(function()
+    return wrap(execute)(function()
       return func(unpack(args))
     end)
   end
 end
 
-local pong_loop = async(function(func, callback)
+--- WIP
+local execute_loop = async(function(func, callback)
   assert(type(func) == "function", "type error :: expected func")
   local thread = co.create(func)
 
@@ -134,8 +143,9 @@ local pong_loop = async(function(func, callback)
   step()
 end)
 
+--- WIP
 --- because idle is a bad name
-local spawn = wrap(pong_loop)
+local spawn = wrap(execute_loop)
 
 return {
   async = async,

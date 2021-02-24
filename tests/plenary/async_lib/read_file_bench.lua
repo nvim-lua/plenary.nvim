@@ -1,22 +1,24 @@
 local a = require('plenary.async_lib')
 local async = a.async
+local await = a.await
+local await_all = a.await_all
 local uv = vim.loop
 
 local plenary_init = vim.api.nvim_get_runtime_file('lua/plenary/init.lua', false)[1]
 local plenary_dir = vim.fn.fnamemodify(plenary_init, ":h:h:h")
-local assets_dir = plenary_dir .. '/' .. 'tests/plenary/async/assets/'
+local assets_dir = plenary_dir .. '/' .. 'tests/plenary/async_lib/assets/'
 
 local read_file = async(function(path)
-  local err, fd = a.wait(a.uv.fs_open(path, "r", 438))
+  local err, fd = await(a.uv.fs_open(path, "r", 438))
   assert(not err, err)
 
-  local err, stat = a.wait(a.uv.fs_fstat(fd))
+  local err, stat = await(a.uv.fs_fstat(fd))
   assert(not err, err)
 
-  local err, data = a.wait(a.uv.fs_read(fd, stat.size, 0))
+  local err, data = await(a.uv.fs_read(fd, stat.size, 0))
   assert(not err, err)
 
-  local err = a.wait(a.uv.fs_close(fd))
+  local err = await(a.uv.fs_close(fd))
   assert(not err, err)
 end)
 
@@ -44,7 +46,7 @@ local first_bench = async(function()
 
   for i = 1, 200 do futures[i] = read_file(assets_dir .. 'README.md') end
 
-  a.wait_all(futures)
+  await_all(futures)
 
   print("Elapsed time: ", os.clock() - start)
 end)
