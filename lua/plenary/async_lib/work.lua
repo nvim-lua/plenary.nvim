@@ -15,7 +15,8 @@ function M.validate_threadargs(...)
   end
 end
 
---- wrap a cpu bound function to execute in threadpool.
+--- wrap function to execute in threadpool.
+--- need to figure out what work does
 --- this functions wraps it for a callback api
 --- WARNING: func cannot have any upvalues, only lua standard library
 --- WARNING: func can only be passed threadargs, see above

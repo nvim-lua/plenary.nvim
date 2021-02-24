@@ -32,6 +32,7 @@ end)
 a.run(test())
 
 --- readfile asynchronously, string process IS async using work
+--- this is actually slower, but at least doesn't execute in main loop?
 local first_bench = async(function()
   local contents = await(read_file(assets_dir .. 'README.md'))
 
@@ -63,4 +64,5 @@ local second_bench = async(function()
   print("Elapsed time: ", os.clock() - start)
 end)
 
-a.run(second_bench())
+a.run(first_bench())
+-- a.run(second_bench())

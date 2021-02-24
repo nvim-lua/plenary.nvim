@@ -70,4 +70,4 @@ end
 
 -- first_bench()()
 
-second_bench()
+-- second_bench()
