@@ -69,11 +69,11 @@ local join = function(thunks)
     for i, tk in ipairs(thunks) do
       assert(type(tk) == "function", "thunk must be function")
       local callback = function(...)
-        results[i] = {...}
+        results[i] = {...} -- should we set this to a table
         done = done + 1
         if done == len then
           -- step(unpack(results))
-          step(results)
+          step(results) -- should we unpack?
         end
       end
       tk(callback)
