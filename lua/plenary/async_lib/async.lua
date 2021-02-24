@@ -1,6 +1,8 @@
 local co = coroutine
 local uv = vim.loop
 
+local M = {}
+
 --- WIP idle stuff
 local thread_loop = function(thread, callback)
   local idle = uv.new_idle()
@@ -41,7 +43,7 @@ local execute = function(func, callback)
 end
 
 -- use with execute, creates thunk factory
-local wrap = function(func)
+M.wrap = function(func)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
 
   return function(...)
@@ -54,10 +56,10 @@ local wrap = function(func)
 end
 
 --- WIP
-local thread_loop_async = wrap(thread_loop)
+local thread_loop_async = M.wrap(thread_loop)
 
 -- many futures -> single thunk
-local join = function(futures)
+M.join = function(futures)
   local combined_future = function(step)
     local len = #futures
     local results = {}
@@ -84,39 +86,35 @@ local join = function(futures)
 end
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
-local function run(future)
-  future()
-end
+M.run = function(future) future() end
 
-local function run_all(futures)
-  for _, future in ipairs(futures) do
-    future()
-  end
+M.run_all = function(futures)
+  for _, future in ipairs(futures) do future() end
 end
 
 -- sugar over coroutine
-local await = function(defer)
+M.await = function(defer)
   assert(type(defer) == "function", "type error :: expected func")
   return co.yield(defer)
 end
 
 
-local await_all = function(defer)
+M.await_all = function(defer)
   assert(type(defer) == "table", "type error :: expected table")
-  return co.yield(join(defer))
+  return co.yield(M.join(defer))
 end
 
-local async = function(func)
+M.async = function(func)
   return function(...)
     local args = {...}
-    return wrap(execute)(function()
+    return M.wrap(execute)(function()
       return func(unpack(args))
     end)
   end
 end
 
 --- WIP
-local execute_loop = async(function(func, callback)
+local execute_loop = M.async(function(func, callback)
   assert(type(func) == "function", "type error :: expected func")
   local thread = co.create(func)
 
@@ -146,16 +144,6 @@ end)
 
 --- WIP
 --- because idle is a bad name
-local spawn = wrap(execute_loop)
+M.spawn = M.wrap(execute_loop)
 
-return {
-  async = async,
-  join = join,
-  await = await,
-  await_all = await_all,
-  run = run,
-  run_all = run_all,
-  spawn = spawn,
-  wrap = wrap,
-  wait_for_textlock = wrap(vim.schedule)
-} 
+return M
