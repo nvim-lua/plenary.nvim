@@ -1,11 +1,12 @@
-local a = require('plenary.async')
+local a = require('plenary.async_lib')
+local async = a.async
 local uv = vim.loop
 
 local plenary_init = vim.api.nvim_get_runtime_file('lua/plenary/init.lua', false)[1]
 local plenary_dir = vim.fn.fnamemodify(plenary_init, ":h:h:h")
 local assets_dir = plenary_dir .. '/' .. 'tests/plenary/async/assets/'
 
-local read_file = a.sync(function(path)
+local read_file = async(function(path)
   local err, fd = a.wait(a.uv.fs_open(path, "r", 438))
   assert(not err, err)
 
@@ -35,7 +36,7 @@ local read_file_other = function(path, callback)
   end)
 end
 
-local first_bench = a.sync(function()
+local first_bench = async(function()
 
   local futures = {}
 

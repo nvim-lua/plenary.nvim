@@ -1,4 +1,7 @@
-local a = require('plenary.async')
+local a = require('plenary.async_lib')
+local async = a.async
+local await_all = a.await_all
+local await = a.await
 local Condvar = a.utils.Condvar
 
 local eq = function(a, b)
@@ -11,8 +14,8 @@ describe('condvar', function()
 
     local condvar = Condvar.new()
 
-    local blocking = a.sync(function()
-      a.wait(condvar:wait())
+    local blocking = async(function()
+      await(condvar:wait())
       var = true
     end)
 
@@ -30,18 +33,18 @@ describe('condvar', function()
 
     local condvar = Condvar.new()
 
-    local first = a.sync(function()
-      a.wait(condvar:wait())
+    local first = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 
-    local second = a.sync(function()
-      a.wait(condvar:wait())
+    local second = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 
-    local third = a.sync(function()
-      a.wait(condvar:wait())
+    local third = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 
@@ -63,27 +66,27 @@ describe('condvar', function()
   end)
 
   it('should allow notify_one to work when using await_all', function()
-    local future = a.sync(function()
+    local future = async(function()
       local counter = 0
 
       local condvar = Condvar.new()
 
-      local first = a.sync(function()
-        a.wait(condvar:wait())
+      local first = async(function()
+        await(condvar:wait())
         counter = counter + 1
       end)
 
-      local second = a.sync(function()
-        a.wait(condvar:wait())
+      local second = async(function()
+        await(condvar:wait())
         counter = counter + 1
       end)
 
-      local third = a.sync(function()
-        a.wait(condvar:wait())
+      local third = async(function()
+        await(condvar:wait())
         counter = counter + 1
       end)
 
-      a.wait_all { first(), second(), third() }
+      await_all { first(), second(), third() }
 
       eq(0, counter)
 
@@ -109,18 +112,18 @@ describe('condvar', function()
 
     local condvar = Condvar.new()
 
-    local first = a.sync(function()
-      a.wait(condvar:wait())
+    local first = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 
-    local second = a.sync(function()
-      a.wait(condvar:wait())
+    local second = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 
-    local third = a.sync(function()
-      a.wait(condvar:wait())
+    local third = async(function()
+      await(condvar:wait())
       counter = counter + 1
     end)
 

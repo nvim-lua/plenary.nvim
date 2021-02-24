@@ -1,6 +1,7 @@
-local a = require('plenary.async.async')
+local a = require('plenary.async_lib.async')
+local async = a.async
 local co = coroutine
-local VecDeque = require('plenary.async.helpers').VecDeque
+local VecDeque = require('plenary.async_lib.helpers').VecDeque
 local uv = vim.loop
 
 local M = {}
@@ -15,12 +16,12 @@ M.sleep = a.wrap(function(ms, callback)
 end)
 
 M.timer = function(ms)
-  return a.sync(function()
+  return async(function()
     a.wait(M.sleep(ms))
   end)
 end
 
-M.id = a.sync(function(...)
+M.id = async(function(...)
   return ...
 end)
 
@@ -39,7 +40,7 @@ end
 
 M.thread_loop_async = a.wrap(M.thread_loop)
 
-M.yield_now = a.sync(function()
+M.yield_now = async(function()
   a.wait(M.id())
 end)
 

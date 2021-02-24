@@ -1,5 +1,5 @@
-local a = require('async')
-local id = require('async.utils').id
+local a = require('plenary.async_lib')
+local id = a.utils.id
 
 local eq = function(a, b)
   assert.are.same(a, b)

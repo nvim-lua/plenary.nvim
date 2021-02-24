@@ -138,10 +138,10 @@ end)
 local spawn = wrap(pong_loop)
 
 return {
-  sync = async,
+  async = async,
   join = join,
-  wait = await,
-  wait_all = await_all,
+  await = await,
+  await_all = await_all,
   run = run,
   run_all = run_all,
   spawn = spawn,
