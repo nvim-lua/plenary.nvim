@@ -56,18 +56,18 @@ end
 --- WIP
 local thread_loop_async = wrap(thread_loop)
 
--- many thunks -> single thunk
-local join = function(thunks)
-  local thunk = function(step)
-    local len = #thunks
+-- many futures -> single thunk
+local join = function(futures)
+  local combined_future = function(step)
+    local len = #futures
     local results = {}
     local done = 0
 
     if len == 0 then
       return step()
     end
-    for i, tk in ipairs(thunks) do
-      assert(type(tk) == "function", "thunk must be function")
+    for i, future in ipairs(futures) do
+      assert(type(future) == "function", "thunk must be function")
       local callback = function(...)
         results[i] = {...} -- should we set this to a table
         done = done + 1
@@ -76,13 +76,14 @@ local join = function(thunks)
           step(results) -- should we unpack?
         end
       end
-      tk(callback)
+      future(callback)
     end
   end
 
-  return thunk
+  return combined_future
 end
 
+--- use this over running a future by calling it with no callback argument because it is more explicit
 local function run(future)
   future()
 end
