@@ -85,6 +85,12 @@ function Semaphore.new(initial_permits)
 end
 
 --- async function, blocks until a permit can be acquired
+--- example:
+--- local semaphore = Semaphore.new(1024)
+--- local permit = await(semaphore:acquire())
+--- permit:forget()
+--- when a permit can be acquired returns it
+--- call permit:forget() to forget the permit
 Semaphore.acquire = a.wrap(function(self, callback)
   self.permits = self.permits - 1
 
