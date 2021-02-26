@@ -2,50 +2,19 @@ local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
 
--- local function get_trace(element, level, msg)
---   local function trimTrace(info)
---      -- print("info : " .. info.traceback)
---     -- local index = info.traceback:find('\n%s*%[C]')
---    local start_index = info.traceback:find('/')
---    local end_index = info.traceback:find(': in')
---     print("start : " .. start_index .. " index: " .. end_index)
---     info.traceback = info.traceback:sub(start_index, end_index)
---     print(info.traceback)
---     return info
---   end
---   level = level or  3
-
---   local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
---   local info = debug.getinfo(level, 'Sl')
---   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
---         (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
---     level = level + 1
---     info = debug.getinfo(level, 'Sl')
---   end
-
---   info.traceback = debug.traceback('', level)
---   info.message = msg
-
---   -- local file = busted.getFile(element)
---   -- local file = false
--- local file = false
---   -- return file and file.getTrace(file.name, info) or trimTrace(info)
---    return trimTrace(info)
--- end
-
-local function get_file_and_line_number(msg)
+local function get_trace(element, level, msg)
 
    local function trimTrace(info)
       local start_index = info.traceback:find('/')
       local end_index = info.traceback:find(': in')
-      print("start : " .. start_index .. " index: " .. end_index)
       info.traceback = info.traceback:sub(start_index, end_index)
-      print(info.traceback)
+
       return info
    end
+
    level = level or  3
 
-   local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
+   local thisdir = dirname(debug.getinfo(1, 'Sl').source)
    local info = debug.getinfo(level, 'Sl')
    while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
       (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
@@ -56,7 +25,41 @@ local function get_file_and_line_number(msg)
    info.traceback = debug.traceback('', level)
    info.message = msg
 
+   -- local file = busted.getFile(element)
+   -- local file = false
+   -- local file = false
+   -- return file and file.getTrace(file.name, info) or trimTrace(info)
    return trimTrace(info)
+end
+
+local function get_file_and_line_number()
+
+   local function trimTrace(trace)
+      local start_index = trace:find('/')
+      local end_index = trace:find(': in')
+      trace = trace:sub(start_index, end_index)
+
+      local split_str = vim.split(trace, ':')
+      local spec = {}
+      spec.file = split_str[1]
+      spec.linenumber = split_str[2]
+
+      return spec
+   end
+
+   local level = 3
+
+   local thisdir = dirname(debug.getinfo(1, 'Sl').source)
+   local info = debug.getinfo(level, 'Sl')
+   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
+      (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+      level = level + 1
+      info = debug.getinfo(level, 'Sl')
+   end
+
+   local trace = debug.traceback('', level)
+
+   return trimTrace(trace)
 end
 
 --[[ is_headless is always true
@@ -103,8 +106,8 @@ local call_inner = function(desc, func)
   local desc_stack = add_description(desc)
   add_new_each()
   local ok, msg = xpcall(func, function(msg)
-    -- local trace = get_trace(nil, 3, msg)
-    -- -- return trace.message .. "\n" .. trace.traceback
+    local trace = get_trace(nil, 3, msg)
+    -- return trace.message .. "\n" .. trace.traceback
     return trace.message
   end)
   clear_last_each()
@@ -115,7 +118,7 @@ end
 
 local ansi_color_table = {
    cyan = 36,
-   purple = 35,
+   magenta = 35,
    yellow = 33,
    green = 32,
    red = 31,
@@ -153,7 +156,7 @@ mod.format_results = function(result)
 
   local num_pass = color_string("green", #result.pass)
   local num_fail = color_string("red", #result.fail)
-  local num_errs = color_string("purple", #result.errs)
+  local num_errs = color_string("magenta", #result.errs)
 
   print(string.format(" %s successes /  %s failures / %s errors", num_pass, num_fail, num_errs))
 end
@@ -245,19 +248,24 @@ mod.it = function(desc, func)
   -- and assert failed or whether it was an error...
   local to_insert, printed
   if not ok then
-    to_insert = results.fail
-    test_result.msg = msg
+     to_insert = results.fail
+     test_result.msg = msg
 
---     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
+     --     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
 
-local filename = get_file_and_line_number()
-   print(FAIL, " → " .. color_string("cyan", filename.traceback) .. "\n")
-    print(bold_string(table.concat(test_result.descriptions)))
-    print(indent("\n" .. msg, 7))
+     local spec = get_file_and_line_number()
+     print("[STATUS: FAIL]")
+     print(FAIL, " → " .. color_string("cyan", spec.file) .. " @ " .. color_string("cyan", spec.linenumber) .. "\n")
+     print(bold_string(table.concat(test_result.descriptions)))
+
+     print("[MSG]")
+     print(indent("\n" .. msg, 7))
+
+     print("[DOT]")
   else
-    -- No need to show passing tests
-    -- to_insert = results.pass
-    -- print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+     print("[SUCCESS]")
+     print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+     print("[DOT]")
   end
 
   table.insert(to_insert, test_result)

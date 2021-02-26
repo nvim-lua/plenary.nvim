@@ -9,13 +9,32 @@ local headless = require("plenary.nvim_meta").is_headless
 
 local harness = {}
 
-local cli_output = vim.schedule_wrap(function(_, ...)
-  for _, v in ipairs({...}) do
-    io.stdout:write(tostring(v))
-    io.stdout:write("\n")
-  end
+-- local tty_output = vim.schedule_wrap(function(_, ...)
+--   for _, v in ipairs({...}) do
+--     io.stdout:write(tostring(v))
+--     io.stdout:write("\n")
+--   end
 
-  vim.cmd [[mode]]
+--   vim.cmd [[mode]]
+-- end)
+
+local test_res = {}
+
+local tty_output = vim.schedule_wrap(function(_, ...)
+   local res = {}
+   for _, v in ipairs({...}) do
+      local line = v
+      if string.match(line, 'Failure') then
+         -- print(line .. "\n")
+         -- io.stdout:write(line, "\n")
+         -- table.insert(res, line)
+         res.status = line
+      end
+      -- print("ToString cli_output : " .. v)
+      -- io.stdout:write("\n")
+   end
+   table.insert(test_res, res)
+   vim.cmd [[mode]]
 end)
 
 local nvim_output = vim.schedule_wrap(function(bufnr, ...)
@@ -58,21 +77,22 @@ function harness.test_directory(directory, opts)
     vim.cmd('mode')
   end
 
-  local outputter = headless and cli_output or nvim_output
+  local outputter = headless and tty_output or nvim_output
 
   local paths = harness._find_files_to_run(directory)
-  for _, path in ipairs(paths) do
-    outputter(res.bufnr, "Scheduling: " .. path.filename)
+  for _, p in ipairs(paths) do
+    outputter(res.bufnr, "Scheduling: " .. p.filename)
   end
+
 
   local path_len = #paths
 
   local jobs = f.map(
-    function(path)
+    function(p)
       local args = {
         '--headless',
         '-c',
-        string.format('lua require("plenary.busted").run("%s")', path:absolute())
+        string.format('lua require("plenary.busted").run("%s")', p:absolute())
       }
 
       if opts.minimal_init ~= nil then
@@ -100,10 +120,10 @@ function harness.test_directory(directory, opts)
         end,
 
         on_exit = vim.schedule_wrap(function(j_self, _, _)
-          if path_len ~= 1 then
-            outputter(res.bufnr, unpack(j_self:stderr_result()))
-            outputter(res.bufnr, unpack(j_self:result()))
-          end
+           if path_len ~= 1 then
+              outputter(res.bufnr, unpack(j_self:stderr_result()))
+              outputter(res.bufnr, unpack(j_self:result()))
+           end
 
           vim.cmd('mode')
         end)
@@ -127,6 +147,17 @@ function harness.test_directory(directory, opts)
   Job.join(unpack(jobs))
   vim.wait(100)
   log.debug("Done...")
+
+  print("Table.len... " .. #test_res)
+  print("Result... " .. tostring(test_res))
+  -- print("key: " .. test_res[2])
+
+  for _,res in pairs(test_res) do
+     -- io.stdout:write("Write: ", tostring(res[1]), " \n")
+     io.stdout:write("Write: ", tostring(res.status), " \n")
+     if res[1] ~= nil then
+     end
+  end
 
   if headless then
     if f.any(function(_, v) return v.code ~= 0 end, jobs) then
@@ -152,11 +183,11 @@ function harness._run_path(test_type, directory)
   local bufnr = 0
   local win_id = 0
 
-  for _, path in pairs(paths) do
+  for _, p in pairs(paths) do
     print(" ")
-    print("Loading Tests For: ", path:absolute(), "\n")
+    print("Loading Tests For: ", p:absolute(), "\n")
 
-    local ok, _ = pcall(function() dofile(path:absolute()) end)
+    local ok, _ = pcall(function() dofile(p:absolute()) end)
 
     if not ok then
       print("Failed to load file")

@@ -1,41 +1,72 @@
--- ✱◼●●●●●●●●●●●●●●●
--- 15 successes / 1 failure / 1 error / 0 pending : 0.022516 seconds
+local ansi_color_table = {
+   cyan = 36,
+   magenta = 35,
+   yellow = 33,
+   green = 32,
+   red = 31,
+}
 
--- Failure → spec/dotnet/foo_spec.lua @ 7
--- Extract and return the properties of a test project from a 'project block' (as found in a .NET solution file):
---  get_project_path() : Should return the path of a Csharp project
--- spec/dotnet/foo_spec.lua:13: (number) 2
--- Expected objects to be equal.
--- Passed in:
--- (string) 'TestProject\TestProject.csproj'
--- Expected:
--- (string) 'TestProject\oooTestProject.csproj'
+local color_string = function(color, str)
+   if not is_headless then
+      -- This is never being called
+      return str
+   end
 
--- Error → spec/error_spec.lua:2: syntax error near <eof>
--- spec/error_spec.lua
-
-
--- == Spec Result Table ===========================
--- Status:
--- Fail, pending, success, error
--- Testfile/dir:
---      spec/dotnet/foo_spec.lua
--- Line number:
---      @ 7
--- Description:
---      Extract and return the properties of a test project
---      get_project_path() : Should return the path of a Csharp project
--- Message:
---      Expected objects to be equal.
---      Passed in:
---      (string) 'TestProject\TestProject.csproj'
---      Expected:
---      (string) 'TestProject\oooTestProject.csproj'
--- Stack Trace:
-
-local M = {}
-
-M.run = function(file)
-
+   return string.format("%s[%sm%s%s[%sm",
+   string.char(27),
+   ansi_color_table[color] or 0,
+   str,
+   string.char(27),
+   0
+   )
 end
-return M
+
+local successDot = color_string('green', '●')
+local failureDot = color_string('red', '◼')
+local errorDot   = color_string('magenta', '✱')
+local pendingDot = color_string('yellow', '◌')
+
+local count = {
+   successesCount = 0,
+   pendingsCount = 0,
+   failuresCount = 0,
+   errorsCount = 0,
+}
+
+local aggregate_dots = function(countresults, dotcolor)
+   for _,_ in pairs(count) do
+      
+   end
+   for i=0, countresults, 1 do
+      result_dots = result_dots .. dotcolor
+   end
+end
+local dots_builder = function()
+
+   local result_dots = ""
+   for i=0, count.errors, 1 do
+      result_dots = result_dots .. errorDot
+   end
+
+   for i=0, count.failures, 1 do
+      result_dots = result_dots .. failureDot
+   end
+
+   for i=0, count.successes, 1 do
+      result_dots = result_dots .. successDot
+   end
+
+   for i=0, count.pending, 1 do
+      result_dots = result_dots .. pendingDot
+   end
+
+   return result_dots 
+end
+
+describe("Build String", function()
+   it("title", function()
+      local expected = ""
+      assert.is_equal(expected, aggregate_dots(3, successDot))
+   end)
+end)
+
