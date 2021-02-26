@@ -61,6 +61,8 @@ local thread_loop_async = M.wrap(thread_loop)
 -- many futures -> single thunk
 M.join = function(futures)
   local combined_future = function(step)
+    step = step or function() end
+
     local len = #futures
     local results = {}
     local done = 0
@@ -86,22 +88,20 @@ M.join = function(futures)
 end
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
-M.run = function(future) future() end
+M.run = function(future, callback) future(callback) end
 
-M.run_all = function(futures)
-  for _, future in ipairs(futures) do future() end
-end
+M.run_all = function(futures, callback) M.run(M.join(futures), callback) end
 
 -- sugar over coroutine
-M.await = function(defer)
-  assert(type(defer) == "function", "type error :: expected func")
-  return co.yield(defer)
+M.await = function(future)
+  assert(type(future) == "function", "type error :: expected func")
+  return co.yield(future)
 end
 
 
-M.await_all = function(defer)
-  assert(type(defer) == "table", "type error :: expected table")
-  return co.yield(M.join(defer))
+M.await_all = function(futures)
+  assert(type(futures) == "table", "type error :: expected table")
+  return co.yield(M.join(futures))
 end
 
 M.async = function(func)

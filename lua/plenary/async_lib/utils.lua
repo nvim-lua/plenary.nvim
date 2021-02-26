@@ -81,6 +81,14 @@ local Semaphore = {}
 Semaphore.__index = Semaphore
 
 function Semaphore.new(initial_permits) 
+  vim.validate {
+    initial_permits = {
+      initial_permits,
+      function(n) return n > 0 end,
+      'number greater than 0'
+    }
+  }
+
   return setmetatable({permits = initial_permits, handles = {}}, Semaphore)
 end
 
@@ -113,6 +121,8 @@ Semaphore.acquire = a.wrap(function(self, callback)
 
   callback(permit)
 end)
+
+M.Semaphore = Semaphore
 
 M.channel = {}
 
