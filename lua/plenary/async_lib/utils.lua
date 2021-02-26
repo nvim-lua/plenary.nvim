@@ -77,6 +77,37 @@ end
 
 M.Condvar = Condvar
 
+local Semaphore = {}
+Semaphore.__index = Semaphore
+
+function Semaphore.new(initial_permits) 
+  return setmetatable({permits = initial_permits, handles = {}}, Semaphore)
+end
+
+--- async function, blocks until a permit can be acquired
+Semaphore.acquire = a.wrap(function(self, callback)
+  self.permits = self.permits - 1
+
+  if self.permits <= 0 then
+    table.insert(self.handles, callback)
+    return
+  end
+
+  local permit = {}
+
+  permit.forget = function(self_permit)
+    self.permits = self.permits + 1
+
+    if self.permits > 0 and #self.handles > 0 then
+      local callback = table.remove(self.handles)
+      callback(self_permit)
+      self.permits = self.permits - 1
+    end
+  end
+
+  callback(permit)
+end)
+
 M.channel = {}
 
 ---comment

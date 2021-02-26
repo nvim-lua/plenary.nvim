@@ -64,5 +64,23 @@ local second_bench = async(function()
   print("Elapsed time: ", os.clock() - start)
 end)
 
+local third_bench = async(function()
+  local contents = await(read_file(assets_dir .. 'README.md'))
+
+  local lines = vim.split(contents, '\n')
+
+  local start = os.clock()
+
+  local result = await(work.map_async(lines, function(idx, value)
+    value = string.match(value, 'i')
+    return idx, value
+  end))
+
+  dump(result)
+
+  print("Elapsed time: ", os.clock() - start)
+end)
+
 a.run(first_bench())
 -- a.run(second_bench())
+-- a.run(third_bench())

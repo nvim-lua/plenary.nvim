@@ -3,6 +3,27 @@ local uv = vim.loop
 
 local M = {}
 
+local function work_map(tbl, func, callback)
+  local results = {}
+  local ran_callback = false
+
+  local work = uv.new_work(func, function(idx, ...)
+    results[idx] = {...}
+    if #results == #tbl and ran_callback == false then
+      callback(results)
+      ran_callback = true
+    end
+  end)
+
+  for idx, v in ipairs(tbl) do
+    M.validate_threadargs(v)
+
+    work:queue(idx, v)
+  end
+end
+
+M.map_async = a.wrap(work_map)
+
 function M.is_threadarg(t)
   return type(t) == "nil" or type(t) == "boolean" or type(t) == "number" or type(t) == "string" or type(t) == "userdata"
 end
