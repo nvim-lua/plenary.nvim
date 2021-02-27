@@ -123,12 +123,6 @@ end
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
 M.run = function(future, callback)
-  -- if future.leaf then
-    -- future = M.async(function()
-    --   return M.await(future)
-    -- end)()
-  -- end
-
   execute(future, callback)
 end
 
