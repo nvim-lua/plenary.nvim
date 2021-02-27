@@ -38,6 +38,8 @@ end
 
 -- use with wrap
 local execute = function(future, callback)
+  callback = callback or function() end
+
   local thread = co.create(function()
     return future.func(unpack(future.args))
   end)
@@ -51,7 +53,8 @@ local execute = function(future, callback)
     assert(stat, string.format("The coroutine failed with this message: %s", ret[1]))
 
     if co.status(thread) == "dead" then
-      (callback or function() end)(unpack(ret))
+      -- (callback or function() end)(unpack(ret))
+      callback(unpack(ret))
     else
       local leaf = ret[1]
       leaf.args[#leaf.args] = next
@@ -105,9 +108,12 @@ M.join = function(futures)
           end
         end
 
-        M.run(future, individual_callback)
-        -- future.func(individual_callback)
-        -- future(callback)
+        if future.leaf then
+          future.args[#future.args] = individual_callback
+          future.func(unpack(future.args))
+        else
+          M.run(future, individual_callback)
+        end
       end
     end
   }

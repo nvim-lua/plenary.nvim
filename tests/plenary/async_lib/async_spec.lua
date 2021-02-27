@@ -24,3 +24,19 @@ describe('should await_all', function()
     a.run(fn())
   end)
 end)
+
+-- local fn = async(function()
+--   local futures = {}
+--   for i = 1, 100 do futures[i] = work.string.match('hello', 'llo') end
+
+--   local result = await_all(futures)
+
+--   local expected = {}
+--   for i = 1, 100 do expected[i] = {'llo'} end
+
+--   dump('result', result)
+
+--   -- eq(result, expected)
+-- end)
+
+-- a.run(fn())

@@ -103,7 +103,7 @@ describe('condvar', function()
       eq(counter, 3)
     end)
 
-    a.run(future)
+    a.run(future())
 
     end)
 
