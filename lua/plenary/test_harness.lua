@@ -19,21 +19,57 @@ local harness = {}
 -- end)
 
 local test_res = {}
-
+local res = {}
 local tty_output = vim.schedule_wrap(function(_, ...)
-   local res = {}
-   for _, v in ipairs({...}) do
-      local line = v
-      if string.match(line, 'Failure') then
-         -- print(line .. "\n")
-         -- io.stdout:write(line, "\n")
-         -- table.insert(res, line)
-         res.status = line
+
+   local ismsg = false
+   local msgcount = 0
+
+   for _, line in ipairs({...}) do
+
+      local clear_results = function()
+         res = {
+            status = nil,
+            header = nil,
+            message = nil,
+         }
       end
-      -- print("ToString cli_output : " .. v)
-      -- io.stdout:write("\n")
+
+      if string.match(line, '{STATUS: SUCCESS}') then
+         clear_results()
+         res.status = 'success'
+      elseif string.match(line, '{STATUS: ERROR}') then
+         clear_results()
+         res.status = 'error'
+      elseif string.match(line, '{STATUS: PENDING}') then
+         clear_results()
+         res.status = 'pending'
+      elseif string.match(line, '{STATUS: FAIL}') then
+         clear_results()
+         res.status = 'fail'
+      elseif string.match(line, '{MSG}') or ismsg then
+         if msgcount == 0 then
+            ismsg = true
+            res.message = ""
+         end
+         msgcount = msgcount + 1
+         if msgcount > 1 then
+            local msg = res.message
+            res.message = msg .. line
+            print("RESMESSAGE: " .. res.message)
+            io.write("RESMESSAGE: " .. res.message)
+         end
+      end
+
+      -- print("line: " .. tostring(line))
+      print("status : " .. tostring(res.status))
+
+
    end
    table.insert(test_res, res)
+
+   -- print("ToString cli_output : " .. v)
+   -- io.stdout:write("\n")
    vim.cmd [[mode]]
 end)
 

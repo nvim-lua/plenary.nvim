@@ -254,18 +254,16 @@ mod.it = function(desc, func)
      --     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
 
      local spec = get_file_and_line_number()
-     print("[STATUS: FAIL]")
+     print("{STATUS: FAIL}")
      print(FAIL, " → " .. color_string("cyan", spec.file) .. " @ " .. color_string("cyan", spec.linenumber) .. "\n")
      print(bold_string(table.concat(test_result.descriptions)))
 
-     print("[MSG]")
+     print("{MSG}")
      print(indent("\n" .. msg, 7))
 
-     print("[DOT]")
   else
-     print("[SUCCESS]")
+     print("{STATUS: SUCCESS}")
      print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
-     print("[DOT]")
   end
 
   table.insert(to_insert, test_result)
