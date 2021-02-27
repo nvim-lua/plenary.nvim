@@ -3,6 +3,25 @@ local uv = vim.loop
 
 local M = {}
 
+local Future = {}
+
+function Future.new(opts)
+  vim.validate {
+    leaf = {opts.leaf, 'boolean'},
+    args = {opts.args, 'table'},
+    func = {opts.func, 'function'},
+  }
+
+  local self = {}
+  self.leaf = opts.leaf
+  if opts.leaf then
+    table.insert(opts.args, function() end)
+  end
+  self.args = opts.args
+  self.func = opts.func
+  return self
+end
+
 --- WIP idle stuff
 local thread_loop = function(thread, callback)
   local idle = uv.new_idle()
@@ -18,9 +37,10 @@ local thread_loop = function(thread, callback)
 end
 
 -- use with wrap
-local execute = function(func, callback)
-  assert(type(func) == "function", "type error :: expected func")
-  local thread = co.create(func)
+local execute = function(future, callback)
+  local thread = co.create(function()
+    return future.func(unpack(future.args))
+  end)
 
   local next
   next = function(...)
@@ -33,9 +53,9 @@ local execute = function(func, callback)
     if co.status(thread) == "dead" then
       (callback or function() end)(unpack(ret))
     else
-      assert(#ret == 1, "expected a single return value")
-      assert(type(ret[1]) == "function", "type error :: expected func")
-      ret[1](next)
+      local leaf = ret[1]
+      leaf.args[#leaf.args] = next
+      leaf.func(unpack(leaf.args))
     end
   end
 
@@ -44,72 +64,92 @@ end
 
 -- use with execute, creates thunk factory
 M.wrap = function(func)
-  assert(type(func) == "function", "type error :: expected func, got " .. type(func))
+  vim.validate {
+    func = {func, 'function'}
+  }
 
   return function(...)
-    local params = {...}
-    return function(step)
-      table.insert(params, step)
-      return func(unpack(params))
-    end
+    return Future.new {
+      leaf = true,
+      args = {...},
+      func = func,
+    }
   end
 end
 
 --- WIP
 local thread_loop_async = M.wrap(thread_loop)
 
--- many futures -> single thunk
+-- many futures -> single future
 M.join = function(futures)
-  local combined_future = function(step)
-    step = step or function() end
 
-    local len = #futures
-    local results = {}
-    local done = 0
+  local combined_future = Future.new {
+    leaf = true,
+    args = {},
+    func = function(callback)
+      local len = #futures
+      local results = {}
+      local done = 0
 
-    if len == 0 then
-      return step()
-    end
-    for i, future in ipairs(futures) do
-      assert(type(future) == "function", "thunk must be function")
-      local callback = function(...)
-        results[i] = {...} -- should we set this to a table
-        done = done + 1
-        if done == len then
-          -- step(unpack(results))
-          step(results) -- should we unpack?
-        end
+      if len == 0 then
+        return callback()
       end
-      future(callback)
+
+      for i, future in ipairs(futures) do
+
+        local individual_callback = function(...)
+          results[i] = {...} -- should we set this to a table
+          done = done + 1
+          if done == len then
+            callback(results) -- should we unpack?
+          end
+        end
+
+        M.run(future, individual_callback)
+        -- future.func(individual_callback)
+        -- future(callback)
+      end
     end
-  end
+  }
 
   return combined_future
 end
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
-M.run = function(future, callback) future(callback) end
+M.run = function(future, callback)
+  -- if future.leaf then
+    -- future = M.async(function()
+    --   return M.await(future)
+    -- end)()
+  -- end
+
+  execute(future, callback)
+end
 
 M.run_all = function(futures, callback) M.run(M.join(futures), callback) end
 
 -- sugar over coroutine
 M.await = function(future)
-  assert(type(future) == "function", "type error :: expected func")
-  return co.yield(future)
+  if future.leaf then
+    return co.yield(future)
+  else
+    return future.func(unpack(future.args))
+  end
 end
 
 
 M.await_all = function(futures)
   assert(type(futures) == "table", "type error :: expected table")
-  return co.yield(M.join(futures))
+  return M.await(M.join(futures))
 end
 
 M.async = function(func)
   return function(...)
-    local args = {...}
-    return M.wrap(execute)(function()
-      return func(unpack(args))
-    end)
+    return Future.new {
+      args = {...},
+      func = func,
+      leaf = false,
+    }
   end
 end
 
