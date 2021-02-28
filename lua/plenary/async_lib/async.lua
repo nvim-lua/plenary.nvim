@@ -3,7 +3,6 @@ local uv = vim.loop
 
 local M = {}
 
-
 --- WIP idle stuff
 local thread_loop = function(thread, callback)
   local idle = uv.new_idle()
@@ -19,12 +18,12 @@ local thread_loop = function(thread, callback)
 end
 
 -- use with wrap
-local execute = function(func, callback)
-  assert(type(func) == "function", "type error :: expected func")
-  local thread = co.create(func)
+local execute = function(future, callback)
+  assert(type(future) == "function", "type error :: expected func")
+  local thread = co.create(future)
 
-  local next
-  next = function(...)
+  local step
+  step = function(...)
     local res = {co.resume(thread, ...)}
     local stat = res[1]
     local ret = {select(2, unpack(res))}
@@ -35,29 +34,30 @@ local execute = function(func, callback)
       (callback or function() end)(unpack(ret))
     else
       assert(#ret == 1, "expected a single return value")
-      assert(type(ret[1]) == "function", "type error :: expected func")
-      ret[1](next)
+      local returned_future = ret[1]
+      assert(type(returned_future) == "function", "type error :: expected func")
+      returned_future(step)
     end
   end
 
-  next()
+  step()
 end
 
--- use with CPS function, creates thunk factory
+-- use with CPS function, creates future factory
 M.wrap = function(func)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
 
   return function(...)
     local params = {...}
-    local function thunk(step)
+    local function future(step)
       if step then
         table.insert(params, step)
         return func(unpack(params))
       else
-        return co.yield(thunk)
+        return co.yield(future)
       end
     end
-    return thunk
+    return future
   end
 end
 --- WIP
@@ -72,8 +72,9 @@ M.join = M.wrap(function(futures, step)
   if len == 0 then
     return step(results)
   end
+
   for i, future in ipairs(futures) do
-    assert(type(future) == "function", "thunk must be function")
+    assert(type(future) == "function", "type error :: future must be function")
     local callback = function(...)
       results[i] = {...} -- should we set this to a table
       done = done + 1
@@ -84,7 +85,6 @@ M.join = M.wrap(function(futures, step)
     end
     future(callback)
   end
-
 end)
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
@@ -92,13 +92,13 @@ M.run = function(future, callback)
   future(callback or function() end)
 end
 
-M.run_all = function(futures, callback) M.run(M.join(futures), callback) end
+M.run_all = function(futures, callback)
+  M.run(M.join(futures), callback)
+end
 
--- sugar over coroutine
 M.await = function(future)
   return future(nil)
 end
-
 
 M.await_all = function(futures)
   assert(type(futures) == "table", "type error :: expected table")
@@ -111,14 +111,14 @@ M.suspend = co.yield
 M.async = function(func)
   return function(...)
     local args = {...}
-    local function run (step)
-      if step ==  nil then
+    local function future(step)
+      if step == nil then
         return func(unpack(args))
       else
-        execute(run, step)
+        execute(future, step)
       end
     end
-    return run
+    return future
   end
 end
 
