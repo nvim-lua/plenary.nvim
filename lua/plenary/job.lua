@@ -76,15 +76,16 @@ function Job:new(o)
     error(debug.traceback("'command' is required for Job:new"))
   end
 
-  if 1 ~= vim.fn.executable(o.command) then
-    error(debug.traceback(o.command..": Executable not found"))
+  local ok, is_exe = pcall(vim.fn.executable, o.command)
+  if ok and 1 ~= is_exe then
+      error(debug.traceback(o.command..": Executable not found"))
   end
 
   local obj = {}
 
   obj.command = o.command
   obj.args = o.args
-  obj.cwd = o.cwd and vim.fn.expand(o.cwd, true)
+  obj.cwd = o.cwd and (vim.in_fast_event() and uv.fs_realpath(o.cwd) or vim.fn.expand(o.cwd, true))
   if o.env then
     if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
 
