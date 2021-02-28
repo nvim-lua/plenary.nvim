@@ -3,25 +3,6 @@ local uv = vim.loop
 
 local M = {}
 
-local Future = {}
-
-function Future.new(opts)
-  vim.validate {
-    leaf = {opts.leaf, 'boolean'},
-    args = {opts.args, 'table'},
-    func = {opts.func, 'function'},
-  }
-
-  if opts.leaf then
-    table.insert(opts.args, function() end)
-  end
-
-  return {
-    leaf = opts.leaf,
-    args = opts.args,
-    func = opts.func,
-  }
-end
 
 --- WIP idle stuff
 local thread_loop = function(thread, callback)
@@ -38,12 +19,9 @@ local thread_loop = function(thread, callback)
 end
 
 -- use with wrap
-local execute = function(future, callback)
-  callback = callback or function() end
-
-  local thread = co.create(function()
-    return future.func(unpack(future.args))
-  end)
+local execute = function(func, callback)
+  assert(type(func) == "function", "type error :: expected func")
+  local thread = co.create(func)
 
   local next
   next = function(...)
@@ -54,88 +32,71 @@ local execute = function(future, callback)
     assert(stat, string.format("The coroutine failed with this message: %s", ret[1]))
 
     if co.status(thread) == "dead" then
-      -- (callback or function() end)(unpack(ret))
-      callback(unpack(ret))
+      (callback or function() end)(unpack(ret))
     else
-      local leaf = ret[1]
-      leaf.args[#leaf.args] = next
-      leaf.func(unpack(leaf.args))
+      assert(#ret == 1, "expected a single return value")
+      assert(type(ret[1]) == "function", "type error :: expected func")
+      ret[1](next)
     end
   end
 
   next()
 end
 
--- use with execute, creates thunk factory
+-- use with CPS function, creates thunk factory
 M.wrap = function(func)
-  vim.validate {
-    func = {func, 'function'}
-  }
+  assert(type(func) == "function", "type error :: expected func, got " .. type(func))
 
   return function(...)
-    return Future.new {
-      leaf = true,
-      args = {...},
-      func = func,
-    }
+    local params = {...}
+    local function thunk(step)
+      if step then
+        table.insert(params, step)
+        return func(unpack(params))
+      else
+        return co.yield(thunk)
+      end
+    end
+    return thunk
   end
 end
-
 --- WIP
 local thread_loop_async = M.wrap(thread_loop)
 
 -- many futures -> single future
-M.join = function(futures)
+M.join = M.wrap(function(futures, step)
+  local len = #futures
+  local results = {}
+  local done = 0
 
-  local combined_future = Future.new {
-    leaf = true,
-    args = {},
-    func = function(callback)
-      local len = #futures
-      local results = {}
-      local done = 0
-
-      if len == 0 then
-        return callback()
-      end
-
-      for i, future in ipairs(futures) do
-
-        local individual_callback = function(...)
-          results[i] = {...} -- should we set this to a table
-          done = done + 1
-          if done == len then
-            callback(results) -- should we unpack?
-          end
-        end
-
-        if future.leaf then
-          future.args[#future.args] = individual_callback
-          future.func(unpack(future.args))
-        else
-          M.run(future, individual_callback)
-        end
+  if len == 0 then
+    return step(results)
+  end
+  for i, future in ipairs(futures) do
+    assert(type(future) == "function", "thunk must be function")
+    local callback = function(...)
+      results[i] = {...} -- should we set this to a table
+      done = done + 1
+      if done == len then
+        -- step(unpack(results))
+        step(results) -- should we unpack?
       end
     end
-  }
+    future(callback)
+  end
 
-  return combined_future
-end
+end)
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
 M.run = function(future, callback)
-  execute(future, callback)
+  future(callback or function() end)
 end
 
 M.run_all = function(futures, callback) M.run(M.join(futures), callback) end
 
 -- sugar over coroutine
 M.await = function(future)
-  if future.leaf then
-    return co.yield(future)
-  else
-    return future.func(unpack(future.args))
-  end
+  return future(nil)
 end
 
 
@@ -144,13 +105,20 @@ M.await_all = function(futures)
   return M.await(M.join(futures))
 end
 
+-- suspend co-routine, call function with its continuation (like call/cc)
+M.suspend = co.yield
+
 M.async = function(func)
   return function(...)
-    return Future.new {
-      args = {...},
-      func = func,
-      leaf = false,
-    }
+    local args = {...}
+    local function run (step)
+      if step ==  nil then
+        return func(unpack(args))
+      else
+        execute(run, step)
+      end
+    end
+    return run
   end
 end
 
