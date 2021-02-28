@@ -44,14 +44,27 @@ local execute = function(future, callback)
 end
 
 -- use with CPS function, creates future factory
-M.wrap = function(func)
+-- optional for now
+-- optional argc will validate argument count, argc excludes the callback
+M.wrap = function(func, argc)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
+  -- add this once every wrapped function is changed
+  -- assert(argc, "argc is required")
 
   return function(...)
     local params = {...}
+
+    if argc then
+      assert(#params == argc, "Not enough parameters, one parameters was nil")
+    end
+
     local function future(step)
       if step then
-        table.insert(params, step)
+        if argc then
+          params[argc + 1] = step
+        else
+          table.insert(params, step) -- change once not optional
+        end
         return func(unpack(params))
       else
         return co.yield(future)
@@ -60,6 +73,7 @@ M.wrap = function(func)
     return future
   end
 end
+
 --- WIP
 local thread_loop_async = M.wrap(thread_loop)
 
