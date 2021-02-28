@@ -12,14 +12,15 @@ function Future.new(opts)
     func = {opts.func, 'function'},
   }
 
-  local self = {}
-  self.leaf = opts.leaf
   if opts.leaf then
     table.insert(opts.args, function() end)
   end
-  self.args = opts.args
-  self.func = opts.func
-  return self
+
+  return {
+    leaf = opts.leaf,
+    args = opts.args,
+    func = opts.func,
+  }
 end
 
 --- WIP idle stuff

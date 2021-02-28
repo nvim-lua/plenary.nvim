@@ -76,6 +76,6 @@ end
 
 -- both result in times between 0.02 and 0.05
 
-a.run(first_bench())
+-- a.run(first_bench())
 
--- second_bench()
+second_bench()
