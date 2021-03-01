@@ -19,57 +19,84 @@ local harness = {}
 -- end)
 
 local test_res = {}
-local res = {}
+
 local tty_output = vim.schedule_wrap(function(_, ...)
 
-   local ismsg = false
-   local msgcount = 0
+   print("TTY_Output\n")
+   -- local res = {}
+   -- local is_msg
 
-   for _, line in ipairs({...}) do
+   -- for _, line in ipairs({...}) do
 
-      local clear_results = function()
-         res = {
-            status = nil,
-            header = nil,
-            message = nil,
-         }
-      end
+   --    -- local clear_results = function()
+   --    --    res = {
+   --    --       status = nil,
+   --    --       header = nil,
+   --    --       message = nil,
+   --    --    }
+   --    -- end
 
-      if string.match(line, '{STATUS: SUCCESS}') then
-         clear_results()
-         res.status = 'success'
-      elseif string.match(line, '{STATUS: ERROR}') then
-         clear_results()
-         res.status = 'error'
-      elseif string.match(line, '{STATUS: PENDING}') then
-         clear_results()
-         res.status = 'pending'
-      elseif string.match(line, '{STATUS: FAIL}') then
-         clear_results()
-         res.status = 'fail'
-      elseif string.match(line, '{MSG}') or ismsg then
-         if msgcount == 0 then
-            ismsg = true
-            res.message = ""
-         end
-         msgcount = msgcount + 1
-         if msgcount > 1 then
-            local msg = res.message
-            res.message = msg .. line
-            print("RESMESSAGE: " .. res.message)
-            io.write("RESMESSAGE: " .. res.message)
-         end
-      end
+   --        io.stdout:write(tostring(line))
+   --        io.stdout:write("\n")
+   --    -- if line:find('{STATUS: SUCCESS}') then
+   --    --    -- clear_results()
+   --    --    res.status = 'success'
+   --    -- end
+   --    -- if line:find('{STATUS: ERROR}') then
+   --    --    -- clear_results()
+   --    --    res.status = 'error'
+   --    -- end
+   --    -- if line:find('{STATUS: PENDING}') then
+   --    --    -- clear_results()
+   --    --    res.status = 'pending'
+   --    -- end
+   --    -- if line:find('{STATUS: FAIL}') then
+   --    --    res.status = 'fail'
+   --    --    print("Status: " .. tostring(res.status) .. "\n")
+   --    -- end
+   --    -- if line:find('{MSG}') or is_msg then
+   --    --    if not is_msg then
+   --    --       is_msg = true
+   --    --       res.message = ""
+   --    --    end
+   --    --    if line:find('{ENDMSG}') then
+   --    --       res.message = res.message:gsub('{MSG}', '')
+   --    --       print("Msg: " .. tostring(res.message) .. "\n")
+   --    --       is_msg = false
+   --    --    end
+   --    --    if is_msg then
+   --    --       local msg = res.message
+   --    --       res.message = msg .. line
+   --    --    end
+   --    -- end
+   --    -- if line:find('{ENDOFTEST}') then
+   --    --    table.insert(test_res, res)
+   --    --    res = nil
+   --    -- end
 
-      -- print("line: " .. tostring(line))
-      print("status : " .. tostring(res.status))
+   --    -- print("line: " .. tostring(line))
+   --    -- print("status : " .. tostring(res.status))
+
+   --    -- io.stdout:write("Status::::: ", tostring(res.status), " \n")
+
+   --    -- io.stdout:write("MSG:::::::: ", tostring(res.message), " \n")
+
+   -- end
+
+   -- for _,v in pairs(res) do
+   --    print("Status: " .. tostring(v.status))
+   --    print("Message: " .. tostring(v.message))
+   --    -- io.stdout:write("Status: ", tostring(v.status), " \n")
+   --    -- io.stdout:write("MSG: ", tostring(v.message), " \n")
+   -- end
 
 
-   end
-   table.insert(test_res, res)
 
    -- print("ToString cli_output : " .. v)
    -- io.stdout:write("\n")
+   local read = require('plenary.busted_reader')
+   local results = read.output_to_table(...)
+   table.insert(test_res, results)
    vim.cmd [[mode]]
 end)
 
@@ -184,15 +211,12 @@ function harness.test_directory(directory, opts)
   vim.wait(100)
   log.debug("Done...")
 
-  print("Table.len... " .. #test_res)
-  print("Result... " .. tostring(test_res))
-  -- print("key: " .. test_res[2])
+  print("Table.len... " .. #test_res .. "\n")
 
-  for _,res in pairs(test_res) do
+  for _, res in pairs(test_res) do
      -- io.stdout:write("Write: ", tostring(res[1]), " \n")
-     io.stdout:write("Write: ", tostring(res.status), " \n")
-     if res[1] ~= nil then
-     end
+     -- io.stdout:write("Write: ", tostring(res.status), " \n")
+     -- print("res table" .. tostring(res))
   end
 
   if headless then

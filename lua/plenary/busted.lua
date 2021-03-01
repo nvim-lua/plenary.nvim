@@ -4,62 +4,62 @@ end
 
 local function get_trace(element, level, msg)
 
-   local function trimTrace(info)
-      local start_index = info.traceback:find('/')
-      local end_index = info.traceback:find(': in')
-      info.traceback = info.traceback:sub(start_index, end_index)
+  local function trimTrace(info)
+    local start_index = info.traceback:find('/')
+    local end_index = info.traceback:find(': in')
+    info.traceback = info.traceback:sub(start_index, end_index)
 
-      return info
-   end
+    return info
+  end
 
-   level = level or  3
+  level = level or  3
 
-   local thisdir = dirname(debug.getinfo(1, 'Sl').source)
-   local info = debug.getinfo(level, 'Sl')
-   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
-      (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
-      level = level + 1
-      info = debug.getinfo(level, 'Sl')
-   end
+  local thisdir = dirname(debug.getinfo(1, 'Sl').source)
+  local info = debug.getinfo(level, 'Sl')
+  while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
+    (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+    level = level + 1
+    info = debug.getinfo(level, 'Sl')
+  end
 
-   info.traceback = debug.traceback('', level)
-   info.message = msg
+  info.traceback = debug.traceback('', level)
+  info.message = msg
 
-   -- local file = busted.getFile(element)
-   -- local file = false
-   -- local file = false
-   -- return file and file.getTrace(file.name, info) or trimTrace(info)
-   return trimTrace(info)
+  -- local file = busted.getFile(element)
+  -- local file = false
+  -- local file = false
+  -- return file and file.getTrace(file.name, info) or trimTrace(info)
+  return trimTrace(info)
 end
 
 local function get_file_and_line_number()
 
-   local function trimTrace(trace)
-      local start_index = trace:find('/')
-      local end_index = trace:find(': in')
-      trace = trace:sub(start_index, end_index)
+  local function trimTrace(trace)
+    local start_index = trace:find('/')
+    local end_index = trace:find(': in')
+    trace = trace:sub(start_index, end_index)
 
-      local split_str = vim.split(trace, ':')
-      local spec = {}
-      spec.file = split_str[1]
-      spec.linenumber = split_str[2]
+    local split_str = vim.split(trace, ':')
+    local spec = {}
+    spec.file = split_str[1]
+    spec.linenumber = split_str[2]
 
-      return spec
-   end
+    return spec
+  end
 
-   local level = 3
+  local level = 3
 
-   local thisdir = dirname(debug.getinfo(1, 'Sl').source)
-   local info = debug.getinfo(level, 'Sl')
-   while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
-      (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
-      level = level + 1
-      info = debug.getinfo(level, 'Sl')
-   end
+  local thisdir = dirname(debug.getinfo(1, 'Sl').source)
+  local info = debug.getinfo(level, 'Sl')
+  while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
+    (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+    level = level + 1
+    info = debug.getinfo(level, 'Sl')
+  end
 
-   local trace = debug.traceback('', level)
+  local trace = debug.traceback('', level)
 
-   return trimTrace(trace)
+  return trimTrace(trace)
 end
 
 --[[ is_headless is always true
@@ -117,37 +117,38 @@ local call_inner = function(desc, func)
 end
 
 local ansi_color_table = {
-   cyan = 36,
-   magenta = 35,
-   yellow = 33,
-   green = 32,
-   red = 31,
+  cyan = 36,
+  magenta = 35,
+  yellow = 33,
+  green = 32,
+  red = 31,
 }
 
 local color_string = function(color, str)
-   if not is_headless then
-      -- This is never being called
-      return str
-   end
+  if not is_headless then
+    -- This is never being called
+    return str
+  end
 
-   return string.format("%s[%sm%s%s[%sm",
-   string.char(27),
-   ansi_color_table[color] or 0,
-   str,
-   string.char(27),
-    0
+  return string.format("%s[%sm%s%s[%sm",
+  string.char(27),
+  ansi_color_table[color] or 0,
+  str,
+  string.char(27),
+  0
   )
 end
 
 local bold_string = function(str)
-   local ansi_bold = "\027[1m"
-   local ansi_clear = "\027[0m"
+  local ansi_bold = "\027[1m"
+  local ansi_clear = "\027[0m"
 
-   return ansi_bold .. str .. ansi_clear
+  return ansi_bold .. str .. ansi_clear
 end
 
 -- local SUCCESS = color_string("green", "Success")
 local FAIL = color_string("red", "Failure")
+local SUCCESS = color_string("green", "Success")
 local PENDING = color_string("yellow", "Pending")
 
 local HORIZONTALRULER = string.rep("─", 80)
@@ -166,7 +167,7 @@ mod.describe = function(desc, func)
   results.fail = {}
   results.errs = {}
 
-     print("\n" .. HORIZONTALRULER .."\n ")
+  print("\n" .. HORIZONTALRULER .."\n ")
   -- print("Testing: ", debug.getinfo(2, 'Sl').source)
 
   describe = mod.inner_describe
@@ -248,22 +249,25 @@ mod.it = function(desc, func)
   -- and assert failed or whether it was an error...
   local to_insert, printed
   if not ok then
-     to_insert = results.fail
-     test_result.msg = msg
+    to_insert = results.fail
+    test_result.msg = msg
 
-     --     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
+    --     print(FAIL, " → " .. color_string("cyan", "spec/foo/bar_spec.lua @ 7") .. "\n")
 
-     local spec = get_file_and_line_number()
-     print("{STATUS: FAIL}")
-     print(FAIL, " → " .. color_string("cyan", spec.file) .. " @ " .. color_string("cyan", spec.linenumber) .. "\n")
-     print(bold_string(table.concat(test_result.descriptions)))
+    print("{SPEC: FAIL}")
+    local spec = get_file_and_line_number()
 
-     print("{MSG}")
-     print(indent("\n" .. msg, 7))
+    print(FAIL, " → " .. color_string("cyan", spec.file) .. " @ " .. color_string("cyan", spec.linenumber) .. "\n")
+
+    print(bold_string(table.concat(test_result.descriptions)))
+    print(indent("\n" .. msg, 7))
+
+    print("{ENDOFSPEC}")
 
   else
-     print("{STATUS: SUCCESS}")
-     print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+    print("{SPEC: SUCCESS}")
+    print(SUCCESS, " → ", table.concat(test_result.descriptions, " "))
+    print("{ENDOFSPEC}")
   end
 
   table.insert(to_insert, test_result)
