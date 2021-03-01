@@ -19,7 +19,7 @@ BustedOutputReader = {}
 
   BustedOutputReader.output_to_table = function(...)
 
-    for _, line in ipairs({...}) do
+    for _, line in pairs({...}) do
 
       if is_spec_result then
 
@@ -30,7 +30,7 @@ BustedOutputReader = {}
           reset()
         else
           if not cat_line then cat_line = "" end
-          cat_line = cat_line .. line
+          cat_line = cat_line .. line .. '\n'
         end
       end
 

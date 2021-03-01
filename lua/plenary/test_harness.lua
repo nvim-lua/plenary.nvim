@@ -22,81 +22,9 @@ local test_res = {}
 
 local tty_output = vim.schedule_wrap(function(_, ...)
 
-   print("TTY_Output\n")
-   -- local res = {}
-   -- local is_msg
-
-   -- for _, line in ipairs({...}) do
-
-   --    -- local clear_results = function()
-   --    --    res = {
-   --    --       status = nil,
-   --    --       header = nil,
-   --    --       message = nil,
-   --    --    }
-   --    -- end
-
-   --        io.stdout:write(tostring(line))
-   --        io.stdout:write("\n")
-   --    -- if line:find('{STATUS: SUCCESS}') then
-   --    --    -- clear_results()
-   --    --    res.status = 'success'
-   --    -- end
-   --    -- if line:find('{STATUS: ERROR}') then
-   --    --    -- clear_results()
-   --    --    res.status = 'error'
-   --    -- end
-   --    -- if line:find('{STATUS: PENDING}') then
-   --    --    -- clear_results()
-   --    --    res.status = 'pending'
-   --    -- end
-   --    -- if line:find('{STATUS: FAIL}') then
-   --    --    res.status = 'fail'
-   --    --    print("Status: " .. tostring(res.status) .. "\n")
-   --    -- end
-   --    -- if line:find('{MSG}') or is_msg then
-   --    --    if not is_msg then
-   --    --       is_msg = true
-   --    --       res.message = ""
-   --    --    end
-   --    --    if line:find('{ENDMSG}') then
-   --    --       res.message = res.message:gsub('{MSG}', '')
-   --    --       print("Msg: " .. tostring(res.message) .. "\n")
-   --    --       is_msg = false
-   --    --    end
-   --    --    if is_msg then
-   --    --       local msg = res.message
-   --    --       res.message = msg .. line
-   --    --    end
-   --    -- end
-   --    -- if line:find('{ENDOFTEST}') then
-   --    --    table.insert(test_res, res)
-   --    --    res = nil
-   --    -- end
-
-   --    -- print("line: " .. tostring(line))
-   --    -- print("status : " .. tostring(res.status))
-
-   --    -- io.stdout:write("Status::::: ", tostring(res.status), " \n")
-
-   --    -- io.stdout:write("MSG:::::::: ", tostring(res.message), " \n")
-
-   -- end
-
-   -- for _,v in pairs(res) do
-   --    print("Status: " .. tostring(v.status))
-   --    print("Message: " .. tostring(v.message))
-   --    -- io.stdout:write("Status: ", tostring(v.status), " \n")
-   --    -- io.stdout:write("MSG: ", tostring(v.message), " \n")
-   -- end
-
-
-
-   -- print("ToString cli_output : " .. v)
-   -- io.stdout:write("\n")
    local read = require('plenary.busted_reader')
-   local results = read.output_to_table(...)
-   table.insert(test_res, results)
+   test_res = read.output_to_table(...)
+
    vim.cmd [[mode]]
 end)
 
@@ -211,11 +139,12 @@ function harness.test_directory(directory, opts)
   vim.wait(100)
   log.debug("Done...")
 
-  print("Table.len... " .. #test_res .. "\n")
+  local dots = require('plenary.busted_dots')
+  dots.draw(test_res)
 
   for _, res in pairs(test_res) do
-     -- io.stdout:write("Write: ", tostring(res[1]), " \n")
-     -- io.stdout:write("Write: ", tostring(res.status), " \n")
+     -- io.stdout:write(tostring(res.status), " \n")
+     io.stdout:write(res.content, " \n")
      -- print("res table" .. tostring(res))
   end
 
