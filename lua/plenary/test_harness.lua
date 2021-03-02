@@ -142,9 +142,9 @@ function harness.test_directory(directory, opts)
   local dots = require('plenary.busted_dots')
   dots.draw(test_res)
 
-  for _, res in pairs(test_res) do
+  for _, spec in pairs(test_res) do
      -- io.stdout:write(tostring(res.status), " \n")
-     io.stdout:write(res.content, " \n")
+     io.stdout:write(spec.content, " \n")
      -- print("res table" .. tostring(res))
   end
 
