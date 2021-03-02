@@ -39,9 +39,9 @@ local function generate_score(n_succ, n_fail, n_err, n_pend)
   local error = n_err == 1 and ' error' or ' errors'
 
   local score =
-  color_string('green', n_succ) .. success .. ' /' ..
-  color_string('red', n_fail) .. fail .. ' /' ..
-  color_string('magenta', n_err) .. error .. ' /' ..
+  color_string('green', n_succ) .. success .. ' / ' ..
+  color_string('red', n_fail) .. fail .. ' / ' ..
+  color_string('magenta', n_err) .. error .. ' / ' ..
   color_string('yellow', n_pend) .. ' pending'
 
   io.stdout:write(score)
