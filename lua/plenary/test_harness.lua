@@ -34,6 +34,10 @@ local nvim_output = vim.schedule_wrap(function(bufnr, ...)
   end
 
   for _, v in ipairs({...}) do
+
+    local skip = v:find('{SPEC:') or v:find('{ENDOFSPEC}')
+    if skip then return end
+
     vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {v})
   end
 end)
@@ -48,7 +52,7 @@ function harness.test_directory_command(command)
 end
 
 function harness.test_directory(directory, opts)
-  print("Starting...\n")
+  print("Start Busting...\n")
   opts = vim.tbl_deep_extend('force', {winopts = {winblend = 3}}, opts or {})
 
   local res = {}
@@ -72,9 +76,9 @@ function harness.test_directory(directory, opts)
 
   local paths = harness._find_files_to_run(directory)
   for _, p in ipairs(paths) do
-    outputter(res.bufnr, "Scheduling: " .. p.filename)
+    local headless_ctx = headless and 'Scheduling: ' or 'Current file: '
+    outputter(res.bufnr, headless_ctx .. p.filename)
   end
-
 
   local path_len = #paths
 
