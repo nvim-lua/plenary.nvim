@@ -197,6 +197,34 @@ function win_float.percentage_range_window(col_range, row_range, options)
   }
 end
 
+function win_float.location_window(options)
+  local default_options = {
+    relative = 'editor',
+    style = 'minimal',
+    width = 30,
+    height = 15,
+    row = 2,
+    col = 2,
+  }
+  options = vim.tbl_extend('keep', options, default_options)
+
+  local bufnr = options.bufnr or vim.fn.nvim_create_buf(false, true)
+  local win_id = vim.fn.nvim_open_win(bufnr, true, options)
+
+  -- TODO: make this optional to achive something almost like notifications
+  vim.api.nvim_win_set_buf(win_id, bufnr)
+
+  local border = Border:new(bufnr, win_id, options, {})
+
+  return {
+    bufnr = bufnr,
+    win_id = win_id,
+
+    border_bufnr = border.bufnr,
+    border_win_id = border.win_id
+  }
+end
+
 function win_float.clear(bufnr)
   if _AssociatedBufs[bufnr] == nil then
     return
