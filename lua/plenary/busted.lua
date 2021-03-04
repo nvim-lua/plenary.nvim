@@ -1,3 +1,5 @@
+local Path = require('plenary.path')
+
 local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
@@ -273,8 +275,7 @@ clear = mod.clear
 assert = require("luassert")
 
 mod.run = function(file)
-  print("\n" .. HEADER)
-  print("Testing: ", file)
+  -- print("Testing: ", file)
 
   local ok, msg = pcall(dofile, file)
 

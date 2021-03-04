@@ -76,8 +76,9 @@ function harness.test_directory(directory, opts)
 
   local paths = harness._find_files_to_run(directory)
   for _, p in ipairs(paths) do
-    local headless_ctx = headless and 'Scheduling: ' or 'Current file: '
-    outputter(res.bufnr, headless_ctx .. p.filename)
+    local headless_ctx = headless and 'Scheduling: ' or 'Current: '
+    local rel_path = Path.make_relative(p)
+    outputter(res.bufnr, headless_ctx .. rel_path)
   end
 
   local path_len = #paths
