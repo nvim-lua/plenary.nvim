@@ -77,15 +77,16 @@ function Job:new(o)
     error(debug.traceback("'command' is required for Job:new"))
   end
 
-  if 1 ~= vim.fn.executable(o.command) then
-    error(debug.traceback(o.command..": Executable not found"))
+  local ok, is_exe = pcall(vim.fn.executable, o.command)
+  if ok and 1 ~= is_exe then
+      error(debug.traceback(o.command..": Executable not found"))
   end
 
   local obj = {}
 
   obj.command = o.command
   obj.args = o.args
-  obj.cwd = o.cwd and vim.fn.expand(o.cwd, true)
+  obj.cwd = o.cwd and (vim.in_fast_event() and uv.fs_realpath(o.cwd) or vim.fn.expand(o.cwd, true))
   if o.env then
     if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
 
@@ -492,11 +493,18 @@ end
 --- Wait for all jobs to complete
 function Job.join(...)
   local jobs_to_wait = {...}
+  local num_jobs = table.getn(jobs_to_wait)
 
-  local num_jobs = #jobs_to_wait
+  -- last entry can be timeout
+  local timeout
+  if type(jobs_to_wait[num_jobs]) == "number" then
+    timeout = table.remove(jobs_to_wait, num_jobs)
+    num_jobs = num_jobs - 1
+  end
+
   local completed = 0
 
-  return vim.wait(10000, function()
+  return vim.wait(timeout or 10000, function()
     for index, current_job in pairs(jobs_to_wait) do
       if current_job.is_shutdown then
         jobs_to_wait[index] = nil

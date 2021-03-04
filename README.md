@@ -128,6 +128,17 @@ for the difficulty of getting them setup, particularly on other platforms or in 
 Please take a look at the new APIs and make any issues for things that aren't clear. I am happy to fix them
 and make it work well :)
 
+#### Colors
+To have "Success" in green and "Failed" in red, you need [nvim-terminal.lua](https://github.com/norcalli/nvim-terminal.lua).
+In order for it to work, make sure to run the setup function in your config.
+For `init.vim`:
+```vim
+lua require('terminal').setup()
+```
+For `init.lua`:
+```lua
+require('terminal').setup()
+```
 
 ### plenary.filetype
 
@@ -213,12 +224,6 @@ neorocks.ensure_installed('lua-cjson', 'cjson')
 
 Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
 
-
-### Bundled with:
-
-Currently comes bundled with slightly modified versions of:
-- luaunit: https://github.com/bluebird75/luaunit -> Used for unit testing
-- busted: Unit testing library
 
 ### And more to come :)
 
