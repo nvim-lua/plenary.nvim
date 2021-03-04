@@ -459,7 +459,8 @@ function Path:head(lines)
   self = check_self(self)
   local chunk_size = 256
 
-  local fd = assert(uv.fs_open(self:expand(), "r", 438))
+  local fd = uv.fs_open(self:expand(), "r", 438)
+  if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
   if stat.type ~= 'file' then return nil end
 
@@ -492,7 +493,8 @@ function Path:tail(lines)
   self = check_self(self)
   local chunk_size = 256
 
-  local fd = assert(uv.fs_open(self:expand(), "r", 438))
+  local fd = uv.fs_open(self:expand(), "r", 438)
+  if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
   if stat.type ~= 'file' then return nil end
 
