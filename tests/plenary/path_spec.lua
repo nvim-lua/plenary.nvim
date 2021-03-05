@@ -205,6 +205,82 @@ describe('Path', function()
     end)
   end)
 
+  describe('rename', function()
+    it('can rename a file', function()
+      local p = Path:new("a_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(p:rename({ new_name = "not_a_random_filename.lua" }))
+      assert(p.filename == "not_a_random_filename.lua")
+
+      p:rm()
+    end)
+
+    it('can handle an invalid filename', function()
+      local p = Path:new("some_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(not p:rename({ new_name = "./" }))
+      assert(not p:rename({ new_name = "../" }))
+      assert(not p:rename({ new_name = "." }))
+      assert(not p:rename({ new_name = ".." }))
+      assert(not p:rename({ new_name = "" }))
+      assert(not p:rename())
+      assert(p.filename == "some_random_filename.lua")
+
+      p:rm()
+    end)
+
+    it('cannot rename to an existing filename', function()
+      local p1 = Path:new("a_random_filename.lua")
+      local p2 = Path:new("not_a_random_filename.lua")
+      assert(pcall(p1.touch, p1))
+      assert(pcall(p2.touch, p2))
+      assert(p1:exists())
+      assert(p2:exists())
+
+      assert(not p1:rename({ new_name = "not_a_random_filename.lua" }))
+      assert(p1.filename == "a_random_filename.lua")
+
+      p1:rm()
+      p2:rm()
+    end)
+  end)
+
+  describe('copy', function()
+    it('can copy a file', function()
+      local p1 = Path:new("a_random_filename.rs")
+      local p2 = Path:new("not_a_random_filename.rs")
+      assert(pcall(p1.touch, p1))
+      assert(p1:exists())
+
+      assert(p1:copy({ destination = "not_a_random_filename.rs" }))
+      assert(p1.filename == "a_random_filename.rs")
+      assert(p2.filename == "not_a_random_filename.rs")
+
+      p1:rm()
+      p2:rm()
+    end)
+
+    it('cannot copy a file if it\'s already exists' , function()
+      local p1 = Path:new("a_random_filename.rs")
+      local p2 = Path:new("not_a_random_filename.rs")
+      assert(pcall(p1.touch, p1))
+      assert(pcall(p2.touch, p2))
+      assert(p1:exists())
+      assert(p2:exists())
+
+      assert(p1:copy({ destination = "not_a_random_filename.rs" }))
+      assert(p1.filename == "a_random_filename.rs")
+      assert(p2.filename == "not_a_random_filename.rs")
+
+      p1:rm()
+      p2:rm()
+    end)
+  end)
+
   describe('read parts', function()
     it('should read head of file', function()
       local p = Path:new('LICENSE')
