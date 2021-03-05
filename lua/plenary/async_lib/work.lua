@@ -22,7 +22,7 @@ local function work_map(tbl, func, callback)
   end
 end
 
-M.map_async = a.wrap(work_map)
+M.map_async = a.wrap(work_map, 3)
 
 function M.is_threadarg(t)
   return type(t) == "nil" or type(t) == "boolean" or type(t) == "number" or type(t) == "string" or type(t) == "userdata"
@@ -69,6 +69,23 @@ end)
 
 M.string.find = M.async_work_wrap(function(...)
   return string.find(...)
+end)
+
+M.thread = a.wrap(function(opts, callback)
+  local func = opts.func
+  local args = opts.args
+
+  local async
+  async = uv.new_async(function(...)
+    callback(...)
+    async:close()
+  end)
+
+  M.validate_threadargs(unpack(args))
+
+  table.insert(args, 1, async)
+
+  uv.new_thread(func, unpack(args))
 end)
 
 return M

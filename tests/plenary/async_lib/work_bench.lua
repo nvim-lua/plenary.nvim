@@ -34,7 +34,7 @@ a.run(test())
 --- readfile asynchronously, string process IS async using work
 --- this is actually slower, but at least doesn't execute in main loop?
 local first_bench = async(function()
-  local contents = await(read_file(assets_dir .. 'README.md'))
+  local contents = await(read_file(assets_dir .. 'syn.json'))
 
   local lines = vim.split(contents, '\n')
 
@@ -51,7 +51,7 @@ end)
 
 --- readfile asynchronously, string process not async
 local second_bench = async(function()
-  local contents = await(read_file(assets_dir .. 'README.md'))
+  local contents = await(read_file(assets_dir .. 'syn.json'))
 
   local lines = vim.split(contents, '\n')
 
@@ -65,7 +65,7 @@ local second_bench = async(function()
 end)
 
 local third_bench = async(function()
-  local contents = await(read_file(assets_dir .. 'README.md'))
+  local contents = await(read_file(assets_dir .. 'syn.json'))
 
   local lines = vim.split(contents, '\n')
 
@@ -76,11 +76,39 @@ local third_bench = async(function()
     return idx, value
   end))
 
-  dump(result)
+  print('result amount', #result == #lines)
 
   print("Elapsed time: ", os.clock() - start)
 end)
 
-a.run(first_bench())
+local fourth_bench = async(function()
+  local contents = await(read_file(assets_dir .. 'syn.json'))
+
+  local lines = vim.split(contents, '\n')
+
+  local start = os.clock()
+
+  for idx, line in ipairs(lines) do
+    lines[idx] = work.thread({
+      func = function(handle, s)
+        handle:send(string.match(s, 'i'))
+      end,
+      args = {line},
+    })
+
+    if idx == 10 then
+      break
+    end
+  end
+
+  local result = await_all(lines)
+
+  print('result amount', #result == #lines)
+
+  print("Elapsed time: ", os.clock() - start)
+end)
+
+-- a.run(first_bench())
 -- a.run(second_bench())
 -- a.run(third_bench())
+a.run(fourth_bench())

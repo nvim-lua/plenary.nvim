@@ -50,18 +50,16 @@ M.wrap = function(func, argc)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
   -- add this once every wrapped function is changed
   -- assert(argc, "argc is required")
+  -- assert(type(argc) == "number", "type error :: expected number, got " .. type(argc))
 
   return function(...)
     local params = {...}
 
-    if argc then
-      assert(#params == argc, "Not enough parameters, one parameters was nil")
-    end
-
     local function future(step)
       if step then
         if argc then
-          params[argc + 1] = step
+          params[argc] = step
+          -- params[argc + 1] = step
         else
           table.insert(params, step) -- change once not optional
         end
@@ -75,7 +73,7 @@ M.wrap = function(func, argc)
 end
 
 --- WIP
-local thread_loop_async = M.wrap(thread_loop)
+local thread_loop_async = M.wrap(thread_loop, 2)
 
 -- many futures -> single future
 M.join = M.wrap(function(futures, step)
@@ -167,6 +165,6 @@ end)
 
 --- WIP
 --- because idle is a bad name
-M.spawn = M.wrap(execute_loop)
+M.spawn = M.wrap(execute_loop, 2)
 
 return M

@@ -12,7 +12,7 @@ M.sleep = a.wrap(function(ms, callback)
     uv.timer_stop(timer)
     uv.close(timer)
     callback()
-  end)
+  end, 2)
 end)
 
 M.timer = function(ms)
@@ -38,7 +38,7 @@ M.thread_loop = function(thread, callback)
   end)
 end
 
-M.thread_loop_async = a.wrap(M.thread_loop)
+M.thread_loop_async = a.wrap(M.thread_loop, 2)
 
 M.yield_now = async(function()
   a.wait(M.id())
@@ -56,7 +56,7 @@ end
 Condvar.wait = a.wrap(function(self, callback)
   -- not calling the callback will block the coroutine
   table.insert(self.handles, callback)
-end)
+end, 2)
 
 --- not an async function
 function Condvar:notify_all()
@@ -120,7 +120,7 @@ Semaphore.acquire = a.wrap(function(self, callback)
   end
 
   callback(permit)
-end)
+end, 2)
 
 M.Semaphore = Semaphore
 
@@ -152,7 +152,7 @@ M.channel.oneshot = function()
     end
 
     saved_callback = callback
-  end)
+  end, 1)
 
   return sender, receiver
 end
