@@ -317,39 +317,46 @@ end
 function Path:rename(opts)
   opts = opts or {}
   if not opts.new_name or opts.new_name == "" then
-    print("Please provide the new name!")
+    error("Please provide the new name!")
     return false
   end
 
-  -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match('^%.%.?/?') then
-    print("Invalid filename!")
+    -- handles `.`, `..`, `./`, and `../`
+  if opts.new_name:match('^%.%.?/?\\?.+') then
+    opts.new_name = {
+      uv.fs_realpath(opts.new_name:sub(1, 3)),
+      opts.new_name:sub(4, #opts.new_name)
+    }
+  end
+
+  local new_path = Path:new(opts.new_name)
+
+  if new_path:exists() then
+    error('File or directory already exists!')
     return false
   end
 
-  local new_file = self:new(opts.new_name)
-
-  if self:new(opts.new_name):exists() then
-    print('File or directory already exists!')
-    return false
-  end
-
-  self.filename = new_file.filename
-  return uv.fs_rename(self:absolute(), new_file:absolute(), function(err)
-    if err then print(err)
+  local success = uv.fs_rename(self:absolute(), new_path:absolute(), function(err)
+    if err then
+      error(err)
       return false
     end
   end)
+
+  local path_tbl = vim.split(new_path.filename, path.sep)
+  self.filename = path_tbl[#path_tbl]
+
+  return success
 end
 
 function Path:copy(opts)
   opts = opts or {}
 
-  local dest = self:new(opts.destination)
+  local dest = Path:new(opts.destination)
 
   return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true }, function(err)
     if err then
-      print(err)
+      error(err)
       return false
     end
   end)
