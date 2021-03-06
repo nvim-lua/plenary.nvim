@@ -318,7 +318,6 @@ function Path:rename(opts)
   opts = opts or {}
   if not opts.new_name or opts.new_name == "" then
     error("Please provide the new name!")
-    return false
   end
 
     -- handles `.`, `..`, `./`, and `../`
@@ -333,20 +332,12 @@ function Path:rename(opts)
 
   if new_path:exists() then
     error('File or directory already exists!')
-    return false
   end
 
-  local success = uv.fs_rename(self:absolute(), new_path:absolute(), function(err)
-    if err then
-      error(err)
-      return false
-    end
-  end)
+  local status = uv.fs_rename(self:absolute(), new_path:absolute())
+  self.filename = new_path.filename
 
-  local path_tbl = vim.split(new_path.filename, path.sep)
-  self.filename = path_tbl[#path_tbl]
-
-  return success
+  return status
 end
 
 function Path:copy(opts)
@@ -354,12 +345,7 @@ function Path:copy(opts)
 
   local dest = Path:new(opts.destination)
 
-  return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true }, function(err)
-    if err then
-      error(err)
-      return false
-    end
-  end)
+  return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
 end
 
 function Path:touch(opts)

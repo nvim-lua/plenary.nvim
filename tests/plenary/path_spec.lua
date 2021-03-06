@@ -235,7 +235,7 @@ describe('Path', function()
       assert(p:exists())
 
       assert(pcall(p.rename, p, { new_name = "../some_random_filename.lua" }))
-      assert.are.same("some_random_filename.lua", p.filename)
+      assert.are.same(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
 
       p:rm()
     end)
