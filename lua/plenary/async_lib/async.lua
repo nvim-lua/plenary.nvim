@@ -44,14 +44,32 @@ local execute = function(future, callback)
 end
 
 -- use with CPS function, creates future factory
--- optional for now
--- optional argc will validate argument count, argc excludes the callback
+-- must have argc for arity checking
 M.wrap = function(func, argc)
   assert(type(func) == "function", "type error :: expected func, got " .. type(func))
-  -- add this once every wrapped function is changed
-  -- assert(argc, "argc is required")
-  -- assert(type(argc) == "number", "type error :: expected number, got " .. type(argc))
+  assert(type(argc) == "number" or argc == "vararg", "expected argc to be a number or string literal 'vararg'")
 
+  return function(...)
+    local params = {...}
+
+    local function future(step)
+      if step then
+        if type(argc) == "number" then
+          params[argc] = step
+        else
+          table.insert(params, step) -- change once not optional
+        end
+        return func(unpack(params))
+      else
+        return co.yield(future)
+      end
+    end
+    return future
+  end
+end
+
+-- same as wrap except the future will be run when called as a function
+M.wrap_run = function(func, argc)
   return function(...)
     local params = {...}
 
@@ -68,6 +86,7 @@ M.wrap = function(func, argc)
         return co.yield(future)
       end
     end
+
     return future
   end
 end
@@ -97,7 +116,7 @@ M.join = M.wrap(function(futures, step)
     end
     future(callback)
   end
-end)
+end, 2)
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
 M.run = function(future, callback)

@@ -18,7 +18,7 @@ add('close', 4) -- close a handle
 -- filesystem operations
 add('fs_open', 4)
 add('fs_read', 4)
-add('fs_close')
+add('fs_close', 2)
 add('fs_unlink', 2)
 add('fs_write', 4)
 add('fs_mkdir', 3)

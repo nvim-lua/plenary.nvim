@@ -58,7 +58,7 @@ end
 --- WARNING: func cannot have any upvalues, only lua standard library
 --- WARNING: func can only be passed threadargs, see above
 function M.async_work_wrap(func)
-  return a.wrap(M.work_wrap(func))
+  return a.wrap(M.work_wrap(func), "vararg")
 end
 
 M.string = {}
@@ -86,6 +86,6 @@ M.thread = a.wrap(function(opts, callback)
   table.insert(args, 1, async)
 
   uv.new_thread(func, unpack(args))
-end)
+end, 2)
 
 return M
