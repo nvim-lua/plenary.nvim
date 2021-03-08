@@ -1,5 +1,6 @@
 local Path = require'plenary.path'
 local os_sep = Path.path.sep
+local F = require('plenary.functional')
 
 local uv = vim.loop
 
@@ -108,6 +109,7 @@ end
 --   opts.depth (int):                depth on how deep the search should go
 --   opts.search_pattern (regex):     regex for which files will be added, string or table of strings
 --   opts.on_insert(entry):           Will be called for each element
+--   opts.silent (bool):              if true will not echo messages that are not accessible
 -- @return array with files
 m.scan_dir = function(path, opts)
   opts = opts or {}
@@ -121,7 +123,9 @@ m.scan_dir = function(path, opts)
 
   for i = table.getn(base_paths), 1, -1 do
     if uv.fs_access(base_paths[i], "X") == false then
-      print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      if not F.if_nil(opts.silent, false, opts.silent) then
+        print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      end
       table.remove(base_paths, i)
     end
   end
@@ -153,6 +157,7 @@ end
 --   opts.search_pattern (lua regex): depth on how deep the search should go
 --   opts.on_insert function(entry):  will be called for each element
 --   opts.on_exit function(results):  will be called at the end
+--   opts.silent (bool):              if true will not echo messages that are not accessible
 m.scan_dir_async = function(path, opts)
   opts = opts or {}
 
@@ -169,7 +174,9 @@ m.scan_dir_async = function(path, opts)
   -- Maybe obers async pr can take me out of callback hell
   for i = table.getn(base_paths), 1, -1 do
     if uv.fs_access(base_paths[i], "X") == false then
-      print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      if not F.if_nil(opts.silent, false, opts.silent) then
+        print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      end
       table.remove(base_paths, i)
     end
   end
