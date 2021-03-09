@@ -271,6 +271,18 @@ describe('Path', function()
       p2:rm()
     end)
 
+    it('can copy to parent dir', function()
+      local p = Path:new("some_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(pcall(p.copy, p, { destination = "../some_random_filename.lua" }))
+      assert(pcall(p.exists, p))
+
+      p:rm()
+      Path:new(vim.loop.fs_realpath("../some_random_filename.lua")):rm()
+    end)
+
     it('cannot copy a file if it\'s already exists' , function()
       local p1 = Path:new("a_random_filename.rs")
       local p2 = Path:new("not_a_random_filename.rs")

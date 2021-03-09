@@ -343,6 +343,14 @@ end
 function Path:copy(opts)
   opts = opts or {}
 
+  -- handles `.`, `..`, `./`, and `../`
+  if opts.destination:match('^%.%.?/?\\?.+') then
+    opts.destination = {
+      uv.fs_realpath(opts.destination:sub(1, 3)),
+      opts.destination:sub(4, #opts.destination)
+    }
+  end
+
   local dest = Path:new(opts.destination)
 
   return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
