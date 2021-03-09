@@ -16,26 +16,25 @@ M.sleep = a.wrap(function(ms, callback)
   end)
 end, 2)
 
+--- Takes a future and a millisecond as the timeout.
+--- If the time is reached and the future hasn't completed yet, it will short circuit the future
+--- NOTE: the future will still be running in libuv, we are just not waiting for it to complete
 M.timeout = a.wrap(function(future, ms, callback)
-  local timed_out = false
-
-  local rx, tx = M.channel.oneshot()
+  -- make sure that the callback isn't called twice, or else the coroutine can be dead
+  local done = false
 
   local timeout_callback = function(...)
-    rx(...)
+    if not done then
+      done = true
+      callback(false, ...) -- false because it has run normally
+    end
   end
 
-  a.run(function()
-    local res = {await(tx)}
-    if timed_out == false then
-      callback(timed_out, unpack(res))
-    end
-  end)
-
   vim.defer_fn(function()
-    timed_out = true
-    callback(timed_out)
-    callback = nil
+    if not done then
+      done = true
+      callback(true) -- true because it has timed out
+    end
   end, ms)
 
   a.run(future, timeout_callback)
@@ -152,32 +151,41 @@ M.Semaphore = Semaphore
 
 M.channel = {}
 
----comment
----@return function
----@return any
 M.channel.oneshot = function()
   local val = nil
   local saved_callback = nil
+  local done = false
 
   --- sender is not async
   --- sends a value
-  local sender = function(t)
+  local sender = function(...)
     if val ~= nil then
       error('Oneshot channel can only send one value!')
+      return
     end
 
-    val = t
-    saved_callback(val)
+    if saved_callback then
+      saved_callback(unpack(val or {}))
+      done = true
+    else
+      val = {...}
+    end
   end
 
   --- receiver is async
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
-    if callback ~= nil then
-      error('Oneshot channel can only receive one value!')
+    if done then
+      error('Oneshot channel can only send one value!')
+      return
     end
 
-    saved_callback = callback
+    if val then
+      callback(unpack(val))
+      done = true
+    else
+      saved_callback = callback
+    end
   end, 1)
 
   return sender, receiver

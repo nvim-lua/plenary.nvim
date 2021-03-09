@@ -140,6 +140,10 @@ M.convert = function(async_func)
   end
 end
 
+M.future = function(func)
+  return M.async(func)()
+end
+
 --- WIP
 local execute_loop = M.async(function(func, callback)
   assert(type(func) == "function", "type error :: expected func")

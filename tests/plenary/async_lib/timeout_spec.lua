@@ -2,9 +2,8 @@ local a = require('plenary.async_lib')
 local async = a.async
 local await = a.await
 
-
 local main1 = async(function()
-  local timed_out = await(a.utils.timeout(a.utils.sleep(500), 1000))
+  local timed_out = await(a.utils.timeout(a.utils.sleep(100), 1000))
 
   print('timed out 1:', timed_out)
 
