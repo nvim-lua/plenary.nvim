@@ -19,6 +19,7 @@ end, 2)
 --- Takes a future and a millisecond as the timeout.
 --- If the time is reached and the future hasn't completed yet, it will short circuit the future
 --- NOTE: the future will still be running in libuv, we are just not waiting for it to complete
+--- thats why you should call this on a leaf future only to avoid unexpected results
 M.timeout = a.wrap(function(future, ms, callback)
   -- make sure that the callback isn't called twice, or else the coroutine can be dead
   local done = false
@@ -68,6 +69,13 @@ M.thread_loop_async = a.wrap(M.thread_loop, 2)
 M.yield_now = async(function()
   await(M.id())
 end)
+
+-- will force the future to be runned when called
+M.runned = function(future)
+  return function(step)
+    a.run(future, step)
+  end
+end
 
 local Condvar = {}
 Condvar.__index = Condvar
@@ -165,7 +173,7 @@ M.channel.oneshot = function()
     end
 
     if saved_callback then
-      saved_callback(unpack(val or {}))
+      saved_callback(unpack(val or {...}))
       done = true
     else
       val = {...}
