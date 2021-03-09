@@ -314,6 +314,48 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
+function Path:rename(opts)
+  opts = opts or {}
+  if not opts.new_name or opts.new_name == "" then
+    error("Please provide the new name!")
+  end
+
+    -- handles `.`, `..`, `./`, and `../`
+  if opts.new_name:match('^%.%.?/?\\?.+') then
+    opts.new_name = {
+      uv.fs_realpath(opts.new_name:sub(1, 3)),
+      opts.new_name:sub(4, #opts.new_name)
+    }
+  end
+
+  local new_path = Path:new(opts.new_name)
+
+  if new_path:exists() then
+    error('File or directory already exists!')
+  end
+
+  local status = uv.fs_rename(self:absolute(), new_path:absolute())
+  self.filename = new_path.filename
+
+  return status
+end
+
+function Path:copy(opts)
+  opts = opts or {}
+
+  -- handles `.`, `..`, `./`, and `../`
+  if opts.destination:match('^%.%.?/?\\?.+') then
+    opts.destination = {
+      uv.fs_realpath(opts.destination:sub(1, 3)),
+      opts.destination:sub(4, #opts.destination)
+    }
+  end
+
+  local dest = Path:new(opts.destination)
+
+  return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
+end
+
 function Path:touch(opts)
   opts = opts or {}
 
