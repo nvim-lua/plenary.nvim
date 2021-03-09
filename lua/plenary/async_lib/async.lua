@@ -68,29 +68,6 @@ M.wrap = function(func, argc)
   end
 end
 
--- same as wrap except the future will be run when called as a function
-M.wrap_run = function(func, argc)
-  return function(...)
-    local params = {...}
-
-    local function future(step)
-      if step then
-        if argc then
-          params[argc] = step
-          -- params[argc + 1] = step
-        else
-          table.insert(params, step) -- change once not optional
-        end
-        return func(unpack(params))
-      else
-        return co.yield(future)
-      end
-    end
-
-    return future
-  end
-end
-
 --- WIP
 local thread_loop_async = M.wrap(thread_loop, 2)
 
@@ -150,6 +127,16 @@ M.async = function(func)
       end
     end
     return future
+  end
+end
+
+-- converts an async function to callback based function
+M.convert = function(async_func)
+  return function(...)
+    local args = {...}
+    local callback = table.remove(args)
+    assert(type(callback) == "function" or type(callback) == "nil", "type error :: expected function as last vararg")
+    M.run(async_func(unpack(args)), callback)
   end
 end
 

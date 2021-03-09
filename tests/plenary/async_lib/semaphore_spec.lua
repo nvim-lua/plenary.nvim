@@ -3,9 +3,7 @@ local async = a.async
 local await = a.await
 local Semaphore = a.utils.Semaphore
 
-local eq = function(a, b)
-  assert.are.same(a, b)
-end
+local eq = assert.are.same
 
 describe('semaphore', function()
   it('should validate arguments', function()

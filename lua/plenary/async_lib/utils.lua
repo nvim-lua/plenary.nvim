@@ -1,4 +1,5 @@
 local a = require('plenary.async_lib.async')
+local await = a.await
 local async = a.async
 local co = coroutine
 local VecDeque = require('plenary.async_lib.helpers').VecDeque
@@ -15,9 +16,34 @@ M.sleep = a.wrap(function(ms, callback)
   end)
 end, 2)
 
+M.timeout = a.wrap(function(future, ms, callback)
+  local timed_out = false
+
+  local rx, tx = M.channel.oneshot()
+
+  local timeout_callback = function(...)
+    rx(...)
+  end
+
+  a.run(function()
+    local res = {await(tx)}
+    if timed_out == false then
+      callback(timed_out, unpack(res))
+    end
+  end)
+
+  vim.defer_fn(function()
+    timed_out = true
+    callback(timed_out)
+    callback = nil
+  end, ms)
+
+  a.run(future, timeout_callback)
+end, 3)
+
 M.timer = function(ms)
   return async(function()
-    a.wait(M.sleep(ms))
+    await(M.sleep(ms))
   end)
 end
 
@@ -41,7 +67,7 @@ end
 M.thread_loop_async = a.wrap(M.thread_loop, 2)
 
 M.yield_now = async(function()
-  a.wait(M.id())
+  await(M.id())
 end)
 
 local Condvar = {}
