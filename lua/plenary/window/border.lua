@@ -118,6 +118,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
 
   obj.bufnr = vim.api.nvim_create_buf(false, true)
   assert(obj.bufnr, "Failed to create border buffer")
+  vim.api.nvim_buf_set_option(obj.bufnr, "bufhidden", "wipe")
 
   obj.contents = Border._create_lines(content_win_options, border_win_options)
   vim.api.nvim_buf_set_lines(obj.bufnr, 0, -1, false, obj.contents)
