@@ -21,7 +21,8 @@ path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if jit then
-    if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
+    local os = string.lower(jit.os)
+    if os == 'linux' or os == 'osx' or os == 'bsd' then
       return '/'
     else
       return '\\'
