@@ -130,16 +130,6 @@ M.async = function(func)
   end
 end
 
--- converts an async function to callback based function
-M.convert = function(async_func)
-  return function(...)
-    local args = {...}
-    local callback = table.remove(args)
-    assert(type(callback) == "function" or type(callback) == "nil", "type error :: expected function as last vararg")
-    M.run(async_func(unpack(args)), callback)
-  end
-end
-
 M.future = function(func)
   return M.async(func)()
 end
