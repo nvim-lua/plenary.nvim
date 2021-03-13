@@ -84,4 +84,27 @@ M.strcharpart = function(str, nchar, charlen)
   return str:sub(nbyte + 1, nbyte + len)
 end
 
+M.truncate = function(str, len, dots)
+  str = tostring(str) -- We need to make sure its an actually a string and not a number
+  dots = dots or '…'
+  if M.strdisplaywidth(str) <= len then
+    return str
+  end
+  local start = 0
+  local current = 0
+  local result = ''
+  local len_of_dots = M.strdisplaywidth(dots)
+  while true do
+    local part = M.strcharpart(str, start, 1)
+    current = current + M.strdisplaywidth(part)
+    if (current + len_of_dots) > len then
+      result = result .. dots
+      break
+    end
+    result = result .. part
+    start = start + 1
+  end
+  return result
+end
+
 return M
