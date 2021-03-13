@@ -5,6 +5,7 @@ describe('strings', function()
   describe('strdisplaywidth', function()
     for _, case in ipairs{
       {str = 'abcde', expected = {single = 5, double = 5}},
+      -- This space below is a tab (U+0009)
       {str = 'abc	de', expected = {single = 10, double = 10}},
       {str = 'アイウエオ', expected = {single = 10, double = 10}},
       {str = '├─┤', expected = {single = 3, double = 6}},
@@ -72,6 +73,33 @@ describe('strings', function()
           local original = vim.o.ambiwidth
           vim.o.ambiwidth = ambiwidth
           eq(case.expected[ambiwidth], strings.truncate(case.args[1], case.args[2]))
+          vim.o.ambiwidth = original
+        end)
+      end
+    end
+  end)
+
+  describe('align_str', function()
+    for _, case in ipairs{
+      {args = {'abcde', 8}, expected = {single = 'abcde   ', double = 'abcde   '}},
+      {args = {'アイウ', 8}, expected = {single = 'アイウ  ', double = 'アイウ  '}},
+      {args = {'├─┤', 8}, expected = {single = '├─┤     ', double = '├─┤  '}},
+      {args = {'abcde', 8, true}, expected = {single = '   abcde', double = '   abcde'}},
+      {args = {'アイウ', 8, true}, expected = {single = '  アイウ', double = '  アイウ'}},
+      {args = {'├─┤', 8, true}, expected = {single = '     ├─┤', double = '  ├─┤'}},
+    } do
+      for _, ambiwidth in ipairs{'single', 'double'} do
+        local msg = ('ambiwidth = %s, [%s, %d, %s] -> "%s"'):format(
+          ambiwidth,
+          case.args[1],
+          case.args[2],
+          tostring(case.args[3]),
+          case.expected[ambiwidth]
+        )
+        it(msg, function()
+          local original = vim.o.ambiwidth
+          vim.o.ambiwidth = ambiwidth
+          eq(case.expected[ambiwidth], strings.align_str(case.args[1], case.args[2], case.args[3]))
           vim.o.ambiwidth = original
         end)
       end

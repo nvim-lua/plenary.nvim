@@ -107,4 +107,11 @@ M.truncate = function(str, len, dots)
   return result
 end
 
+M.align_str = function(string, width, right_justify)
+  local str_len = M.strdisplaywidth(string)
+  return right_justify
+    and string.rep(" ", width - str_len)..string
+    or string..string.rep(" ", width - str_len)
+end
+
 return M
