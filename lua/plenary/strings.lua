@@ -24,7 +24,7 @@ M.strdisplaywidth = (function()
 end)()
 
 M.utf_ptr2len = (function()
-  if jit and path.sep ~= '\\' then
+  if jit and path.sep ~= [[\]] then
     local ffi = require('ffi')
     ffi.cdef[[
       typedef unsigned char char_u;
