@@ -46,6 +46,14 @@ local shutdown_factory = function (child, options)
   end
 end
 
+local function expand(path)
+  if vim.in_fast_event() then
+    return uv.fs_realpath(path)
+  else
+    return vim.fn.expand(path, true)
+  end
+end
+
 ---@class Array
 --- Numeric table
 
@@ -100,7 +108,7 @@ function Job:new(o)
 
   obj.command = command
   obj.args = args
-  obj.cwd = o.cwd and (vim.in_fast_event() and uv.fs_realpath(o.cwd) or vim.fn.expand(o.cwd, true))
+  obj.cwd = o.cwd and expand(o.cwd)
   if o.env then
     if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
 
