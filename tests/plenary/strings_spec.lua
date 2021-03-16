@@ -34,14 +34,10 @@ describe('strings', function()
     } do
       local msg = ('("%s", %d, %s) -> "%s"'):format(case.args[1], case.args[2], tostring(case.args[3]), case.expected)
       it('lua: '..msg, function()
-        eq(case.expected, strings.strcharpart(case.args[1], case.args[2], case.args[3]))
+        eq(case.expected, strings.strcharpart(unpack(case.args)))
       end)
       it('vim: '..msg, function()
-        if case.args[3] then
-          eq(case.expected, vim.fn.strcharpart(case.args[1], case.args[2], case.args[3]))
-        else
-          eq(case.expected, vim.fn.strcharpart(case.args[1], case.args[2]))
-        end
+        eq(case.expected, vim.fn.strcharpart(unpack(case.args)))
       end)
     end
   end)
@@ -72,7 +68,7 @@ describe('strings', function()
         it(msg, function()
           local original = vim.o.ambiwidth
           vim.o.ambiwidth = ambiwidth
-          eq(case.expected[ambiwidth], strings.truncate(case.args[1], case.args[2]))
+          eq(case.expected[ambiwidth], strings.truncate(unpack(case.args)))
           vim.o.ambiwidth = original
         end)
       end
@@ -99,7 +95,7 @@ describe('strings', function()
         it(msg, function()
           local original = vim.o.ambiwidth
           vim.o.ambiwidth = ambiwidth
-          eq(case.expected[ambiwidth], strings.align_str(case.args[1], case.args[2], case.args[3]))
+          eq(case.expected[ambiwidth], strings.align_str(unpack(case.args)))
           vim.o.ambiwidth = original
         end)
       end
