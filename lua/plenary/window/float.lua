@@ -30,7 +30,11 @@ win_float.default_options = {
 
 function win_float.default_opts(options, centered)
   options = tbl.apply_defaults(options, win_float.default_options)
+
+  -- defaults for win_float.location_window
   if centered == false then
+    options.percentage = nil
+    options.winblend = nil
     return options
   end
 
@@ -179,8 +183,7 @@ function win_float.percentage_range_window(col_range, row_range, options)
     width_percentage = col_range[2] - col_range[1]
     col_start_percentage = col_range[1]
   else
-    error(string.format("Invalid type for 'col_range': %p", col_range))
-  end
+    error(string.format("Invalid type for 'col_range': %p", col_range)) end
 
   win_opts.col = math.floor(vim.o.columns * col_start_percentage)
   win_opts.width = math.floor(vim.o.columns * width_percentage)
@@ -214,7 +217,7 @@ end
 --                  Table containing some or all of the options defined in
 --                  win_float.default options.
 function win_float.location_window(options)
-  options = win_float.default_options(options)
+  options = win_float.default_opts(options, false)
 
   local bufnr = options.bufnr or vim.fn.nvim_create_buf(false, true)
   local win_id = vim.fn.nvim_open_win(bufnr, true, options)
@@ -247,5 +250,7 @@ function win_float.clear(bufnr)
 
   _AssociatedBufs[bufnr] = nil
 end
+
+win_float.location_window()
 
 return win_float
