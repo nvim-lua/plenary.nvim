@@ -251,6 +251,4 @@ function win_float.clear(bufnr)
   _AssociatedBufs[bufnr] = nil
 end
 
-win_float.location_window()
-
 return win_float
