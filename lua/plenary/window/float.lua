@@ -19,10 +19,20 @@ local win_float = {}
 win_float.default_options = {
   winblend = 15,
   percentage = 0.9,
+
+  relative = 'editor',
+  style = 'minimal',
+  width = 30,
+  height = 15,
+  row = 2,
+  col = 2,
 }
 
-function win_float.default_opts(options)
+function win_float.default_opts(options, centered)
   options = tbl.apply_defaults(options, win_float.default_options)
+  if centered == false then
+    return options
+  end
 
   local width = math.floor(vim.o.columns * options.percentage)
   local height = math.floor(vim.o.lines * options.percentage)
@@ -197,21 +207,20 @@ function win_float.percentage_range_window(col_range, row_range, options)
   }
 end
 
+--- Create window that of a certain size at a certain (col, row) position
+---
+--- Works regardless of current buffers, tabs, splits, etc.
+--@param options Table:
+--                  Table containing some or all of the options defined in
+--                  win_float.default options.
 function win_float.location_window(options)
-  local default_options = {
-    relative = 'editor',
-    style = 'minimal',
-    width = 30,
-    height = 15,
-    row = 2,
-    col = 2,
-  }
-  options = vim.tbl_extend('keep', options, default_options)
+  options = win_float.default_options(options)
 
   local bufnr = options.bufnr or vim.fn.nvim_create_buf(false, true)
   local win_id = vim.fn.nvim_open_win(bufnr, true, options)
 
-  -- TODO: make this optional to achive something almost like notifications
+  -- TODO(anott03): make this optional to achive something almost
+  -- like notifications
   vim.api.nvim_win_set_buf(win_id, bufnr)
 
   local border = Border:new(bufnr, win_id, options, {})
