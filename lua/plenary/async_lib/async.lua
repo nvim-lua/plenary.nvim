@@ -83,6 +83,7 @@ M.join = M.wrap(function(futures, step)
 
   for i, future in ipairs(futures) do
     assert(type(future) == "function", "type error :: future must be function")
+
     local callback = function(...)
       results[i] = {...} -- should we set this to a table
       done = done + 1
@@ -91,9 +92,27 @@ M.join = M.wrap(function(futures, step)
         step(results) -- should we unpack?
       end
     end
+
     future(callback)
   end
 end, 2)
+
+M.select = M.wrap(function(futures, step)
+  local selected = false
+
+  for _, future in ipairs(futures) do
+    assert(type(future) == "function", "type error :: future must be function")
+
+    local callback = function(...)
+      if not selected then
+        selected = true
+        step(...)
+      end
+    end
+
+    future(callback)
+  end
+end)
 
 --- use this over running a future by calling it with no callback argument because it is more explicit
 M.run = function(future, callback)
