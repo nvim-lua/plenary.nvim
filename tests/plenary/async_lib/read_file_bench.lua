@@ -17,8 +17,6 @@ local read_file = async(function(path)
   local err, stat = await(a.uv.fs_fstat(fd))
   assert(not err, err)
 
-  print('stat', stat)
-
   local err, data = await(a.uv.fs_read(fd, stat.size, 0))
   assert(not err, err)
 
@@ -72,10 +70,33 @@ local second_bench = function()
   end
 end
 
+local call_api = async(function()
+  local futures = {}
+
+  local read_and_api = async(function()
+    -- local res = await(a.scheduled(read_file(assets_dir .. 'syn.json')))
+    local res = await(read_file(assets_dir .. 'syn.json'))
+    await(a.nvim())
+    vim.api.nvim_notify("Hello", 1, {})
+    return res
+  end)
+
+  for i = 1, 300 do
+    futures[i] = read_and_api()
+  end
+
+  local start = os.clock()
+
+  local res = await_all(futures)
+
+  print("Elapsed time: ", os.clock() - start)
+end)
+
 -- a.run(read_file(assets_dir .. 'README.md'))
 
 -- both result in times between 0.02 and 0.05
 
-a.run(first_bench())
-
+-- a.run(first_bench())
 -- second_bench()
+-- a.run(call_api())
+

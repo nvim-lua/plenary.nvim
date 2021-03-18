@@ -167,4 +167,6 @@ end)
 --- because idle is a bad name
 M.spawn = M.wrap(execute_loop, 2)
 
+M.nvim = M.wrap(vim.schedule, 1)
+
 return M
