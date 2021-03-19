@@ -16,11 +16,15 @@ local test = async(function()
   dump(res)
 end)
 
+local no_close = async(function()
+  local res = run { "echo", [['hello world!']] }
+end)
+
 local cat = async(function()
   local handle = run { "cat", "-", interactive = true }
   await(handle:write("hello world!"))
-  dump(await(handle:read_stdout()))
-  dump("resulting handle", await(handle:stop()))
+  await(handle:read_stdout())
+  await(handle:stop())
 end)
 
 local python = async(function()
@@ -43,5 +47,10 @@ local long_job = async(function()
   dump(res)
 end)
 
--- a.run(python())
-a.run(test())
+local concurrent = function()
+  local jobs = {}
+  for i = 1, 200 do jobs[i] = cat() end
+  a.run_all(jobs)
+end
+
+-- a.run(cat())

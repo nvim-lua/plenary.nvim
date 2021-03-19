@@ -22,9 +22,6 @@ end
 local Job = {}
 Job.__index = Job
 
-Job.__add = function(lhs, rhs)
-end
-
 function Job.new(opts)
   local self = setmetatable({}, Job)
 
@@ -40,8 +37,8 @@ end
 
 function Job:create_control_flow()
   self.exit_tx, self.exit_rx = channel.oneshot()
-  self.stdout_tx, self.stdout_rx = channel.oneshot()
-  self.stderr_tx, self.stderr_rx = channel.oneshot()
+  self.stdout_eof_tx, self.stdout_eof_rx = channel.oneshot()
+  self.stderr_eof_tx, self.stderr_eof_rx = channel.oneshot()
 
   self.stdout_data_condvar = Condvar.new()
   self.stderr_data_condvar = Condvar.new()
@@ -50,7 +47,12 @@ end
 function Job:create_pipes()
   self.stdout = self.opts.stdout or uv.new_pipe(false)
   self.stderr = self.opts.stderr or uv.new_pipe(false)
-  self.stdin = self.opts.stdin or uv.new_pipe(false)
+
+  if self.opts.writer then
+    self.stdin = self.opts.writer.stdout
+  else
+    self.stdin = self.opts.stdin or uv.new_pipe(false)
+  end
 end
 
 function Job:create_uv_options()
@@ -79,21 +81,22 @@ function Job:check_dead()
   end
 end
 
-Job.wait_for_rx = async(function(self)
+Job.wait_eof = async(function(self)
   await_all {
-    job.stdout_rx(),
-    job.stderr_rx(),
-    job.exit_rx(),
+    self.stdout_eof_rx(),
+    self.stderr_eof_rx(),
+    self.exit_rx(),
   }
 end)
 
-Job.close_pipes = async(function(self)
+Job.close_everything = async(function(self)
   local close = a.uv.close
 
   await_all {
-    close(job.stdout),
-    close(job.stderr),
-    close(job.stdin),
+    close(self.stdout),
+    close(self.stderr),
+    close(self.stdin),
+    close(self.process_handle),
   }
 end)
 
@@ -129,19 +132,10 @@ local function new_handle(job)
   self.stop = async(function(self, force)
     job:check_dead()
 
-    local close = a.uv.close
-
-    await(self:close_pipes())
-
     local signal = force and "sigkill" or "sigterm"
-
-    job.uv_handle:kill(signal)
-
-    print('after sigterm')
+    job.process_handle:kill(signal)
 
     await(job.exit_rx())
-
-    print('after await channel')
 
     self.exit_code = job.code
     self.signal = job.signal
@@ -156,11 +150,7 @@ local function new_handle(job)
       error("Should not be run on an interactive job")
     end
 
-    await(self:wait_for_rx())
-
-    -- must close after awaiting output
-    -- or will have broken pipe
-    await(self:close_pipes())
+    await(job:wait_eof())
 
     self.exit_code = job.code
     self.signal = job.signal
@@ -175,16 +165,18 @@ local function new_handle(job)
       error("Should not be run on an interactive job")
     end
 
-    await(self:wait_for_rx())
+    await(self:wait_eof())
 
-    -- must close after awaiting output
-    -- or will have broken pipe
-    await(self:close_pipes())
-
-    return {
+    local status = {
       exit_code = job.code,
       signal = job.signal,
     }
+
+    function status:success()
+      return self.exit_code == 0
+    end
+
+    return status
   end)
 
   -- asynchronously write, writes are queued
@@ -226,14 +218,18 @@ function Job:start()
 
   local handle = new_handle(job)
 
-  job.uv_handle, job.pid = uv.spawn(
+  job.process_handle, job.pid = uv.spawn(
     job.uv_opts.command,
     job.uv_opts,
     function(code, signal)
-      job.code = code
-      job.signal = signal
-      uv.close(job.uv_handle)
-      job.exit_tx(true)
+      local fn = async(function()
+        job.code = code
+        job.signal = signal
+        await(job:close_everything())
+        job.exit_tx(true)
+      end)
+
+      a.run(fn())
     end
   )
 
@@ -241,7 +237,7 @@ function Job:start()
     assert(not err, err) -- fix this
 
     if not data then
-      job.stdout_tx(true)
+      job.stdout_eof_tx(true)
     else
       handle.stdout = handle.stdout .. data
       job.stdout_data_condvar:notify_all()
@@ -252,12 +248,16 @@ function Job:start()
     assert(not err, err) -- fix this
 
     if not data then
-      job.stderr_tx(true)
+      job.stderr_eof_tx(true)
     else
       handle.stderr = handle.stderr .. data
       job.stderr_data_condvar:notify_all()
     end
   end)
+
+  if self.opts.writer then
+    self.opts.writer:start()
+  end
 
   return handle
 end
