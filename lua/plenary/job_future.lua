@@ -4,6 +4,25 @@ local Condvar = a.utils.Condvar
 local channel = a.utils.channel
 local uv = vim.loop
 
+local function double_arg(...)
+  return ..., ...
+end
+
+local function repeat_arg(..., times)
+  if times == 0 then return ... end
+
+  return repeat_arg(double_arg(...), times - 1)
+end
+
+local function clear_tbl(tbl)
+  for k in pairs(t) do
+    t[k] = nil
+  end
+end
+
+local function tbl_with_size(n)
+end
+
 local Output = {}
 Output.__index = Output
 
@@ -22,10 +41,13 @@ end
 local Job = {}
 Job.__index = Job
 
+Job.__add = function(lhs, rhs)
+end
+
 function Job.new(opts)
   local self = setmetatable({}, Job)
-  self.dead = false
 
+  self.dead = false
   self.opts = opts
 
   self:create_control_flow()
@@ -45,9 +67,9 @@ function Job:create_control_flow()
 end
 
 function Job:create_pipes()
-  self.stdout = uv.new_pipe(false)
-  self.stderr = uv.new_pipe(false)
-  self.stdin = uv.new_pipe(false)
+  self.stdout = self.stdout or uv.new_pipe(false)
+  self.stderr = self.stderr or uv.new_pipe(false)
+  self.stdin = self.stdin or uv.new_pipe(false)
 end
 
 function Job:create_uv_options()
@@ -195,8 +217,8 @@ local function new_handle(job)
   return self
 end
 
-local function run(opts)
-  local job = Job.new(opts)
+function Job:start()
+  local job = self
 
   local handle = new_handle(job)
 
@@ -236,6 +258,11 @@ local function run(opts)
   return handle
 end
 
+local function run(opts)
+  return Job.new(opts):start()
+end
+
 return {
+  Job = function(opts) return Job.new(opts) end,
   run = run,
 }
