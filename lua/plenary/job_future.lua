@@ -32,7 +32,7 @@ function Job.new(opts)
   self:create_pipes()
   self:create_uv_options()
 
-  return setmetatable(self, Job)
+  return self
 end
 
 function Job:create_control_flow()
