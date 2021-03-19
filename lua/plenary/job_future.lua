@@ -4,25 +4,6 @@ local Condvar = a.utils.Condvar
 local channel = a.utils.channel
 local uv = vim.loop
 
-local function double_arg(...)
-  return ..., ...
-end
-
-local function repeat_arg(..., times)
-  if times == 0 then return ... end
-
-  return repeat_arg(double_arg(...), times - 1)
-end
-
-local function clear_tbl(tbl)
-  for k in pairs(t) do
-    t[k] = nil
-  end
-end
-
-local function tbl_with_size(n)
-end
-
 local Output = {}
 Output.__index = Output
 
@@ -67,9 +48,9 @@ function Job:create_control_flow()
 end
 
 function Job:create_pipes()
-  self.stdout = self.stdout or uv.new_pipe(false)
-  self.stderr = self.stderr or uv.new_pipe(false)
-  self.stdin = self.stdin or uv.new_pipe(false)
+  self.stdout = self.opts.stdout or uv.new_pipe(false)
+  self.stderr = self.opts.stderr or uv.new_pipe(false)
+  self.stdin = self.opts.stdin or uv.new_pipe(false)
 end
 
 function Job:create_uv_options()
@@ -97,6 +78,24 @@ function Job:check_dead()
     error("The job is dead")
   end
 end
+
+Job.wait_for_rx = async(function(self)
+  await_all {
+    job.stdout_rx(),
+    job.stderr_rx(),
+    job.exit_rx(),
+  }
+end)
+
+Job.close_pipes = async(function(self)
+  local close = a.uv.close
+
+  await_all {
+    close(job.stdout),
+    close(job.stderr),
+    close(job.stdin),
+  }
+end)
 
 --- create a handle to a job
 local function new_handle(job)
@@ -132,11 +131,7 @@ local function new_handle(job)
 
     local close = a.uv.close
 
-    await_all {
-      close(job.stdout),
-      close(job.stderr),
-      close(job.stdin),
-    }
+    await(self:close_pipes())
 
     local signal = force and "sigkill" or "sigterm"
 
@@ -161,26 +156,35 @@ local function new_handle(job)
       error("Should not be run on an interactive job")
     end
 
-    local close = a.uv.close
-
-    await_all {
-      job.stdout_rx(),
-      job.stderr_rx(),
-      job.exit_rx(),
-    }
+    await(self:wait_for_rx())
 
     -- must close after awaiting output
     -- or will have broken pipe
-    await_all {
-      close(job.stdout),
-      close(job.stderr),
-      close(job.stdin),
-    }
+    await(self:close_pipes())
 
     self.exit_code = job.code
     self.signal = job.signal
 
     return Output.from_handle(self)
+  end)
+
+  self.status = async(function(self)
+    job:check_dead()
+
+    if job.opts.interactive then
+      error("Should not be run on an interactive job")
+    end
+
+    await(self:wait_for_rx())
+
+    -- must close after awaiting output
+    -- or will have broken pipe
+    await(self:close_pipes())
+
+    return {
+      exit_code = job.code,
+      signal = job.signal,
+    }
   end)
 
   -- asynchronously write, writes are queued
