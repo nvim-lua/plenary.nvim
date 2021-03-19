@@ -12,7 +12,7 @@ local async, await = a.async, a.await
 local run = require("plenary.job_future").run
 
 local test = async(function()
-  local res = await(run { "ls", cwd = "/home/brian" }:output())
+  local res = await(run { "echo", [['hello world!']] }:output())
   dump(res)
 end)
 
@@ -43,5 +43,5 @@ local long_job = async(function()
   dump(res)
 end)
 
-a.run(cat())
--- a.run(long_job())
+-- a.run(python())
+a.run(test())

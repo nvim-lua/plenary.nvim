@@ -118,7 +118,7 @@ local function new_handle(job)
 
     local signal = force and "sigkill" or "sigterm"
 
-    uv.process_kill(job.uv_handle, signal)
+    job.uv_handle:kill(signal)
 
     print('after sigterm')
 
@@ -128,7 +128,6 @@ local function new_handle(job)
 
     self.exit_code = job.code
     self.signal = job.signal
-    self.dead = true
 
     return Output.from_handle(self)
   end)
@@ -143,15 +142,17 @@ local function new_handle(job)
     local close = a.uv.close
 
     await_all {
-      close(job.stdout),
-      close(job.stderr),
-      close(job.stdin),
-    }
-
-    await_all {
       job.stdout_rx(),
       job.stderr_rx(),
       job.exit_rx(),
+    }
+
+    -- must close after awaiting output
+    -- or will have broken pipe
+    await_all {
+      close(job.stdout),
+      close(job.stderr),
+      close(job.stdin),
     }
 
     self.exit_code = job.code
@@ -160,6 +161,7 @@ local function new_handle(job)
     return Output.from_handle(self)
   end)
 
+  -- asynchronously write, writes are queued
   self.write = async(function(self, stuff)
     job:check_dead()
 
