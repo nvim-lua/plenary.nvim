@@ -77,4 +77,19 @@ function f.last(...)
   return x
 end
 
+function f.repeat_arg(times, ...)
+  if times == 0 then return ... end
+
+  return f.repeat_arg(times - 1, f.first(...), ...)
+end
+
+function f.clear_tbl(tbl)
+  for k in pairs(t) do
+    t[k] = nil
+  end
+end
+
+local function tbl_with_size(n)
+end
+
 return f
