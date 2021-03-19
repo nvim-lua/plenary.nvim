@@ -17,26 +17,31 @@ local test = async(function()
 end)
 
 local cat = async(function()
-  local handle = run { "cat", "-", cwd = "/home/brian" }
+  local handle = run { "cat", "-", interactive = true }
   await(handle:write("hello world!"))
-  -- await(a.utils.sleep(100))
-  -- dump(handle)
   dump(await(handle:read_stdout()))
-  await(handle:stop())
+  dump("resulting handle", await(handle:stop()))
 end)
 
 local python = async(function()
-  local handle = run { "python", "-i" }
+  local handle = run { "python", "-i", interactive = true }
 
   -- prelude
   dump(await(handle:read_stderr()))
 
-  -- write 1 + 1
   await(handle:write("1 + 1"))
 
   dump(await(handle:read_stdout()))
 
-  await(handle:stop())
+  local res = await(handle:stop())
+  dump("res", res)
 end)
 
-a.run(python())
+local long_job = async(function()
+  local handle = run { "sleep", "5" }
+  local res = await(handle:stop())
+  dump(res)
+end)
+
+a.run(cat())
+-- a.run(long_job())
