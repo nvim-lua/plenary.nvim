@@ -194,14 +194,21 @@ M.nvim = M.wrap(vim.schedule, 1)
 M.block_on = function(future, timeout)
   local res
 
-  M.run(future, function(...) res = {...} end)
+  local stat, ret = pcall(function()
+    M.run(future, function(...)
+      res = {...}
+    end)
+  end)
 
   local function check()
+    if stat == false then
+      error("Blocking on future failed " .. ret)
+    end
     return res ~= nil
   end
 
   if not vim.wait(timeout or 2000, check, 50, false) then
-    error("Future timed out or was interrupted")
+    error("Blocking on future timed out or was interrupted")
   end
 
   return unpack(res)

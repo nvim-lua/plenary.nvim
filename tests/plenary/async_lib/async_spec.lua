@@ -38,15 +38,32 @@ describe('async await', function()
     it('should be able to protect a non-leaf future', function()
       local fn = async(function()
         error("This should error")
+        return 'return'
       end)
 
       local main = async(function()
-        local stat, ret = await(a.utils.protected(fn()))
-        eq(stat, false)
-        assert(ret:match("This should error") ~= nil)
+        local stat, ret = await(a.utils.protected_non_leaf(fn()))
+        eq(false, stat)
+        assert(ret:match("This should error"))
+        return 'hello'
       end)
 
-      a.run(main())
+      local res = a.block_on(main())
+      eq(res, 'hello')
+    end)
+
+    it('should be able to protect a non-leaf future that doesnt fail', function()
+      local fn = async(function()
+        return 'didnt fail'
+      end)
+
+      local main = async(function()
+        local stat, ret = await(a.utils.protected_non_leaf(fn()))
+        eq(stat, true)
+        eq(ret, 'didnt fail')
+      end)
+
+      a.block_on(main())
     end)
 
     it('should be able to protect a leaf future', function()
@@ -61,7 +78,7 @@ describe('async await', function()
         assert(ret:match("This should error") ~= nil)
       end)
 
-      a.run(main())
+      a.block_on(main())
     end)
 
     it('should be able to protect a leaf future that doesnt fail', function()
@@ -75,21 +92,7 @@ describe('async await', function()
         eq(ret, 'didnt fail')
       end)
 
-      a.run(main())
-    end)
-
-    it('should be able to protect a non-leaf future that doesnt fail', function()
-      local fn = async(function()
-        return 'didnt fail'
-      end)
-
-      local main = async(function()
-        local stat, ret = await(a.utils.protected(fn()))
-        eq(stat, true)
-        eq(ret, 'didnt fail')
-      end)
-
-      a.run(main())
+      a.block_on(main())
     end)
   end)
 end)
