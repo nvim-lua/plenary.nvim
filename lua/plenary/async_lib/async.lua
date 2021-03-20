@@ -188,4 +188,17 @@ M.spawn = M.wrap(execute_loop, 2)
 
 M.nvim = M.wrap(vim.schedule, 1)
 
+---This will COMPLETELY block neovim
+---please just use a.run unless you have a very special usecase
+---for example, used in plenary test_harness you must use this
+M.block_on = function(future, timeout)
+  local res
+
+  M.run(future, function(...) res = {...} end)
+
+  if not vim.wait(timeout or 1000, function() return res ~= nil end) then
+    error("Future timed out or was interrupted")
+  end
+end
+
 return M
