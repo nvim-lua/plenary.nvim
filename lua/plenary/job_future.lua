@@ -25,80 +25,105 @@ Job.__index = Job
 function Job.new(opts)
   local self = setmetatable({}, Job)
 
-  self.dead = false
   self.opts = opts
-
-  self:create_control_flow()
-  self:create_pipes()
-  self:create_uv_options()
 
   return self
 end
 
-function Job:create_control_flow()
-  self.exit_tx, self.exit_rx = channel.oneshot()
-  self.stdout_eof_tx, self.stdout_eof_rx = channel.oneshot()
-  self.stderr_eof_tx, self.stderr_eof_rx = channel.oneshot()
+do
+  local function create_uv_options(opts)
+    local uv_opts = {}
+    uv_opts.args = {}
 
-  self.stdout_data_condvar = Condvar.new()
-  self.stderr_data_condvar = Condvar.new()
-end
-
-function Job:create_pipes()
-  self.stdout = self.opts.stdout or uv.new_pipe(false)
-  self.stderr = self.opts.stderr or uv.new_pipe(false)
-
-  if self.opts.writer then
-    self.stdin = self.opts.writer.stdout
-  else
-    self.stdin = self.opts.stdin or uv.new_pipe(false)
-  end
-end
-
-function Job:create_uv_options()
-  local uv_opts = {}
-  uv_opts.args = {}
-
-  for i, arg in ipairs(self.opts) do
-    if i == 1 then
-      uv_opts.command = arg
-    else
-      uv_opts.args[i - 1] = arg
+    for i, arg in ipairs(opts) do
+      if i == 1 then
+        uv_opts.command = arg
+      else
+        uv_opts.args[i - 1] = arg
+      end
     end
+
+    uv_opts.stdio = { nil, uv.new_pipe(false), uv.new_pipe(false) }
+
+    uv_opts.cwd = opts.cwd
+    uv_opts.env = opts.env
+
+    return uv_opts
   end
 
-  uv_opts.stdio = { self.stdin, self.stdout, self.stderr }
+  Job.output = async(function(self)
+    assert(not self.opts.interactive == true, "Cannot get the output of an interactive job")
 
-  uv_opts.cwd = self.opts.cwd
-  uv_opts.env = self.opts.env
+    local uv_opts = create_uv_options(self.opts)
 
-  self.uv_opts = uv_opts
+    local stdout = uv_opts[2]
+    local stderr = uv_opts[3]
+
+    local exit_tx, exit_rx = channel.oneshot()
+    local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
+    local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
+
+    local stdout_data = ""
+    local stderr_data = ""
+
+    local handle
+    handle, _ = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
+      local fn = async(function()
+        await(a.uv.close(handle))
+
+        exit_tx(code, signal)
+      end)
+
+      a.run(fn())
+    end)
+
+    uv.read_start(stdout, function(err, data)
+      assert(not err, err)
+
+      if data == nil then
+        stdout_eof_tx(true)
+      else
+        stdout_data = stdout_data .. data
+      end
+    end)
+
+    uv.read_start(stderr, function(err, data)
+      assert(not err, err)
+
+      if data == nil then
+        stderr_eof_tx(true)
+      else
+        stderr_data = stderr_data .. data
+      end
+    end)
+
+    -- await the data before closing the pipes
+    -- or there will be a broken pipe signal
+    local res = await_all {
+      stdout_eof_rx(),
+      stderr_eof_rx(),
+      exit_rx(),
+    }
+
+    local close = a.uv.close
+
+    await_all {
+      close(stdout),
+      close(stderr),
+      close(handle),
+    }
+
+    local code = res[3][1]
+    local signal = res[3][2]
+
+    return {
+      stdout_data = stdout_data,
+      stderr_data = stderr_data,
+      code = code,
+      signal = signal,
+    }
+  end)
 end
-
-function Job:check_dead()
-  if self.dead then
-    error("The job is dead")
-  end
-end
-
-Job.wait_eof = async(function(self)
-  await_all {
-    self.stdout_eof_rx(),
-    self.stderr_eof_rx(),
-    self.exit_rx(),
-  }
-end)
-
-Job.close_everything = async(function(self)
-  local close = a.uv.close
-
-  await_all {
-    close(self.stdout),
-    close(self.stderr),
-    close(self.stdin),
-    close(self.process_handle),
-  }
-end)
 
 --- create a handle to a job
 local function new_handle(job)
