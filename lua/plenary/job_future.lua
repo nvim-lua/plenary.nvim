@@ -166,7 +166,7 @@ Handle.stop = async(function(self, force)
   local signal = force and "sigkill" or "sigterm"
   self.process_handle:kill(signal)
 
-  await(self.exit_rx())
+  self.exit_code, self.signal = await(self.exit_rx())
 
   return Output.from_handle(self)
 end)
@@ -213,10 +213,7 @@ Job.spawn = function(self, spawn_opts)
       }
 
       self.dead = true
-      self.exit_code = code
-      self.signal = signal
 
-      -- this send a signal through the oneshot channel that we are done
       job_handle.exit_tx(code, signal)
     end)
 
