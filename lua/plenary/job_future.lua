@@ -22,7 +22,7 @@ function Output:stderr_lines()
 end
 
 function Output:success()
-  return self.code == 0
+  return self.exit_code == 0
 end
 
 function Output:closed_normally()
@@ -44,100 +44,24 @@ function Job.new(opts)
 end
 
 -- TODO: add support for piping jobs to each other
-do
-  local function create_uv_options(opts)
-    local uv_opts = {}
-    uv_opts.args = {}
+Job.output = async(function(self)
+  print('running output')
+  assert(not self.opts.interactive == true, "Cannot get the output of an interactive job")
 
-    for i, arg in ipairs(opts) do
-      if i == 1 then
-        uv_opts.command = arg
-      else
-        uv_opts.args[i - 1] = arg
-      end
-    end
+  local handle = self:spawn()
 
-    -- TODO: writer should be in place of nil
-    uv_opts.stdio = { nil, uv.new_pipe(false), uv.new_pipe(false) }
+  local stdout_data = await(handle:read_all_stdout())
+  local stderr_data = await(handle:read_all_stderr())
 
-    uv_opts.cwd = opts.cwd
-    uv_opts.env = opts.env
+  local exit_code, signal = await(handle:wait_done())
 
-    return uv_opts
-  end
-
-  Job.output = async(function(self)
-    assert(not self.opts.interactive == true, "Cannot get the output of an interactive job")
-
-    local uv_opts = create_uv_options(self.opts)
-
-    local stdout = uv_opts.stdio[2]
-    local stderr = uv_opts.stdio[3]
-
-    local exit_tx, exit_rx = channel.oneshot()
-    local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
-    local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
-
-    local stdout_data = ""
-    local stderr_data = ""
-
-    local handle
-    handle, _ = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
-      local fn = async(function()
-        exit_tx(code, signal)
-      end)
-
-      a.run(fn())
-    end)
-
-    uv.read_start(stdout, function(err, data)
-      assert(not err, err)
-
-      if data == nil then
-        stdout_eof_tx(true)
-      else
-        print('adding stdout', data)
-        stdout_data = stdout_data .. data
-      end
-    end)
-
-    uv.read_start(stderr, function(err, data)
-      assert(not err, err)
-
-      if data == nil then
-        stderr_eof_tx(true)
-      else
-        stderr_data = stderr_data .. data
-      end
-    end)
-
-    -- await the data before closing the pipes
-    -- or there will be a broken pipe signal
-    local res = await_all {
-      stdout_eof_rx(),
-      stderr_eof_rx(),
-      exit_rx(),
-    }
-
-    local close = a.uv.close
-
-    await_all {
-      close(stdout),
-      close(stderr),
-      close(handle),
-    }
-
-    local code = res[3][1]
-    local signal = res[3][2]
-
-    return setmetatable({
-      stdout_data = stdout_data,
-      stderr_data = stderr_data,
-      code = code,
-      signal = signal,
-    }, Output)
-  end)
-end
+  return setmetatable({
+    stdout_data = stdout_data,
+    stderr_data = stderr_data,
+    exit_code = exit_code,
+    signal = signal,
+  }, Output)
+end)
 
 local Handle = {}
 Handle.__index = Handle
@@ -194,6 +118,22 @@ Handle.read_stdout = async(function(self)
   return stdout_data
 end)
 
+Handle.read_all_stdout = async(function(self)
+  await(self.stdout_eof_rx())
+
+  local stdout_data = self.stdout_data
+  self.stdout_data = ""
+  return stdout_data
+end)
+
+Handle.read_all_stderr = async(function(self)
+  await(self.stderr_eof_rx())
+
+  local stderr_data = self.stderr_data
+  self.stderr_data = ""
+  return stderr_data
+end)
+
 Handle.read_stderr = async(function(self)
   if self.stderr_data == "" then
     await(self.stderr_data_condvar:wait())
@@ -204,6 +144,12 @@ Handle.read_stderr = async(function(self)
   return stderr_data
 end)
 
+Handle.wait_done = async(function(self)
+  self:check_dead()
+
+  return await(self.exit_rx())
+end)
+
 -- if force is true, will stop it with sigkill
 Handle.stop = async(function(self, force)
   self:check_dead()
@@ -211,7 +157,7 @@ Handle.stop = async(function(self, force)
   local signal = force and "sigkill" or "sigterm"
   self.process_handle:kill(signal)
 
-  self.exit_code, self.signal = await(self.exit_rx())
+  await(self.exit_rx())
 
   return Output.from_handle(self)
 end)
@@ -235,7 +181,7 @@ do
     return uv_opts
   end
 
-  Job.spawn = function(self)
+  Job.spawn = function(self, spawn_opts)
     local uv_opts = create_uv_options(self.opts)
 
     local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
@@ -252,6 +198,9 @@ do
           maybe_close(job_handle.stdin_handle),
         }
 
+        self.dead = true
+        self.exit_code = code
+        self.signal = signal
         job_handle.exit_tx(code, signal)
       end)
 
@@ -280,6 +229,7 @@ do
         assert(not err, err)
 
         if data == nil then
+          print('stderr hit eof')
           job_handle.stderr_eof_tx(true)
           await(maybe_close(stderr))
         else
