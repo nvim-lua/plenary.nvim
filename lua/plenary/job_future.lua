@@ -53,8 +53,8 @@ function Job.new(opts)
 end
 
 -- TODO: add support for piping jobs to each other
+---Thin wrapper around Job:spawn
 Job.output = async(function(self)
-  print('running output')
   assert(not self.opts.interactive == true, "Cannot get the output of an interactive job")
 
   local handle = self:spawn()
@@ -171,87 +171,96 @@ Handle.stop = async(function(self, force)
   return Output.from_handle(self)
 end)
 
-do
-  local function create_uv_options(opts)
-    local uv_opts = {}
-    uv_opts.args = {}
+local function create_uv_options(opts)
+  local uv_opts = {}
+  uv_opts.args = {}
 
-    for i, arg in ipairs(opts) do
-      if i == 1 then
-        uv_opts.command = arg
-      else
-        uv_opts.args[i - 1] = arg
-      end
+  for i, arg in ipairs(opts) do
+    if i == 1 then
+      uv_opts.command = arg
+    else
+      uv_opts.args[i - 1] = arg
     end
-
-    uv_opts.cwd = opts.cwd
-    uv_opts.env = opts.env
-
-    return uv_opts
   end
 
-  Job.spawn = function(self, spawn_opts)
-    local uv_opts = create_uv_options(self.opts)
+  uv_opts.cwd = opts.cwd
+  uv_opts.env = opts.env
 
-    local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
-    uv_opts.stdio = { stdin, stdout, stderr }
+  return uv_opts
+end
 
-    local job_handle = Handle.new(stdin, stdout, stderr)
+-- TODO: allow pipes to be confirgurable
+Job.spawn = function(self, spawn_opts)
+  local uv_opts = create_uv_options(self.opts)
 
-    job_handle.process_handle, job_handle.pid = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
-      local fn = async(function()
-        await_all {
-          a.uv.close(job_handle.process_handle),
-          maybe_close(job_handle.stdout_handle),
-          maybe_close(job_handle.stderr_handle),
-          maybe_close(job_handle.stdin_handle),
-        }
+  local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
+  uv_opts.stdio = { stdin, stdout, stderr }
 
-        self.dead = true
-        self.exit_code = code
-        self.signal = signal
-        job_handle.exit_tx(code, signal)
-      end)
+  local job_handle = Handle.new(stdin, stdout, stderr)
 
-      a.run(fn())
+  job_handle.process_handle, job_handle.pid = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
+    local fn = async(function()
+      await_all {
+        -- we don't use maybe_close here
+        -- because this is the only function that will close
+        a.uv.close(job_handle.process_handle),
+        -- the rest of the handles can also be closed in their read_callbacks when eof is hit
+        -- however, when forcefully closing a job or when the job is interactive eof will never be hit
+        -- so we have to maybe_close it here
+        maybe_close(job_handle.stdout_handle),
+        maybe_close(job_handle.stderr_handle),
+        maybe_close(job_handle.stdin_handle),
+      }
+
+      self.dead = true
+      self.exit_code = code
+      self.signal = signal
+
+      -- this send a signal through the oneshot channel that we are done
+      job_handle.exit_tx(code, signal)
     end)
 
-    uv.read_start(stdout, function(err, data)
-      local fn = async(function()
-        assert(not err, err)
+    a.run(fn())
+  end)
 
-        if data == nil then
-          job_handle.stdout_eof_tx(true)
-          await(maybe_close(stdout))
-        else
-          job_handle.stdout_data = job_handle.stdout_data .. data
+  uv.read_start(stdout, function(err, data)
+    local fn = async(function()
+      assert(not err, err)
 
-          job_handle.stdout_data_condvar:notify_all()
-        end
-      end)
+      if data == nil then
+        job_handle.stdout_eof_tx(true)
+        await(maybe_close(stdout))
+      else
+        -- first update the data
+        job_handle.stdout_data = job_handle.stdout_data .. data
 
-      a.run(fn())
+        -- then notify everyone that is waiting on our data that it is ready
+        job_handle.stdout_data_condvar:notify_all()
+      end
     end)
 
-    uv.read_start(stderr, function(err, data)
-      local fn = async(function()
-        assert(not err, err)
+    a.run(fn())
+  end)
 
-        if data == nil then
-          job_handle.stderr_eof_tx(true)
-          await(maybe_close(stderr))
-        else
-          job_handle.stderr_data = job_handle.stderr_data .. data
+  -- this is the same as for stdout but for stderr
+  uv.read_start(stderr, function(err, data)
+    local fn = async(function()
+      assert(not err, err)
 
-          job_handle.stderr_data_condvar:notify_all()
-        end
-      end)
+      if data == nil then
+        job_handle.stderr_eof_tx(true)
+        await(maybe_close(stderr))
+      else
+        job_handle.stderr_data = job_handle.stderr_data .. data
 
-      a.run(fn())
+        job_handle.stderr_data_condvar:notify_all()
+      end
     end)
 
-    return job_handle
-  end
+    a.run(fn())
+  end)
+
+  return job_handle
 end
 
 return {
