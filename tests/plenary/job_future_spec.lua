@@ -10,26 +10,41 @@
 local a = require("plenary.async_lib")
 local uv = vim.loop
 local async, await = a.async, a.await
-local run = require("plenary.job_future").run
+local Job = require("plenary.job_future").Job
+
+describe('Job', function()
+  describe('echo', function()
+    it('should work simple', function()
+      local fn = async(function()
+        local output = await(Job { "echo", [['hello world!']] }:output())
+        assert(output:success())
+        assert(false)
+      end)
+
+      a.run(fn())
+    end)
+  end)
+end)
 
 local test = async(function()
-  local res = await(run { "echo", [['hello world!']] }:output())
+  local res = await(Job { "echo", [['hello world!']] }:output())
   dump(res)
 end)
 
 local no_close = async(function()
-  local res = run { "echo", [['hello world!']] }
+  local res = Job { "echo", [['hello world!']] }
 end)
 
 local cat = async(function()
-  local handle = run { "cat", "-", interactive = true }
+  local handle = Job { "cat", "-", interactive = true }:spawn()
   await(handle:write("hello world!"))
   await(handle:read_stdout())
+  print('got here')
   await(handle:stop())
 end)
 
 local python = async(function()
-  local handle = run { "python", "-i", interactive = true }
+  local handle = Job { "python", "-i", interactive = true }:spawn()
 
   -- prelude
   dump(await(handle:read_stderr()))
@@ -38,12 +53,13 @@ local python = async(function()
 
   dump(await(handle:read_stdout()))
 
+  print('got here')
   local res = await(handle:stop())
-  dump("res", res)
+  -- dump(res)
 end)
 
 local long_job = async(function()
-  local handle = run { "sleep", "5" }
+  local handle = Job { "sleep", "5" }
   local res = await(handle:stop())
   dump(res)
 end)
@@ -60,5 +76,3 @@ local another = function()
     print('The signal was:', signal)
   end)
 end
-
--- a.run(cat())
