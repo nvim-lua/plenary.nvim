@@ -22,14 +22,15 @@ local no_close = async(function()
 end)
 
 local cat = async(function()
-  local handle = Job { "cat", "-", interactive = true }
+  local handle = Job { "cat", "-", interactive = true }:spawn()
   await(handle:write("hello world!"))
   await(handle:read_stdout())
+  print('got here')
   await(handle:stop())
 end)
 
 local python = async(function()
-  local handle = Job { "python", "-i", interactive = true }
+  local handle = Job { "python", "-i", interactive = true }:spawn()
 
   -- prelude
   dump(await(handle:read_stderr()))
@@ -38,8 +39,9 @@ local python = async(function()
 
   dump(await(handle:read_stdout()))
 
+  print('got here')
   local res = await(handle:stop())
-  dump("res", res)
+  -- dump(res)
 end)
 
 local long_job = async(function()
@@ -61,4 +63,4 @@ local another = function()
   end)
 end
 
-a.run(test())
+a.run(python())

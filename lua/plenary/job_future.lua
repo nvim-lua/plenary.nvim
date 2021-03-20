@@ -5,7 +5,7 @@ local channel = a.utils.channel
 local uv = vim.loop
 
 local maybe_close = async(function(uv_handle)
-  if uv.is_closing(uv_handle) then
+  if not uv.is_closing(uv_handle) then
     await(a.uv.close(uv_handle))
   end
 end)
@@ -135,7 +135,7 @@ end
 local Handle = {}
 Handle.__index = Handle
 
-function Handle.new(stdout_handle, stderr_handle, stdin_handle)
+function Handle.new(stdin_handle, stdout_handle, stderr_handle)
   local exit_tx, exit_rx = channel.oneshot()
   local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
   local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
@@ -204,10 +204,7 @@ Handle.stop = async(function(self, force)
   local signal = force and "sigkill" or "sigterm"
   self.process_handle:kill(signal)
 
-  await(self.exit_rx())
-
-  self.exit_code = self.code
-  self.signal = self.signal
+  self.exit_code, self.signal = await(self.exit_rx())
 
   return Output.from_handle(self)
 end)
@@ -225,15 +222,13 @@ do
       end
     end
 
-    uv_opts.stdio = { opts.stdin, opts.stdout, opts.stderr }
-
     uv_opts.cwd = opts.cwd
     uv_opts.env = opts.env
 
     return uv_opts
   end
 
-  Job.spawn = async(function(self)
+  Job.spawn = function(self)
     local uv_opts = create_uv_options(self.opts)
 
     local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
@@ -264,9 +259,9 @@ do
           job_handle.stdout_eof_tx(true)
           await(maybe_close(stdout))
         else
-          job_handle.stdout_data_condvar:notify_all()
-
           job_handle.stdout_data = job_handle.stdout_data .. data
+
+          job_handle.stdout_data_condvar:notify_all()
         end
       end)
 
@@ -281,15 +276,17 @@ do
           job_handle.stderr_eof_tx(true)
           await(maybe_close(stderr))
         else
-          job_handle.stderr_data_condvar:notify_all()
-
           job_handle.stderr_data = job_handle.stderr_data .. data
+
+          job_handle.stderr_data_condvar:notify_all()
         end
       end)
 
       a.run(fn())
     end)
-  end)
+
+    return job_handle
+  end
 end
 
 return {
