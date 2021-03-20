@@ -12,6 +12,20 @@ local uv = vim.loop
 local async, await = a.async, a.await
 local Job = require("plenary.job_future").Job
 
+describe('Job', function()
+  describe('echo', function()
+    it('should work simple', function()
+      local fn = async(function()
+        local output = await(Job { "echo", [['hello world!']] }:output())
+        assert(output:success())
+        assert(false)
+      end)
+
+      a.run(fn())
+    end)
+  end)
+end)
+
 local test = async(function()
   local res = await(Job { "echo", [['hello world!']] }:output())
   dump(res)
@@ -62,5 +76,3 @@ local another = function()
     print('The signal was:', signal)
   end)
 end
-
-a.run(python())

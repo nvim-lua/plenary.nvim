@@ -13,25 +13,32 @@ end)
 local Output = {}
 Output.__index = Output
 
-function Output.from_handle(handle)
-  return setmetatable(handle, Output)
-end
-
 function Output:stdout_lines()
-  return vim.split(self.stdout, '\n', true)
+  return vim.split(self.stdout_data, '\n', true)
 end
 
 function Output:stderr_lines()
-  return vim.split(self.stderr, '\n', true)
+  return vim.split(self.stderr_data, '\n', true)
+end
+
+function Output:success()
+  return self.code == 0
+end
+
+function Output:closed_normally()
+  return self.signal == 0
 end
 
 local Job = {}
 Job.__index = Job
+Job.__concat = function(lhs, rhs)
+  local new_job = Job.new(rhs.opts)
+  new_job.opts.writer = lhs
+  return new_job
+end
 
 function Job.new(opts)
-  local self = setmetatable({}, Job)
-
-  self.opts = opts
+  local self = setmetatable({opts = opts}, Job)
 
   return self
 end
@@ -123,12 +130,12 @@ do
     local code = res[3][1]
     local signal = res[3][2]
 
-    return {
+    return setmetatable({
       stdout_data = stdout_data,
       stderr_data = stderr_data,
       code = code,
       signal = signal,
-    }
+    }, Output)
   end)
 end
 
