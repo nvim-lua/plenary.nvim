@@ -53,7 +53,6 @@ local python = async(function()
 
   dump(await(handle:read_stdout()))
 
-  print('got here')
   local res = await(handle:stop())
   -- dump(res)
 end)
@@ -77,4 +76,4 @@ local another = function()
   end)
 end
 
-a.run(test())
+a.run(python())

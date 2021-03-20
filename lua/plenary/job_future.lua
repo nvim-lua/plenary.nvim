@@ -13,6 +13,15 @@ end)
 local Output = {}
 Output.__index = Output
 
+function Output.from_handle(handle)
+  return setmetatable({
+    stdout_data = handle.stdout_data,
+    stderr_data = handle.stderr_data,
+    exit_code = handle.exit_code,
+    signal = handle.signal,
+  }, Output)
+end
+
 function Output:stdout_lines()
   return vim.split(self.stdout_data, '\n', true)
 end
@@ -229,7 +238,6 @@ do
         assert(not err, err)
 
         if data == nil then
-          print('stderr hit eof')
           job_handle.stderr_eof_tx(true)
           await(maybe_close(stderr))
         else
