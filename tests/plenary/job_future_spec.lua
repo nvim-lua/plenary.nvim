@@ -29,6 +29,23 @@ describe('Job', function()
 
       a.block_on(fn())
     end)
+
+    it('should error when stopping job when already dead', function()
+      local fn = async(function()
+        local handle = Job { "cat", "-", interactive = true }:spawn()
+        await(handle:write("hello world!"))
+        local got = await(handle:read_stdout())
+        assert(got, "hello world!")
+        local output = await(handle:stop())
+        assert(output:success())
+
+        -- local stat, ret = await(a.utils.protected(handle:stop()))
+        local stat, ret = await(handle:stop())
+        -- eq(stat, false)
+      end)
+
+      a.block_on(fn())
+    end)
   end)
 
   describe('python', function()

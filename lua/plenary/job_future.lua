@@ -110,7 +110,7 @@ function Handle.new(stdin_handle, stdout_handle, stderr_handle)
 end
 
 function Handle:check_dead()
-  assert(not self.dead, "Cannot use this option when the self is dead")
+  assert(not self.dead, "The handle is not running anymore")
 end
 
 Handle.write = async(function(self, stuff)
