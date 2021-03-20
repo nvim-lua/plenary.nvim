@@ -8,6 +8,7 @@
 
 
 local a = require("plenary.async_lib")
+local uv = vim.loop
 local async, await = a.async, a.await
 local run = require("plenary.job_future").run
 
@@ -51,6 +52,13 @@ local concurrent = function()
   local jobs = {}
   for i = 1, 200 do jobs[i] = cat() end
   a.run_all(jobs)
+end
+
+local another = function()
+  uv.spawn("sleep", {args = {"1"}}, function(status, signal)
+    print('The status was:', status)
+    print('The signal was:', signal)
+  end)
 end
 
 -- a.run(cat())
