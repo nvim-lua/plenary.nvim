@@ -75,7 +75,10 @@ local call_api = async(function()
 
   local read_and_api = async(function()
     local res = await(read_file(assets_dir .. 'syn.json'))
+    print('first in fast event', vim.in_fast_event())
     await(a.api.nvim_notify("Hello", 1, {}))
+    print('second in fast event', vim.in_fast_event())
+    print('third in fast event', vim.in_fast_event())
     return res
   end)
 
