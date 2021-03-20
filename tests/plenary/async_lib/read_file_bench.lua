@@ -74,10 +74,8 @@ local call_api = async(function()
   local futures = {}
 
   local read_and_api = async(function()
-    -- local res = await(a.scheduled(read_file(assets_dir .. 'syn.json')))
     local res = await(read_file(assets_dir .. 'syn.json'))
-    await(a.nvim())
-    vim.api.nvim_notify("Hello", 1, {})
+    await(a.api.nvim_notify("Hello", 1, {}))
     return res
   end)
 
@@ -92,11 +90,4 @@ local call_api = async(function()
   print("Elapsed time: ", os.clock() - start)
 end)
 
--- a.run(read_file(assets_dir .. 'README.md'))
-
--- both result in times between 0.02 and 0.05
-
--- a.run(first_bench())
--- second_bench()
--- a.run(call_api())
-
+a.run(call_api())

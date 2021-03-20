@@ -3,5 +3,6 @@ exports.uv = require('plenary.async_lib.uv_async')
 exports.utils = require('plenary.async_lib.utils')
 exports.lsp = require('plenary.async_lib.lsp')
 exports.work = require('plenary.async_lib.work')
+exports.api = require('plenary.async_lib.api')
 
 return exports
