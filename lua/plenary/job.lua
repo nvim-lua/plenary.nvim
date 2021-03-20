@@ -46,6 +46,14 @@ local shutdown_factory = function (child, options)
   end
 end
 
+local function expand(path)
+  if vim.in_fast_event() then
+    return uv.fs_realpath(path)
+  else
+    return vim.fn.expand(path, true)
+  end
+end
+
 ---@class Array
 --- Numeric table
 
@@ -55,11 +63,12 @@ end
 --- Create a new job
 ---
 ---@class Job
----@param o table
+---@class o
 ---@field command string          : Command to run
 ---@field args Array              : List of arguments to pass
 ---@field cwd string              : Working directory for job
 ---@field env Map|Array           : Environment looking like: { ['VAR'] = 'VALUE } or { 'VAR=VALUE' }
+---@field skip_validation boolean : Skip validating the arguments
 ---@field enable_handlers boolean : If set to false, disables all callbacks associated with output
 ---@field on_start function       : Run when starting job
 ---@field on_stdout function      : (error: string, data: string, self? Job)
@@ -72,19 +81,34 @@ function Job:new(o)
     error(debug.traceback("Options are required for Job:new"))
   end
 
-  if not o.command then
-    error(debug.traceback("'command' is required for Job:new"))
+  local command = o.command
+  if not command then
+    if o[1] then
+      command = o[1]
+    else
+      error(debug.traceback("'command' is required for Job:new"))
+    end
+  elseif o[1] then
+    error(debug.traceback("Cannot pass both 'command' and array args"))
   end
 
-  if 1 ~= vim.fn.executable(o.command) then
-    error(debug.traceback(o.command..": Executable not found"))
+  local args = o.args
+  if not args then
+    if #o > 1 then
+      args = {select(2, unpack(o))}
+    end
+  end
+
+  local ok, is_exe = pcall(vim.fn.executable, command)
+  if not o.skip_validation and ok and 1 ~= is_exe then
+    error(debug.traceback(command..": Executable not found"))
   end
 
   local obj = {}
 
-  obj.command = o.command
-  obj.args = o.args
-  obj.cwd = o.cwd and vim.fn.expand(o.cwd, true)
+  obj.command = command
+  obj.args = args
+  obj.cwd = o.cwd and expand(o.cwd)
   if o.env then
     if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
 

@@ -225,12 +225,6 @@ neorocks.ensure_installed('lua-cjson', 'cjson')
 Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
 
 
-### Bundled with:
-
-Currently comes bundled with slightly modified versions of:
-- luaunit: https://github.com/bluebird75/luaunit -> Used for unit testing
-- busted: Unit testing library
-
 ### And more to come :)
 
 - [ ] Floating window wrappers

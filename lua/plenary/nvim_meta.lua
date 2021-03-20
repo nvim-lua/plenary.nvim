@@ -12,7 +12,7 @@ end
 
 return {
   -- Is run in `--headless` mode.
-  is_headless = (#vim.fn.nvim_list_uis() == 0),
+  is_headless = (#vim.api.nvim_list_uis() == 0),
 
   lua_jit = get_lua_version(),
 }
