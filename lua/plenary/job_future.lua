@@ -4,6 +4,12 @@ local Condvar = a.utils.Condvar
 local channel = a.utils.channel
 local uv = vim.loop
 
+local maybe_close = async(function(uv_handle)
+  if uv.is_closing(uv_handle) then
+    await(a.uv.close(uv_handle))
+  end
+end)
+
 local Output = {}
 Output.__index = Output
 
@@ -30,6 +36,7 @@ function Job.new(opts)
   return self
 end
 
+-- TODO: add support for piping jobs to each other
 do
   local function create_uv_options(opts)
     local uv_opts = {}
@@ -43,6 +50,7 @@ do
       end
     end
 
+    -- TODO: writer should be in place of nil
     uv_opts.stdio = { nil, uv.new_pipe(false), uv.new_pipe(false) }
 
     uv_opts.cwd = opts.cwd
@@ -56,8 +64,8 @@ do
 
     local uv_opts = create_uv_options(self.opts)
 
-    local stdout = uv_opts[2]
-    local stderr = uv_opts[3]
+    local stdout = uv_opts.stdio[2]
+    local stderr = uv_opts.stdio[3]
 
     local exit_tx, exit_rx = channel.oneshot()
     local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
@@ -69,8 +77,6 @@ do
     local handle
     handle, _ = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
       local fn = async(function()
-        await(a.uv.close(handle))
-
         exit_tx(code, signal)
       end)
 
@@ -83,6 +89,7 @@ do
       if data == nil then
         stdout_eof_tx(true)
       else
+        print('adding stdout', data)
         stdout_data = stdout_data .. data
       end
     end)
@@ -125,173 +132,166 @@ do
   end)
 end
 
---- create a handle to a job
-local function new_handle(job)
-  local self = {stdout = "", stderr = ""}
+local Handle = {}
+Handle.__index = Handle
 
-  self.write = async(function(self, stuff)
-    await(a.uv.write(job.stdin, stuff .. '\n'))
-  end)
+function Handle.new(stdout_handle, stderr_handle, stdin_handle)
+  local exit_tx, exit_rx = channel.oneshot()
+  local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
+  local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
 
-  self.read_stdout = async(function(self)
-    if self.stdout == "" then
-      await(job.stdout_data_condvar:wait())
-    end
+  local self = setmetatable({
+    -- data that was received
+    stdout_data = "",
+    stderr_data = "",
 
-    local stdout = self.stdout
-    self.stdout = ""
-    return stdout
-  end)
+    -- actual job handles
+    stdout_handle = stdout_handle,
+    stderr_handle = stderr_handle,
+    stdin_handle = stdin_handle,
 
-  self.read_stderr = async(function(self)
-    if self.stderr == "" then
-      await(job.stderr_data_condvar:wait())
-    end
+    -- control flow
+    exit_tx = exit_tx,
+    exit_rx = exit_rx,
+    stdout_eof_tx = stdout_eof_tx,
+    stdout_eof_rx  = stdout_eof_rx,
+    stderr_eof_tx = stderr_eof_tx,
+    stderr_eof_rx = stderr_eof_rx,
 
-    local stderr = self.stderr
-    self.stderr = ""
-    return stderr
-  end)
+    -- data condvars
+    stdout_data_condvar = Condvar.new(),
+    stderr_data_condvar = Condvar.new(),
 
-  -- if force is true, will stop it with sigkill
-  self.stop = async(function(self, force)
-    job:check_dead()
-
-    local signal = force and "sigkill" or "sigterm"
-    job.process_handle:kill(signal)
-
-    await(job.exit_rx())
-
-    self.exit_code = job.code
-    self.signal = job.signal
-
-    return Output.from_handle(self)
-  end)
-
-  self.output = async(function(self)
-    job:check_dead()
-
-    if job.opts.interactive then
-      error("Should not be run on an interactive job")
-    end
-
-    await(job:wait_eof())
-
-    self.exit_code = job.code
-    self.signal = job.signal
-
-    return Output.from_handle(self)
-  end)
-
-  self.status = async(function(self)
-    job:check_dead()
-
-    if job.opts.interactive then
-      error("Should not be run on an interactive job")
-    end
-
-    await(self:wait_eof())
-
-    local status = {
-      exit_code = job.code,
-      signal = job.signal,
-    }
-
-    function status:success()
-      return self.exit_code == 0
-    end
-
-    return status
-  end)
-
-  -- asynchronously write, writes are queued
-  self.write = async(function(self, stuff)
-    job:check_dead()
-
-    await(a.uv.write(job.stdin, stuff .. '\n'))
-  end)
-
-  self.read_stdout = async(function(self)
-    job:check_dead()
-
-    if self.stdout == "" then
-      await(job.stdout_data_condvar:wait())
-    end
-
-    local stdout = self.stdout
-    self.stdout = ""
-    return stdout
-  end)
-
-  self.read_stderr = async(function(self)
-    job:check_dead()
-
-    if self.stderr == "" then
-      await(job.stderr_data_condvar:wait())
-    end
-
-    local stderr = self.stderr
-    self.stderr = ""
-    return stderr
-  end)
+    -- lock
+    dead = false,
+  }, Handle)
 
   return self
 end
 
-function Job:start()
-  local job = self
+function Handle:check_dead()
+  assert(not self.dead, "Cannot use this option when the self is dead")
+end
 
-  local handle = new_handle(job)
+Handle.write = async(function(self, stuff)
+  await(a.uv.write(self.stdin_handle, stuff .. '\n'))
+end)
 
-  job.process_handle, job.pid = uv.spawn(
-    job.uv_opts.command,
-    job.uv_opts,
-    function(code, signal)
+Handle.read_stdout = async(function(self)
+  if self.stdout_data == "" then
+    await(self.stdout_data_condvar:wait())
+  end
+
+  local stdout_data = self.stdout_data
+  self.stdout_data = ""
+  return stdout_data
+end)
+
+Handle.read_stderr = async(function(self)
+  if self.stderr_data == "" then
+    await(self.stderr_data_condvar:wait())
+  end
+
+  local stderr_data = self.stderr_data
+  self.stderr_data = ""
+  return stderr_data
+end)
+
+-- if force is true, will stop it with sigkill
+Handle.stop = async(function(self, force)
+  self:check_dead()
+
+  local signal = force and "sigkill" or "sigterm"
+  self.process_handle:kill(signal)
+
+  await(self.exit_rx())
+
+  self.exit_code = self.code
+  self.signal = self.signal
+
+  return Output.from_handle(self)
+end)
+
+do
+  local function create_uv_options(opts)
+    local uv_opts = {}
+    uv_opts.args = {}
+
+    for i, arg in ipairs(opts) do
+      if i == 1 then
+        uv_opts.command = arg
+      else
+        uv_opts.args[i - 1] = arg
+      end
+    end
+
+    uv_opts.stdio = { opts.stdin, opts.stdout, opts.stderr }
+
+    uv_opts.cwd = opts.cwd
+    uv_opts.env = opts.env
+
+    return uv_opts
+  end
+
+  Job.spawn = async(function(self)
+    local uv_opts = create_uv_options(self.opts)
+
+    local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
+    uv_opts.stdio = { stdin, stdout, stderr }
+
+    local job_handle = Handle.new(stdin, stdout, stderr)
+
+    job_handle.process_handle, job_handle.pid = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
       local fn = async(function()
-        job.code = code
-        job.signal = signal
-        await(job:close_everything())
-        job.exit_tx(true)
+        await_all {
+          a.uv.close(job_handle.process_handle),
+          maybe_close(job_handle.stdout_handle),
+          maybe_close(job_handle.stderr_handle),
+          maybe_close(job_handle.stdin_handle),
+        }
+
+        job_handle.exit_tx(code, signal)
       end)
 
       a.run(fn())
-    end
-  )
+    end)
 
-  job.stdout:read_start(function(err, data)
-    assert(not err, err) -- fix this
+    uv.read_start(stdout, function(err, data)
+      local fn = async(function()
+        assert(not err, err)
 
-    if not data then
-      job.stdout_eof_tx(true)
-    else
-      handle.stdout = handle.stdout .. data
-      job.stdout_data_condvar:notify_all()
-    end
+        if data == nil then
+          job_handle.stdout_eof_tx(true)
+          await(maybe_close(stdout))
+        else
+          job_handle.stdout_data_condvar:notify_all()
+
+          job_handle.stdout_data = job_handle.stdout_data .. data
+        end
+      end)
+
+      a.run(fn())
+    end)
+
+    uv.read_start(stderr, function(err, data)
+      local fn = async(function()
+        assert(not err, err)
+
+        if data == nil then
+          job_handle.stderr_eof_tx(true)
+          await(maybe_close(stderr))
+        else
+          job_handle.stderr_data_condvar:notify_all()
+
+          job_handle.stderr_data = job_handle.stderr_data .. data
+        end
+      end)
+
+      a.run(fn())
+    end)
   end)
-
-  job.stderr:read_start(function(err, data)
-    assert(not err, err) -- fix this
-
-    if not data then
-      job.stderr_eof_tx(true)
-    else
-      handle.stderr = handle.stderr .. data
-      job.stderr_data_condvar:notify_all()
-    end
-  end)
-
-  if self.opts.writer then
-    self.opts.writer:start()
-  end
-
-  return handle
-end
-
-local function run(opts)
-  return Job.new(opts):start()
 end
 
 return {
   Job = function(opts) return Job.new(opts) end,
-  run = run,
 }

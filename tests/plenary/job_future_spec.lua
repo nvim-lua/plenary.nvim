@@ -10,26 +10,26 @@
 local a = require("plenary.async_lib")
 local uv = vim.loop
 local async, await = a.async, a.await
-local run = require("plenary.job_future").run
+local Job = require("plenary.job_future").Job
 
 local test = async(function()
-  local res = await(run { "echo", [['hello world!']] }:output())
+  local res = await(Job { "echo", [['hello world!']] }:output())
   dump(res)
 end)
 
 local no_close = async(function()
-  local res = run { "echo", [['hello world!']] }
+  local res = Job { "echo", [['hello world!']] }
 end)
 
 local cat = async(function()
-  local handle = run { "cat", "-", interactive = true }
+  local handle = Job { "cat", "-", interactive = true }
   await(handle:write("hello world!"))
   await(handle:read_stdout())
   await(handle:stop())
 end)
 
 local python = async(function()
-  local handle = run { "python", "-i", interactive = true }
+  local handle = Job { "python", "-i", interactive = true }
 
   -- prelude
   dump(await(handle:read_stderr()))
@@ -43,7 +43,7 @@ local python = async(function()
 end)
 
 local long_job = async(function()
-  local handle = run { "sleep", "5" }
+  local handle = Job { "sleep", "5" }
   local res = await(handle:stop())
   dump(res)
 end)
@@ -61,4 +61,4 @@ local another = function()
   end)
 end
 
--- a.run(cat())
+a.run(test())
