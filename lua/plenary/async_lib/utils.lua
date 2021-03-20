@@ -167,16 +167,22 @@ M.channel.oneshot = function()
   --- sender is not async
   --- sends a value
   local sender = function(...)
+    local args = {...}
+
+    if #args == 0 then
+      error('Cannot send nil value')
+    end
+
     if val ~= nil then
       error('Oneshot channel can only send one value!')
       return
     end
 
     if saved_callback then
-      saved_callback(unpack(val or {...}))
+      saved_callback(unpack(val or args))
       done = true
     else
-      val = {...}
+      val = args
     end
   end
 
