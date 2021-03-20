@@ -167,16 +167,22 @@ M.channel.oneshot = function()
   --- sender is not async
   --- sends a value
   local sender = function(...)
+    local args = {...}
+
+    if #args == 0 then
+      error('Cannot send nil value')
+    end
+
     if val ~= nil then
       error('Oneshot channel can only send one value!')
       return
     end
 
     if saved_callback then
-      saved_callback(unpack(val or {...}))
+      saved_callback(unpack(val or args))
       done = true
     else
-      val = {...}
+      val = args
     end
   end
 
@@ -212,17 +218,16 @@ M.protected_non_leaf = async(function(future)
   return await(pcall_wrap(future))
 end)
 
-M.protected = a.wrap(function(future, callback)
-  local stat, ret
-  stat, ret = pcall(function()
-    a.run(future, function(...)
-      if stat == false then
-        callback(stat, ret)
-      else
-        callback(stat, ...)
-      end
-    end)
-  end)
-end, 1)
+M.protected = async(function(future)
+  local tx, rx = M.channel.oneshot()
+
+  stat, ret = pcall(future, tx)
+
+  if stat == true then
+    return stat, await(rx())
+  else
+    return stat, ret
+  end
+end)
 
 return M
