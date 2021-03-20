@@ -196,9 +196,15 @@ M.block_on = function(future, timeout)
 
   M.run(future, function(...) res = {...} end)
 
-  if not vim.wait(timeout or 5000, function() return res ~= nil end, 50, false) then
+  local function check()
+    return res ~= nil
+  end
+
+  if not vim.wait(timeout or 2000, check, 50, false) then
     error("Future timed out or was interrupted")
   end
+
+  return unpack(res)
 end
 
 return M

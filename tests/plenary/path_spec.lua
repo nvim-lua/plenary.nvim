@@ -205,6 +205,101 @@ describe('Path', function()
     end)
   end)
 
+  describe('rename', function()
+    it('can rename a file', function()
+      local p = Path:new("a_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(pcall(p.rename, p, { new_name = "not_a_random_filename.lua" }))
+      assert.are.same("not_a_random_filename.lua", p.filename)
+
+      p:rm()
+    end)
+
+    it('can handle an invalid filename', function()
+      local p = Path:new("some_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(not pcall(p.rename, p, { new_name = "" }))
+      assert(not pcall(p.rename, p))
+      assert.are.same("some_random_filename.lua", p.filename)
+
+      p:rm()
+    end)
+
+    it('can move to parent dir', function()
+      local p = Path:new("some_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(pcall(p.rename, p, { new_name = "../some_random_filename.lua" }))
+      assert.are.same(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
+
+      p:rm()
+    end)
+
+    it('cannot rename to an existing filename', function()
+      local p1 = Path:new("a_random_filename.lua")
+      local p2 = Path:new("not_a_random_filename.lua")
+      assert(pcall(p1.touch, p1))
+      assert(pcall(p2.touch, p2))
+      assert(p1:exists())
+      assert(p2:exists())
+
+      assert(not pcall(p1.rename, p1, { new_name = "not_a_random_filename.lua" }))
+      assert.are.same(p1.filename, "a_random_filename.lua")
+
+      p1:rm()
+      p2:rm()
+    end)
+  end)
+
+  describe('copy', function()
+    it('can copy a file', function()
+      local p1 = Path:new("a_random_filename.rs")
+      local p2 = Path:new("not_a_random_filename.rs")
+      assert(pcall(p1.touch, p1))
+      assert(p1:exists())
+
+      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs" }))
+      assert.are.same(p1.filename, "a_random_filename.rs")
+      assert.are.same(p2.filename, "not_a_random_filename.rs")
+
+      p1:rm()
+      p2:rm()
+    end)
+
+    it('can copy to parent dir', function()
+      local p = Path:new("some_random_filename.lua")
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      assert(pcall(p.copy, p, { destination = "../some_random_filename.lua" }))
+      assert(pcall(p.exists, p))
+
+      p:rm()
+      Path:new(vim.loop.fs_realpath("../some_random_filename.lua")):rm()
+    end)
+
+    it('cannot copy a file if it\'s already exists' , function()
+      local p1 = Path:new("a_random_filename.rs")
+      local p2 = Path:new("not_a_random_filename.rs")
+      assert(pcall(p1.touch, p1))
+      assert(pcall(p2.touch, p2))
+      assert(p1:exists())
+      assert(p2:exists())
+
+      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs" }))
+      assert.are.same(p1.filename, "a_random_filename.rs")
+      assert.are.same(p2.filename, "not_a_random_filename.rs")
+
+      p1:rm()
+      p2:rm()
+    end)
+  end)
+
   describe('read parts', function()
     it('should read head of file', function()
       local p = Path:new('LICENSE')

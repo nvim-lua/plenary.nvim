@@ -202,4 +202,27 @@ end
 M.channel.mpsc = function()
 end
 
+local pcall_wrap = function(func)
+  return function(...)
+    return pcall(func, ...)
+  end
+end
+
+M.protected_non_leaf = async(function(future)
+  return await(pcall_wrap(future))
+end)
+
+M.protected = a.wrap(function(future, callback)
+  local stat, ret
+  stat, ret = pcall(function()
+    a.run(future, function(...)
+      if stat == false then
+        callback(stat, ret)
+      else
+        callback(stat, ...)
+      end
+    end)
+  end)
+end, 1)
+
 return M

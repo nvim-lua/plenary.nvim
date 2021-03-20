@@ -1,5 +1,6 @@
 local Path = require'plenary.path'
 local os_sep = Path.path.sep
+local F = require('plenary.functional')
 
 local uv = vim.loop
 
@@ -72,7 +73,7 @@ end
 local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
   if opts.hidden or name:sub(1, 1) ~= '.' then
     if typ == 'directory' then
-      local entry = current_dir .. '/' .. name
+      local entry = current_dir .. os_sep .. name
       if opts.depth then
         table.insert(next_dir, handle_depth(bp, entry, opts.depth))
       else
@@ -85,7 +86,7 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
         end
       end
     else
-      local entry = current_dir .. '/' .. name
+      local entry = current_dir .. os_sep .. name
       if not giti or interpret_gitignore(giti, bp, entry) then
         if not msp or msp(entry) then
           table.insert(data, entry)
@@ -108,6 +109,7 @@ end
 --   opts.depth (int):                depth on how deep the search should go
 --   opts.search_pattern (regex):     regex for which files will be added, string or table of strings
 --   opts.on_insert(entry):           Will be called for each element
+--   opts.silent (bool):              if true will not echo messages that are not accessible
 -- @return array with files
 m.scan_dir = function(path, opts)
   opts = opts or {}
@@ -118,6 +120,16 @@ m.scan_dir = function(path, opts)
 
   local gitignore = opts.respect_gitignore and get_gitignore(base_paths) or nil
   local match_seach_pat = opts.search_pattern and gen_search_pat(opts.search_pattern) or nil
+
+  for i = table.getn(base_paths), 1, -1 do
+    if uv.fs_access(base_paths[i], "X") == false then
+      if not F.if_nil(opts.silent, false, opts.silent) then
+        print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      end
+      table.remove(base_paths, i)
+    end
+  end
+  if table.getn(base_paths) == 0 then return {} end
 
   repeat
     local current_dir = table.remove(next_dir, 1)
@@ -145,6 +157,7 @@ end
 --   opts.search_pattern (lua regex): depth on how deep the search should go
 --   opts.on_insert function(entry):  will be called for each element
 --   opts.on_exit function(results):  will be called at the end
+--   opts.silent (bool):              if true will not echo messages that are not accessible
 m.scan_dir_async = function(path, opts)
   opts = opts or {}
 
@@ -153,8 +166,21 @@ m.scan_dir_async = function(path, opts)
   local next_dir = vim.tbl_flatten{ path }
   local current_dir = table.remove(next_dir, 1)
 
+  -- TODO(conni2461): get gitignore is not async
   local gitignore = opts.respect_gitignore and get_gitignore() or nil
   local match_seach_pat = opts.search_pattern and gen_search_pat(opts.search_pattern) or nil
+
+  -- TODO(conni2461): is not async. Shouldn't be that big of a problem but still
+  -- Maybe obers async pr can take me out of callback hell
+  for i = table.getn(base_paths), 1, -1 do
+    if uv.fs_access(base_paths[i], "X") == false then
+      if not F.if_nil(opts.silent, false, opts.silent) then
+        print(string.format("%s is not accessible by the current user!", base_paths[i]))
+      end
+      table.remove(base_paths, i)
+    end
+  end
+  if table.getn(base_paths) == 0 then return {} end
 
   local read_dir
   read_dir = function(err, fd)
