@@ -117,6 +117,21 @@ end
 -- suspend co-routine, call function with its continuation (like call/cc)
 M.suspend = co.yield
 
+M.scope = function(func)
+  M.run(M.future(func))
+end
+
+--- Future a :: a -> (a -> ())
+--- turns this signature
+--- ... -> Future a
+--- into this signature
+--- ... -> ()
+M.void = function(async_func)
+  return function(...)
+    async_func(...)(function() end)
+  end
+end
+
 M.async = function(func)
   return function(...)
     local args = {...}
