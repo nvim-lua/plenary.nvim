@@ -185,7 +185,7 @@ end)
 --- because idle is a bad name
 M.spawn = M.wrap(execute_loop, 2)
 
-M.nvim = M.wrap(vim.schedule, 1)
+M.scheduler = M.wrap(vim.schedule, 1)
 
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
