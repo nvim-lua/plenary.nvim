@@ -3,20 +3,6 @@ local uv = vim.loop
 
 local M = {}
 
---- WIP idle stuff
-local thread_loop = function(thread, callback)
-  local idle = uv.new_idle()
-  idle:start(function()
-    local success = co.resume(thread)
-    assert(success, "Coroutine failed")
-
-    if co.status(thread) == "dead" then
-      idle:stop()
-      callback()
-    end
-  end)
-end
-
 -- use with wrap
 local execute = function(future, callback)
   assert(type(future) == "function", "type error :: expected func")
@@ -67,9 +53,6 @@ M.wrap = function(func, argc)
     return future
   end
 end
-
---- WIP
-local thread_loop_async = M.wrap(thread_loop, 2)
 
 -- many futures -> single future
 M.join = M.wrap(function(futures, step)
@@ -151,39 +134,6 @@ end
 M.future = function(func)
   return M.async(func)()
 end
-
---- WIP
-local execute_loop = M.async(function(func, callback)
-  assert(type(func) == "function", "type error :: expected func")
-  local thread = co.create(func)
-
-  local _step
-  _step = function(...)
-    local res = {co.resume(thread, ...)}
-    local stat = res[1]
-    local ret = {select(2, unpack(res))}
-    assert(stat, "Status should be true")
-    if co.status(thread) == "dead" then
-      (callback or function() end)(unpack(ret))
-    else
-      assert(#ret == 1, "expected a single return value")
-      assert(type(ret[1]) == "function", "type error :: expected func")
-      -- yield before calling the next one
-      co.yield()
-      ret[1](_step)
-    end
-  end
-
-  local step = function()
-    thread_loop(co.create(_step))
-  end
-
-  step()
-end)
-
---- WIP
---- because idle is a bad name
-M.spawn = M.wrap(execute_loop, 2)
 
 M.scheduler = M.wrap(vim.schedule, 1)
 
