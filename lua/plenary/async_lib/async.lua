@@ -85,11 +85,10 @@ M.join = M.wrap(function(futures, step)
     assert(type(future) == "function", "type error :: future must be function")
 
     local callback = function(...)
-      results[i] = {...} -- should we set this to a table
+      results[i] = {...}
       done = done + 1
       if done == len then
-        -- step(unpack(results))
-        step(results) -- should we unpack?
+        step(results)
       end
     end
 
