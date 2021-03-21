@@ -1,7 +1,7 @@
 local a = require('plenary.async_lib')
 local async = a.async
 local await = a.await
-local Semaphore = a.utils.Semaphore
+local Semaphore = a.util.Semaphore
 
 local eq = assert.are.same
 

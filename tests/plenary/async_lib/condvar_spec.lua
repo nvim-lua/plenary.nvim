@@ -2,7 +2,7 @@ local a = require('plenary.async_lib')
 local async = a.async
 local await_all = a.await_all
 local await = a.await
-local Condvar = a.utils.Condvar
+local Condvar = a.util.Condvar
 
 local eq = function(a, b)
   assert.are.same(a, b)
