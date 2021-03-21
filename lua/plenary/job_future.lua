@@ -4,11 +4,21 @@ local Condvar = a.util.Condvar
 local channel = a.util.channel
 local uv = vim.loop
 
-local maybe_close = async(function(uv_handle)
-  if not uv.is_closing(uv_handle) then
-    await(a.uv.close(uv_handle))
+
+local valid_handle_name
+do
+  local handle_names = {
+    stdout = true,
+    stderr = true,
+    stdin = true,
+  }
+
+  valid_handle_name = function(name)
+    if not handle_names[name] then
+      error("not valid handle name")
+    end
   end
-end)
+end
 
 local Output = {}
 Output.__index = Output
@@ -119,6 +129,12 @@ Handle.write = async(function(self, stuff)
   await(a.uv.write(self.stdin_handle, stuff .. '\n'))
 end)
 
+-- Handle.get_pipe = async(function(self, name)
+--   valid_handle_name(name)
+
+--   return name .. '_handle'
+-- end)
+
 Handle.read_stdout = async(function(self)
   if self.stdout_data == "" then
     await(self.stdout_data_condvar:wait())
@@ -161,13 +177,17 @@ Handle.wait_done = async(function(self)
   return await(self.exit_rx())
 end)
 
-Handle.raw_read_stdout = async(function(self)
+Handle.raw_read = async(function(self, handle_name)
   assert(self.spawn_opts.raw_read == true, "Raw read must be enabled")
+  valid_handle_name(handle_name)
+  handle_name = handle_name .. '_handle'
 
   local tx, rx = channel.oneshot()
 
-  self.stdout_handle:read_start(function(err, data)
-    self.stdout_handle:read_stop()
+  local handle = self[handle_name]
+
+  handle:read_start(function(err, data)
+    handle:read_stop()
 
     assert(not err, err)
 
