@@ -16,4 +16,10 @@ function tbl.apply_defaults(original, defaults)
   return original
 end
 
+function tbl.map_inplace(t, func)
+  for key, value in pairs(t) do
+    tbl[key] = func(value)
+  end
+end
+
 return tbl
