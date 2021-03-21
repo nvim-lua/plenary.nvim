@@ -1,7 +1,7 @@
 local a = require("plenary.async_lib")
 local async, await, await_all = a.async, a.await, a.await_all
-local Condvar = a.utils.Condvar
-local channel = a.utils.channel
+local Condvar = a.util.Condvar
+local channel = a.util.channel
 local uv = vim.loop
 
 local maybe_close = async(function(uv_handle)
@@ -159,7 +159,13 @@ Handle.wait_done = async(function(self)
   return await(self.exit_rx())
 end)
 
--- if force is true, will stop it with sigkill
+-- safety: when the process is killed, all read_start callbacks will be called with data == nil which means that eof has been hit
+-- each callback will check for this and close the proper pipe
+-- this means that pipes will always be closed properly and there will be no closing pipes while there is still output
+-- which can lead to a broken pipe error in the process
+-- if the process is not killed and stops naturally, eof will be hit naturally and the same process above happens
+-- this means that if there are multiple queued reads it will not close before everything is finished
+---if force is true, will stop it with sigkill
 Handle.stop = async(function(self, force)
   self:check_dead()
 
@@ -201,15 +207,8 @@ Job.spawn = function(self, spawn_opts)
   job_handle.process_handle, job_handle.pid = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
     local fn = async(function()
       await_all {
-        -- we don't use maybe_close here
-        -- because this is the only function that will close
         a.uv.close(job_handle.process_handle),
-        -- the rest of the handles can also be closed in their read_callbacks when eof is hit
-        -- however, when forcefully closing a job or when the job is interactive eof will never be hit
-        -- so we have to maybe_close it here
-        maybe_close(job_handle.stdout_handle),
-        maybe_close(job_handle.stderr_handle),
-        maybe_close(job_handle.stdin_handle),
+        a.uv.close(stdin),
       }
 
       self.dead = true
@@ -225,8 +224,9 @@ Job.spawn = function(self, spawn_opts)
       assert(not err, err)
 
       if data == nil then
+        print('stdout hit eof')
         job_handle.stdout_eof_tx(true)
-        await(maybe_close(stdout))
+        await(a.uv.close(stdout))
       else
         -- first update the data
         job_handle.stdout_data = job_handle.stdout_data .. data
@@ -245,8 +245,9 @@ Job.spawn = function(self, spawn_opts)
       assert(not err, err)
 
       if data == nil then
+        print('stderr hit eof')
         job_handle.stderr_eof_tx(true)
-        await(maybe_close(stderr))
+        await(a.uv.close(stderr))
       else
         job_handle.stderr_data = job_handle.stderr_data .. data
 

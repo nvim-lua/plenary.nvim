@@ -4,12 +4,21 @@ local async, await = a.async, a.await
 local Job = require("plenary.job_future").Job
 
 local fn = async(function()
-  local handle = Job { "sleep", "5" }:spawn()
-  local res = await(handle:stop())
+  -- local handle = Job { "sleep", "2" }:spawn()
+  -- local res = await(handle:stop())
+  local output = await(Job { "sleep", "2" }:output())
+  dump(output)
 
-  dump(res)
+  -- dump(handle)
   -- dump(res)
   -- assert(res:success())
 end)
 
-a.block_on(fn())
+local rg = async(function()
+  local handle = Job { "rg", ".*", cwd = "/home/brian" }:spawn()
+  await(a.util.sleep(6000))
+  await(handle:stop())
+  -- dump(handle)
+end)
+
+a.run(rg())
