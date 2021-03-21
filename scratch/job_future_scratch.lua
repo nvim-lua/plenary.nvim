@@ -16,9 +16,7 @@ end)
 
 local rg = async(function()
   local handle = Job { "rg", "--vimgrep", ".*", cwd = "/home/brian" }:spawn()
-  await(a.util.sleep(6000))
-  await(handle:stop())
-  -- dump(handle)
+  await(a.util.sleep(2000))
 end)
 
 local fd = async(function()

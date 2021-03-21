@@ -75,7 +75,7 @@ end)
 local Handle = {}
 Handle.__index = Handle
 
-function Handle.new(stdin_handle, stdout_handle, stderr_handle)
+function Handle.new(stdin_handle, stdout_handle, stderr_handle, spawn_opts)
   local exit_tx, exit_rx = channel.oneshot()
   local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
   local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
@@ -104,6 +104,8 @@ function Handle.new(stdin_handle, stdout_handle, stderr_handle)
 
     -- lock
     dead = false,
+
+    spawn_opts = spawn_opts,
   }, Handle)
 
   return self
@@ -159,6 +161,28 @@ Handle.wait_done = async(function(self)
   return await(self.exit_rx())
 end)
 
+Handle.raw_read_stdout = async(function(self)
+  assert(self.spawn_opts.raw_read == true, "Raw read must be enabled")
+
+  local tx, rx = channel.oneshot()
+
+  self.stdout_handle:read_start(function(err, data)
+    self.stdout_handle:read_stop()
+
+    assert(not err, err)
+
+    tx(data or false)
+  end)
+
+  local res = await(rx())
+
+  if res == false then
+    return nil
+  else
+    return res
+  end
+end)
+
 -- safety: when the process is killed, all read_start callbacks will be called with data == nil which means that eof has been hit
 -- each callback will check for this and close the proper pipe
 -- this means that pipes will always be closed properly and there will be no closing pipes while there is still output
@@ -197,12 +221,14 @@ end
 
 -- TODO: allow pipes to be confirgurable
 Job.spawn = function(self, spawn_opts)
+  spawn_opts = spawn_opts or {}
+
   local uv_opts = create_uv_options(self.opts)
 
   local stdin, stdout, stderr = uv.new_pipe(false), uv.new_pipe(false), uv.new_pipe(false)
   uv_opts.stdio = { stdin, stdout, stderr }
 
-  local job_handle = Handle.new(stdin, stdout, stderr)
+  local job_handle = Handle.new(stdin, stdout, stderr, spawn_opts)
 
   job_handle.process_handle, job_handle.pid = uv.spawn(uv_opts.command, uv_opts, function(code, signal)
     local fn = async(function()
@@ -218,6 +244,10 @@ Job.spawn = function(self, spawn_opts)
 
     a.run(fn())
   end)
+
+  if spawn_opts.raw_read == true then
+    return 
+  end
 
   uv.read_start(stdout, function(err, data)
     local fn = async(function()
