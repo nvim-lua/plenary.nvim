@@ -93,6 +93,8 @@ end, 2)
 
 --- not an async function
 function Condvar:notify_all()
+  if #self.handles == 0 then return end
+
   for _, callback in ipairs(self.handles) do
     callback()
   end
