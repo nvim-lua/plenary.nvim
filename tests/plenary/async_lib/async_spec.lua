@@ -1,32 +1,15 @@
 local a = require('plenary.async_lib')
 local async, await = a.async, a.await
 local await_all = a.await_all
-local work = a.work
 
 local eq = function(a, b)
   assert.are.same(a, b)
 end
 
 describe('async await', function()
-  it('should await_all', function()
-    local fn = async(function()
-      local futures = {}
-      for i = 1, 100 do futures[i] = work.string.match('hello', 'llo') end
-
-      local result = await_all(futures)
-
-      local expected = {}
-      for i = 1, 100 do expected[i] = {'llo'} end
-
-      eq(result, expected)
-    end)
-
-    a.run(fn())
-  end)
-
   it('should block_on', function()
     local fn = async(function()
-      await(a.utils.sleep(100))
+      await(a.util.sleep(100))
       return 'hello'
     end)
 
@@ -42,7 +25,7 @@ describe('async await', function()
       end)
 
       local main = async(function()
-        local stat, ret = await(a.utils.protected_non_leaf(fn()))
+        local stat, ret = await(a.util.protected_non_leaf(fn()))
         eq(false, stat)
         assert(ret:match("This should error"))
         return 'hello'
@@ -58,7 +41,7 @@ describe('async await', function()
       end)
 
       local main = async(function()
-        local stat, ret = await(a.utils.protected_non_leaf(fn()))
+        local stat, ret = await(a.util.protected_non_leaf(fn()))
         eq(stat, true)
         eq(ret, 'didnt fail')
       end)
@@ -73,7 +56,7 @@ describe('async await', function()
       end, 1)
 
       local main = async(function()
-        local stat, ret = await(a.utils.protected(fn()))
+        local stat, ret = await(a.util.protected(fn()))
         eq(stat, false)
         assert(ret:match("This should error") ~= nil)
       end)
@@ -87,7 +70,7 @@ describe('async await', function()
       end, 1)
 
       local main = async(function()
-        local stat, ret = await(a.utils.protected(fn()))
+        local stat, ret = await(a.util.protected(fn()))
         eq(stat, true)
         eq(ret, 'didnt fail')
       end)

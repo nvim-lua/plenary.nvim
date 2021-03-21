@@ -1,8 +1,8 @@
 local a = require('plenary.async_lib')
 local async = a.async
 local await = a.await
-local channel = a.utils.channel
-local runned = a.utils.runned
+local channel = a.util.channel
+local runned = a.util.runned
 
 local eq = function(a, b)
   assert.are.same(a, b)
