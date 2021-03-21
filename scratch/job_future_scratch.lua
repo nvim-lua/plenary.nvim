@@ -15,8 +15,12 @@ local fn = async(function()
 end)
 
 local rg = async(function()
-  local handle = Job { "rg", "--vimgrep", ".*", cwd = "/home/brian" }:spawn()
+  local handle = Job { "rg", "--vimgrep", ".*", cwd = "/home/brian" }:spawn { raw_read = true }
+  for i = 1, 100 do
+    print(await(handle:raw_read_stdout()))
+  end
   await(a.util.sleep(2000))
+  await(handle:stop())
 end)
 
 local fd = async(function()

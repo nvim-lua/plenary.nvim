@@ -246,7 +246,7 @@ Job.spawn = function(self, spawn_opts)
   end)
 
   if spawn_opts.raw_read == true then
-    return 
+    return job_handle
   end
 
   uv.read_start(stdout, function(err, data)
