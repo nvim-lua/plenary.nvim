@@ -34,7 +34,9 @@ end
 -- use with CPS function, creates future factory
 -- must have argc for arity checking
 M.wrap = function(func, argc)
-  assert(type(func) == "function", "type error :: expected func")
+  if type(func) ~= "function" then
+    error("function", "type error :: expected func, got " .. type(func))
+  end
   assert(type(argc) == "number" or argc == "vararg", "expected argc to be a number or string literal 'vararg'")
 
   return function(...)
