@@ -1,11 +1,15 @@
 local co = coroutine
-local uv = vim.loop
 local errors = require('plenary.errors')
 local traceback_error = errors.traceback_error
 
 local M = {}
 
--- use with wrap
+---@class Future
+---Something that will give a value when run
+
+---Executes a future with a callback when it is done
+---@param future Future: the future to execute
+---@param callback function: the callback to call when done
 local execute = function(future, callback)
   assert(type(future) == "function", "type error :: expected func")
   local thread = co.create(future)
@@ -33,8 +37,10 @@ local execute = function(future, callback)
   step()
 end
 
--- use with CPS function, creates future factory
--- must have argc for arity checking
+---Creates an async function with a callback style function.
+---@param func function: A callback style function to be converted. The last argument must be the callback.
+---@param argc number: The number of arguments of func. Must be included.
+---@return function: Returns an async function
 M.wrap = function(func, argc)
   if type(func) ~= "function" then
     traceback_error("type error :: expected func, got " .. type(func))
@@ -63,7 +69,9 @@ M.wrap = function(func, argc)
   end
 end
 
--- many futures -> single future
+---Return a new future that when run will run all futures concurrently.
+---@param futures table: the futures that you want to join
+---@return Future: returns a future
 M.join = M.wrap(function(futures, step)
   local len = #futures
   local results = {}
@@ -88,6 +96,9 @@ M.join = M.wrap(function(futures, step)
   end
 end, 2)
 
+---Returns a future that when run will select the first future that finishes
+---@param futures table: The future that you want to select
+---@return Future
 M.select = M.wrap(function(futures, step)
   local selected = false
 
@@ -105,27 +116,41 @@ M.select = M.wrap(function(futures, step)
   end
 end, 2)
 
---- use this over running a future by calling it with no callback argument because it is more explicit
+---Use this to either run a future concurrently and then do something else
+---or use it to run a future with a callback in a non async context
+---@param future Future
+---@param callback function
 M.run = function(future, callback)
   future(callback or function() end)
 end
 
+---Same as run but runs multiple futures
+---@param futures table
+---@param callback function
 M.run_all = function(futures, callback)
   M.run(M.join(futures), callback)
 end
 
+---Await a future, yielding the current function
+---@param future Future
+---@return any: returns the result of the future when it is done
 M.await = function(future)
   return future(nil)
 end
 
+---Same as await but can await multiple futures.
+---If the futures have libuv leaf futures they will be run concurrently
+---@param futures table
+---@return table: returns a table of results that each future returned. Note that if the future returns multiple values they will be packed into a table.
 M.await_all = function(futures)
   assert(type(futures) == "table", "type error :: expected table")
   return M.await(M.join(futures))
 end
 
--- suspend co-routine, call function with its continuation (like call/cc)
+---suspend a coroutine
 M.suspend = co.yield
 
+---create a async scope
 M.scope = function(func)
   M.run(M.future(func))
 end
@@ -141,6 +166,9 @@ M.void = function(async_func)
   end
 end
 
+---creates an async function
+---@param func function
+---@return function: returns an async function
 M.async = function(func)
   if type(func) ~= "function" then
     traceback_error("type error :: expected func, got " .. type(func))
@@ -159,15 +187,21 @@ M.async = function(func)
   end
 end
 
+---creates a future
+---@param func function
+---@return Future
 M.future = function(func)
   return M.async(func)()
 end
 
+---An async function that when awaited will await the scheduler to be able to call the api.
 M.scheduler = M.wrap(vim.schedule, 1)
 
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
----for example, used in plenary test_harness you must use this
+---for example, in plenary test_harness you must use this
+---@param future Future
+---@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
 M.block_on = function(future, timeout)
   local res
 

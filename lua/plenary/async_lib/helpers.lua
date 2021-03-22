@@ -3,6 +3,10 @@ local M = {}
 VecDeque = {}
 VecDeque.__index = VecDeque
 
+---@class VecDeque
+---A vector double ended queue
+---
+---@return VecDeque
 function VecDeque.new()
   return setmetatable({first = 0, last = -1}, VecDeque)
 end

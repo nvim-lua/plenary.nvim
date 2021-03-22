@@ -7,6 +7,8 @@ local uv = vim.loop
 
 local M = {}
 
+---Sleep for milliseconds
+---@param ms number
 M.sleep = a.wrap(function(ms, callback)
   local timer = uv.new_timer()
   uv.timer_start(timer, ms, 0, function()
@@ -16,10 +18,12 @@ M.sleep = a.wrap(function(ms, callback)
   end)
 end, 2)
 
---- Takes a future and a millisecond as the timeout.
---- If the time is reached and the future hasn't completed yet, it will short circuit the future
---- NOTE: the future will still be running in libuv, we are just not waiting for it to complete
---- thats why you should call this on a leaf future only to avoid unexpected results
+---Takes a future and a millisecond as the timeout.
+---If the time is reached and the future hasn't completed yet, it will short circuit the future
+---NOTE: the future will still be running in libuv, we are just not waiting for it to complete
+---thats why you should call this on a leaf future only to avoid unexpected results
+---@param future Future
+---@param ms number
 M.timeout = a.wrap(function(future, ms, callback)
   -- make sure that the callback isn't called twice, or else the coroutine can be dead
   local done = false
@@ -41,36 +45,27 @@ M.timeout = a.wrap(function(future, ms, callback)
   a.run(future, timeout_callback)
 end, 3)
 
+---create an async function timer
+---@param ms number
 M.timer = function(ms)
   return async(function()
     await(M.sleep(ms))
   end)
 end
 
+---id function that can be awaited
+---@param nil ...
+---@return ...
 M.id = async(function(...)
   return ...
 end)
 
-M.thread_loop = function(thread, callback)
-  local idle = uv.new_idle()
-  idle:start(function()
-    local success = co.resume(thread)
-    assert(success, "Coroutine failed")
-
-    if co.status(thread) == "dead" then
-      idle:stop()
-      callback()
-    end
-  end)
-end
-
-M.thread_loop_async = a.wrap(M.thread_loop, 2)
-
+---Running this function will yield now and do nothing else
 M.yield_now = async(function()
   await(M.id())
 end)
 
--- will force the future to be runned when called
+---forces a future to be runned
 M.runned = function(future)
   return function(step)
     a.run(future, step)
@@ -80,18 +75,19 @@ end
 local Condvar = {}
 Condvar.__index = Condvar
 
+---@class Condvar
+---@return Condvar
 function Condvar.new()
   return setmetatable({handles = {}}, Condvar)
 end
 
---- async function
---- blocks the thread until a notification is received
+---`blocks` the thread until a notification is received
 Condvar.wait = a.wrap(function(self, callback)
   -- not calling the callback will block the coroutine
   table.insert(self.handles, callback)
 end, 2)
 
---- not an async function
+---notify everyone that is waiting on this Condvar
 function Condvar:notify_all()
   if #self.handles == 0 then return end
 
@@ -101,7 +97,7 @@ function Condvar:notify_all()
   self.handles = {} -- reset all handles as they have been used up
 end
 
---- not an async function
+---notify randomly one person that is waiting on this Condvar
 function Condvar:notify_one()
   if #self.handles == 0 then return end
 
@@ -115,6 +111,9 @@ M.Condvar = Condvar
 local Semaphore = {}
 Semaphore.__index = Semaphore
 
+---@class Semaphore
+---@param initial_permits number: the number of permits that it can give out
+---@return Semaphore
 function Semaphore.new(initial_permits) 
   vim.validate {
     initial_permits = {
@@ -127,13 +126,13 @@ function Semaphore.new(initial_permits)
   return setmetatable({permits = initial_permits, handles = {}}, Semaphore)
 end
 
---- async function, blocks until a permit can be acquired
---- example:
---- local semaphore = Semaphore.new(1024)
---- local permit = await(semaphore:acquire())
---- permit:forget()
---- when a permit can be acquired returns it
---- call permit:forget() to forget the permit
+---async function, blocks until a permit can be acquired
+---example:
+---local semaphore = Semaphore.new(1024)
+---local permit = await(semaphore:acquire())
+---permit:forget()
+---when a permit can be acquired returns it
+---call permit:forget() to forget the permit
 Semaphore.acquire = a.wrap(function(self, callback)
   self.permits = self.permits - 1
 
@@ -161,6 +160,10 @@ M.Semaphore = Semaphore
 
 M.channel = {}
 
+---Creates a oneshot channel
+---returns a sender and receiver function
+---the sender is not async while the receiver is
+---@return function, function
 M.channel.oneshot = function()
   local val = nil
   local saved_callback = nil
@@ -216,10 +219,15 @@ local pcall_wrap = function(func)
   end
 end
 
+---Makes a future protected. It is like pcall but for futures.
+---Only works for non-leaf futures
 M.protected_non_leaf = async(function(future)
   return await(pcall_wrap(future))
 end)
 
+---Makes a future protected. It is like pcall but for futures.
+---@param future Future
+---@return Future
 M.protected = async(function(future)
   local tx, rx = M.channel.oneshot()
 
