@@ -14,7 +14,9 @@ local execute = function(future, callback)
     local stat = res[1]
     local ret = {select(2, unpack(res))}
 
-    assert(stat, string.format("The coroutine failed with this message: %s", ret[1]))
+    if not stat then
+      error(string.format("The coroutine failed with this message: %s", ret[1]))
+    end
 
     if co.status(thread) == "dead" then
       (callback or function() end)(unpack(ret))
@@ -32,7 +34,7 @@ end
 -- use with CPS function, creates future factory
 -- must have argc for arity checking
 M.wrap = function(func, argc)
-  assert(type(func) == "function", "type error :: expected func, got " .. type(func))
+  assert(type(func) == "function", "type error :: expected func")
   assert(type(argc) == "number" or argc == "vararg", "expected argc to be a number or string literal 'vararg'")
 
   return function(...)
