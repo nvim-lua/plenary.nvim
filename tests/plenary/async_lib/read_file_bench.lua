@@ -1,3 +1,4 @@
+-- do not run this for now, the asset was removed
 local a = require('plenary.async_lib')
 local async = a.async
 local await = a.await
