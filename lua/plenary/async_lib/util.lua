@@ -51,19 +51,6 @@ M.id = async(function(...)
   return ...
 end)
 
-M.thread_loop = function(thread, callback)
-  local idle = uv.new_idle()
-  idle:start(function()
-    local success = co.resume(thread)
-    assert(success, "Coroutine failed")
-
-    if co.status(thread) == "dead" then
-      idle:stop()
-      callback()
-    end
-  end)
-end
-
 M.thread_loop_async = a.wrap(M.thread_loop, 2)
 
 M.yield_now = async(function()
@@ -164,11 +151,16 @@ M.channel = {}
 M.channel.oneshot = function()
   local val = nil
   local saved_callback = nil
-  local done = false
+  local sended = false
+  local received = false
 
   --- sender is not async
   --- sends a value
   local sender = function(...)
+    if sended then
+      error('Can only send once')
+    end
+
     local args = {...}
 
     if #args == 0 then
@@ -182,7 +174,7 @@ M.channel.oneshot = function()
 
     if saved_callback then
       saved_callback(unpack(val or args))
-      done = true
+      sended = true
     else
       val = args
     end
@@ -191,14 +183,17 @@ M.channel.oneshot = function()
   --- receiver is async
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
-    if done then
-      error('Oneshot channel can only send one value!')
-      return
+    if received then
+      error('Oneshot channel can only receive one value!')
+    end
+
+    if saved_callback then
+      error('Can only receive once')
     end
 
     if val then
+      received = true
       callback(unpack(val))
-      done = true
     else
       saved_callback = callback
     end

@@ -1,6 +1,8 @@
 local a = require('plenary.async_lib')
 local async, await = a.async, a.await
 local await_all = a.await_all
+local channel = a.util.channel
+local protected = a.util.protected
 
 local eq = function(a, b)
   assert.are.same(a, b)
@@ -73,6 +75,19 @@ describe('async await', function()
         local stat, ret = await(a.util.protected(fn()))
         eq(stat, true)
         eq(ret, 'didnt fail')
+      end)
+
+      a.block_on(main())
+    end)
+
+    it('should be able to protect a oneshot channel that was called twice', function ()
+      local main = async(function()
+        local tx, rx = channel.oneshot()
+        tx(true)
+        await(rx())
+        local stat, ret = await(protected(rx()))
+        eq(stat, false)
+        assert(ret:match('Oneshot channel can only receive one value!'))
       end)
 
       a.block_on(main())
