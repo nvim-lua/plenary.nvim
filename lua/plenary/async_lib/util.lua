@@ -51,8 +51,6 @@ M.id = async(function(...)
   return ...
 end)
 
-M.thread_loop_async = a.wrap(M.thread_loop, 2)
-
 M.yield_now = async(function()
   await(M.id())
 end)
