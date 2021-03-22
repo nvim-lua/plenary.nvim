@@ -274,7 +274,6 @@ Job.spawn = function(self, spawn_opts)
       assert(not err, err)
 
       if data == nil then
-        print('stdout hit eof')
         job_handle.stdout_eof_tx(true)
         await(a.uv.close(stdout))
       else
@@ -295,7 +294,6 @@ Job.spawn = function(self, spawn_opts)
       assert(not err, err)
 
       if data == nil then
-        print('stderr hit eof')
         job_handle.stderr_eof_tx(true)
         await(a.uv.close(stderr))
       else
