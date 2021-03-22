@@ -1,5 +1,7 @@
 local co = coroutine
 local uv = vim.loop
+local errors = require('plenary.errors')
+local traceback_error = errors.traceback_error
 
 local M = {}
 
@@ -35,9 +37,12 @@ end
 -- must have argc for arity checking
 M.wrap = function(func, argc)
   if type(func) ~= "function" then
-    error("function", "type error :: expected func, got " .. type(func))
+    traceback_error("type error :: expected func, got " .. type(func))
   end
-  assert(type(argc) == "number" or argc == "vararg", "expected argc to be a number or string literal 'vararg'")
+
+  if type(argc) ~= "number" and argc ~= "vararg" then
+    traceback_error("expected argc to be a number or string literal 'vararg'")
+  end
 
   return function(...)
     local params = {...}
@@ -137,6 +142,10 @@ M.void = function(async_func)
 end
 
 M.async = function(func)
+  if type(func) ~= "function" then
+    traceback_error("type error :: expected func, got " .. type(func))
+  end
+
   return function(...)
     local args = {...}
     local function future(step)
