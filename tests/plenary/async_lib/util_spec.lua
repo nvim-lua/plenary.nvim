@@ -1,6 +1,7 @@
 require('plenary.async_lib').tests.add_to_env()
 local block_on = a.util.block_on
 local eq = assert.are.same
+local id = a.util.id
 
 a.describe('async await util', function()
   a.describe('block_on', function()
@@ -84,5 +85,20 @@ a.describe('async await util', function()
 
       assert(timed_out == false)
     end)
+  end)
+
+  a.it('id should work', function()
+    eq(await(id(1, 2, 3, 4, 5)), 1, 2, 3, 4, 5)
+  end)
+
+  a.it('yield_now should work', function ()
+    local yield_now = a.util.yield_now
+    yield_now()
+    yield_now()
+    yield_now()
+    yield_now()
+    yield_now()
+    yield_now()
+    yield_now()
   end)
 end)

@@ -4,7 +4,7 @@ local eq = assert.are.same
 local protected = a.util.protected
 
 a.describe('channel', function()
-  a.describe('oneshot', function ()
+  a.describe('oneshot', function()
     a.it('should work when rx is used first', function()
       local tx, rx = channel.oneshot()
 
