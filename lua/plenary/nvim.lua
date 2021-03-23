@@ -126,6 +126,9 @@ return setmetatable(
       if not api_func then
         error(string.format('Could not find api function with name %s and real name %s', k, real_name))
       end
+      return function(_, ...)
+        return api_func(...)
+      end
     end
   }
 )
