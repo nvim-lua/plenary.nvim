@@ -197,32 +197,4 @@ end
 ---An async function that when awaited will await the scheduler to be able to call the api.
 M.scheduler = M.wrap(vim.schedule, 1)
 
----This will COMPLETELY block neovim
----please just use a.run unless you have a very special usecase
----for example, in plenary test_harness you must use this
----@param future Future
----@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
-M.block_on = function(future, timeout)
-  local res
-
-  local stat, ret = pcall(function()
-    M.run(future, function(...)
-      res = {...}
-    end)
-  end)
-
-  local function check()
-    if stat == false then
-      error("Blocking on future failed " .. ret)
-    end
-    return res ~= nil
-  end
-
-  if not vim.wait(timeout or 2000, check, 50, false) then
-    error("Blocking on future timed out or was interrupted")
-  end
-
-  return unpack(res)
-end
-
 return M

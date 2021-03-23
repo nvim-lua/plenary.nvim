@@ -1,6 +1,7 @@
 local a = require('plenary.async_lib')
 local async, await = a.async, a.await
 local await_all = a.await_all
+local block_on = a.util.block_on
 
 local eq = function(a, b)
   assert.are.same(a, b)
@@ -13,7 +14,7 @@ describe('async await', function()
       return 'hello'
     end)
 
-    local res = a.block_on(fn())
+    local res = block_on(fn())
     eq(res, 'hello')
   end)
 
@@ -31,7 +32,7 @@ describe('async await', function()
         return 'hello'
       end)
 
-      local res = a.block_on(main())
+      local res = block_on(main())
       eq(res, 'hello')
     end)
 
@@ -46,7 +47,7 @@ describe('async await', function()
         eq(ret, 'didnt fail')
       end)
 
-      a.block_on(main())
+      block_on(main())
     end)
 
     it('should be able to protect a leaf future', function()
@@ -61,7 +62,7 @@ describe('async await', function()
         assert(ret:match("This should error") ~= nil)
       end)
 
-      a.block_on(main())
+      block_on(main())
     end)
 
     it('should be able to protect a leaf future that doesnt fail', function()
@@ -75,7 +76,7 @@ describe('async await', function()
         eq(ret, 'didnt fail')
       end)
 
-      a.block_on(main())
+      block_on(main())
     end)
   end)
 end)

@@ -167,25 +167,21 @@ M.channel = {}
 M.channel.oneshot = function()
   local val = nil
   local saved_callback = nil
-  local done = false
+  local sent = false
+  local received = false
 
   --- sender is not async
   --- sends a value
   local sender = function(...)
     local args = {...}
 
-    if #args == 0 then
-      error('Cannot send nil value')
-    end
-
-    if val ~= nil then
-      error('Oneshot channel can only send one value!')
-      return
+    if sent then
+      error("Oneshot channel can only send once")
     end
 
     if saved_callback then
+      sent = true
       saved_callback(unpack(val or args))
-      done = true
     else
       val = args
     end
@@ -194,14 +190,13 @@ M.channel.oneshot = function()
   --- receiver is async
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
-    if done then
+    if received then
       error('Oneshot channel can only send one value!')
-      return
     end
 
     if val then
+      received = true
       callback(unpack(val))
-      done = true
     else
       saved_callback = callback
     end
@@ -239,5 +234,34 @@ M.protected = async(function(future)
     return stat, ret
   end
 end)
+
+---This will COMPLETELY block neovim
+---please just use a.run unless you have a very special usecase
+---for example, in plenary test_harness you must use this
+---@param future Future
+---@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
+M.block_on = function(future, timeout)
+  future = M.protected(future)
+
+  local stat, ret
+  a.run(future, function(_stat, ...)
+    stat = _stat
+    ret = {...}
+  end)
+
+  local function check()
+    if stat == false then
+      error("Blocking on future failed " .. unpack(ret))
+    end
+    return stat == true
+  end
+
+  if not vim.wait(timeout or 2000, check, 50, false) then
+    error("Blocking on future timed out or was interrupted")
+  end
+
+  return unpack(ret)
+end
+
 
 return M
