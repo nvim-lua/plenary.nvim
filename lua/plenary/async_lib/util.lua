@@ -256,12 +256,15 @@ M.block_on = function(future, timeout)
     return stat == true
   end
 
-  if not vim.wait(timeout or 2000, check, 50, false) then
+  if not vim.wait(timeout or 2000, check, 20, false) then
     error("Blocking on future timed out or was interrupted")
   end
 
   return unpack(ret)
 end
 
+M.will_block = async(function(future)
+  return M.block_on(future)
+end)
 
 return M
