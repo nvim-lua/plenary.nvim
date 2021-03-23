@@ -173,14 +173,15 @@ M.channel.oneshot = function()
   --- sender is not async
   --- sends a value
   local sender = function(...)
-    local args = {...}
-
     if sent then
       error("Oneshot channel can only send once")
     end
 
+    sent = true
+
+    local args = {...}
+
     if saved_callback then
-      sent = true
       saved_callback(unpack(val or args))
     else
       val = args
