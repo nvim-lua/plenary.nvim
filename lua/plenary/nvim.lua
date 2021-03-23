@@ -47,10 +47,6 @@ function Buffer:prefix()
   return "nvim_buf_"
 end
 
-function Buffer:id()
-  return self.id
-end
-
 local Tabpage = {}
 do
   local manual = {}
