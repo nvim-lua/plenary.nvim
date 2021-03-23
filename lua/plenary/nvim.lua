@@ -121,7 +121,11 @@ return setmetatable(
   },
   {
     __index = function(_, k)
-      return api["nvim_" .. k]
+      local real_name = 'nvim_' .. k
+      local api_func = api[real_name]
+      if not api_func then
+        error(string.format('Could not find api function with name %s and real name %s', k, real_name))
+      end
     end
   }
 )
