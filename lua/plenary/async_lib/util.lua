@@ -263,6 +263,9 @@ M.block_on = function(future, timeout)
   return unpack(ret)
 end
 
+---Returns a new future that WILL BLOCK
+---@param future Future
+---@return Future
 M.will_block = async(function(future)
   return M.block_on(future)
 end)

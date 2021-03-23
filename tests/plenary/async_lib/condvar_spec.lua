@@ -1,15 +1,9 @@
-local a = require('plenary.async_lib')
-local async = a.async
-local await_all = a.await_all
-local await = a.await
+require('plenary.async_lib').tests.add_to_env()
 local Condvar = a.util.Condvar
+local eq = assert.are.same
 
-local eq = function(a, b)
-  assert.are.same(a, b)
-end
-
-describe('condvar', function()
-  it('should allow blocking', function()
+a.describe('condvar', function()
+  a.it('should allow blocking', function()
     local var = false
 
     local condvar = Condvar.new()
@@ -28,7 +22,7 @@ describe('condvar', function()
     eq(var, true)
   end)
 
-  it('should be able to notify one when running', function()
+  a.it('should be able to notify one when running', function()
     local counter = 0
 
     local condvar = Condvar.new()
@@ -65,49 +59,44 @@ describe('condvar', function()
     eq(counter, 3)
   end)
 
-  it('should allow notify_one to work when using await_all', function()
-    local future = async(function()
-      local counter = 0
+  a.it('should allow notify_one to work when using await_all', function()
+    local counter = 0
 
-      local condvar = Condvar.new()
+    local condvar = Condvar.new()
 
-      local first = async(function()
-        await(condvar:wait())
-        counter = counter + 1
-      end)
-
-      local second = async(function()
-        await(condvar:wait())
-        counter = counter + 1
-      end)
-
-      local third = async(function()
-        await(condvar:wait())
-        counter = counter + 1
-      end)
-
-      await_all { first(), second(), third() }
-
-      eq(0, counter)
-
-      condvar:notify_one()
-
-      eq(1, counter)
-
-      condvar:notify_one()
-
-      eq(counter, 2)
-
-      condvar:notify_one()
-
-      eq(counter, 3)
+    local first = async(function()
+      await(condvar:wait())
+      counter = counter + 1
     end)
 
-    a.run(future())
-
+    local second = async(function()
+      await(condvar:wait())
+      counter = counter + 1
     end)
 
-  it('should notify_all', function()
+    local third = async(function()
+      await(condvar:wait())
+      counter = counter + 1
+    end)
+
+    a.run_all { first(), second(), third() }
+
+    eq(0, counter)
+
+    condvar:notify_one()
+
+    eq(1, counter)
+
+    condvar:notify_one()
+
+    eq(counter, 2)
+
+    condvar:notify_one()
+
+    eq(counter, 3)
+  end)
+
+  a.it('should notify_all', function()
     local counter = 0
 
     local condvar = Condvar.new()

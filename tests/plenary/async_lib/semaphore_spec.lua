@@ -1,12 +1,10 @@
-local a = require('plenary.async_lib')
-local async = a.async
-local await = a.await
+require('plenary.async_lib').tests.add_to_env()
 local Semaphore = a.util.Semaphore
 
 local eq = assert.are.same
 
-describe('semaphore', function()
-  it('should validate arguments', function()
+a.describe('semaphore', function()
+  a.it('should validate arguments', function()
     local status = pcall(Semaphore.new, -1)
     eq(status, false)
 
@@ -14,6 +12,6 @@ describe('semaphore', function()
     eq(status, false)
   end)
 
-  it('should count properly', function()
+  a.it('should count properly', function()
   end)
 end)

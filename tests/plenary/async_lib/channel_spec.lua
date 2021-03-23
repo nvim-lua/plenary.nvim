@@ -1,15 +1,9 @@
-local a = require('plenary.async_lib')
-local async = a.async
-local await = a.await
+require('plenary.async_lib').tests.add_to_env()
 local channel = a.util.channel
-local runned = a.util.runned
+local eq = assert.are.same
 
-local eq = function(a, b)
-  assert.are.same(a, b)
-end
-
-describe('oneshot channel', function()
-  it('should work when rx is used first', runned(a.future(function()
+a.describe('oneshot channel', function()
+  a.it('should work when rx is used first', function()
     local tx, rx = channel.oneshot()
 
     a.run(a.future(function()
@@ -18,9 +12,9 @@ describe('oneshot channel', function()
     end))
 
     tx("sent value")
-  end)))
+  end)
 
-  it('should work when tx is used first', runned(a.future(function()
+  a.it('should work when tx is used first', function()
     local tx, rx = channel.oneshot()
 
     tx("sent value")
@@ -29,9 +23,9 @@ describe('oneshot channel', function()
       local got = await(rx())
       eq("sent value", got)
     end))
-  end)))
+  end)
 
-  it('should work with multiple returns', runned(a.future(function()
+  a.it('should work with multiple returns', function()
     local tx, rx = channel.oneshot()
 
     a.run(a.future(function()
@@ -41,5 +35,5 @@ describe('oneshot channel', function()
     end))
 
     tx("sent value", "another sent value")
-  end)))
+  end)
 end)
