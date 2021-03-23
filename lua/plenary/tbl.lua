@@ -18,8 +18,9 @@ end
 
 function tbl.map_inplace(t, func)
   for key, value in pairs(t) do
-    tbl[key] = func(value)
+    t[key] = func(value)
   end
+  return t
 end
 
 return tbl
