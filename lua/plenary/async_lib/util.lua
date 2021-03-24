@@ -206,6 +206,29 @@ M.channel.oneshot = function()
   return sender, receiver
 end
 
+---A counter channel.
+---Basically a channel that you want to use only to notify and not to send any actual values.
+---@return function: sender
+---@return function: receiver
+M.channel.counter = function()
+  local counter = 0
+  local condvar = Condvar.new()
+
+  local sender = function()
+    counter = counter + 1
+    condvar:notify_all()
+  end
+
+  local receiver = async(function()
+    if counter == 0 then
+      await(condvar:wait())
+    end
+    counter = counter - 1
+  end)
+
+  return sender, receiver
+end
+
 M.channel.mpsc = function()
 end
 
