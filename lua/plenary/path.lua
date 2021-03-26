@@ -171,6 +171,32 @@ function Path:_st_mode()
   return self:_stat().mode or 0
 end
 
+local _escape = (function()
+  if jit then
+    if string.lower(jit.os) == 'linux' or string.lower(jit.os) == 'osx' then
+      return function(path)
+        local escaped_path = path
+        escaped_path = string.gsub(escaped_path, " ", "\\ ")
+        escaped_path = string.gsub(escaped_path, "%$", "\\$")
+        return escaped_path
+      end
+    else
+      return function(path)
+        local escaped_path = path
+        -- windows substitutions here
+        return escaped_path
+      end
+    end
+  else
+    return function(path)
+      return vim.fn.fnameescape(path)
+    end
+  end
+end)()
+
+function Path:escape()
+  return _escape(self.filename)
+end
 
 function Path:joinpath(...)
   return Path:new(self.filename, ...)
