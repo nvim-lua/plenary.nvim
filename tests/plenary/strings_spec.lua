@@ -101,4 +101,146 @@ describe('strings', function()
       end
     end
   end)
+
+  describe('dedent', function()
+    local function lines(t)
+      return table.concat(t, '\n')
+    end
+    for _, case in ipairs{
+      {
+        msg = 'empty string',
+        tabstop = 8,
+        args = {''},
+        expected = '',
+      },
+      {
+        msg = 'in case tabs are longer than spaces',
+        tabstop = 8,
+        args = {
+          lines{
+            '		<Tab><Tab> -> 13 spaces',
+            '     5 spaces -> 0 space',
+          },
+        },
+        expected = lines{
+          '           <Tab><Tab> -> 13 spaces',
+          '5 spaces -> 0 space',
+        },
+      },
+      {
+        msg = 'in case tabs are shorter than spaces',
+        tabstop = 2,
+        args = {
+          lines{
+            '		<Tab><Tab> -> 0 space',
+            '     5spaces -> 1 space',
+          },
+        },
+        expected = lines{
+          '<Tab><Tab> -> 0 space',
+          ' 5spaces -> 1 space',
+        },
+      },
+      {
+        msg = 'ignores empty lines',
+        tabstop = 2,
+        args = {
+          lines{
+            '',
+            '',
+            '',
+            '        8 spaces -> 3 spaces',
+            '',
+            '',
+            '     5 spaces -> 0 space',
+            '',
+            '',
+            '',
+          },
+        },
+        expected = lines{
+          '',
+          '',
+          '',
+          '   8 spaces -> 3 spaces',
+          '',
+          '',
+          '5 spaces -> 0 space',
+          '',
+          '',
+          '',
+        },
+      },
+      {
+        msg = 'no indent',
+        tabstop = 2,
+        args = {
+          lines{
+            '	<Tab> -> 2 spaces',
+            'Here is no indent.',
+            '    4 spaces will remain',
+          },
+        },
+        expected = lines{
+          '  <Tab> -> 2 spaces',
+          'Here is no indent.',
+          '    4 spaces will remain',
+        },
+      },
+      {
+        msg = 'leave_indent = 4',
+        tabstop = 2,
+        args = {
+          lines{
+            '	<Tab> -> 6 spaces',
+            '0 indent -> 4 spaces',
+            '    4 spaces -> 8 spaces',
+          },
+          4,
+        },
+        expected = lines{
+          '      <Tab> -> 6 spaces',
+          '    0 indent -> 4 spaces',
+          '        4 spaces -> 8 spaces',
+        },
+      },
+      {
+        msg = 'typical usecase: <Tab> to 5 spaces',
+        tabstop = 4,
+        args = {
+          lines{
+            '',
+            '		Chapter 1',
+            '',
+            '	  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed',
+            '	do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+            '',
+            '	  Ut enim ad minim veniam, quis nostrud exercitation ullamco',
+            '	laboris nisi ut aliquip ex ea commodo consequat.',
+            '',
+          },
+          5,
+        },
+        expected = lines{
+          '',
+          '         Chapter 1',
+          '',
+          '       Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed',
+          '     do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+          '',
+          '       Ut enim ad minim veniam, quis nostrud exercitation ullamco',
+          '     laboris nisi ut aliquip ex ea commodo consequat.',
+          '',
+        },
+      },
+    } do
+      local msg = ('tabstop = %d, %s'):format(case.tabstop, case.msg)
+      it(msg, function()
+        local original = vim.bo.tabstop
+        vim.bo.tabstop = case.tabstop
+        eq(case.expected, strings.dedent(unpack(case.args)))
+        vim.bo.tabstop = original
+      end)
+    end
+  end)
 end)
