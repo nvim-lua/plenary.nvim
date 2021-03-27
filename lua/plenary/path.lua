@@ -370,7 +370,7 @@ function Path:touch(opts)
   end
 
   if parents then
-    Path:new(self:parents()):mkdir({ parents = true })
+    Path:new(self:parent()):mkdir({ parents = true })
   end
 
   local fd = uv.fs_open(self:_fs_filename(), "w", mode)
@@ -428,8 +428,18 @@ function Path:_split()
   return vim.split(self:absolute(), self._sep)
 end
 
-function Path:parents()
+function Path:parent()
   return self:absolute():match(string.format('^(.+)%s[^%s]+', self._sep, self._sep))
+end
+
+function Path:parents()
+    local results = {}
+    local cur = self
+    repeat
+        cur = Path:new(cur:parent())
+        table.insert(results, cur.filename)
+    until not cur:parent()
+    return results
 end
 
 function Path:is_file()
