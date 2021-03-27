@@ -19,6 +19,24 @@ local S_IF = {
 local path = {}
 path.home = vim.loop.os_homedir()
 
+path.root = (function()
+    if jit then
+        local os = string.lower(jit.os)
+        if os == 'linux' or os == 'osx' or os == 'bsd' then
+            return '/'
+        else
+            return 'C:\\'
+        end
+    else
+        local sep = package.config:sub(1, 1)
+        if sep == '/' then
+            return '/'
+        else
+            return 'C:\\'
+        end
+    end
+end)()
+
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
@@ -439,6 +457,7 @@ function Path:parents()
         cur = Path:new(cur:parent())
         table.insert(results, cur.filename)
     until not cur:parent()
+    table.insert(results, path.root)
     return results
 end
 
