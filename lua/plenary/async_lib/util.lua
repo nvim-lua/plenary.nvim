@@ -223,14 +223,14 @@ M.channel.counter = function()
 
   local Receiver = {}
 
-  Receiver.recv = async(function(self)
+  Receiver.recv = async(function()
     if counter == 0 then
       await(condvar:wait())
     end
     counter = counter - 1
   end)
 
-  Receiver.last = async(function(self)
+  Receiver.last = async(function()
     if counter == 0 then
       await(condvar:wait())
     end
@@ -241,6 +241,35 @@ M.channel.counter = function()
 end
 
 M.channel.mpsc = function()
+  local deque = Deque.new()
+  local condvar = Condvar.new()
+
+  local Sender = {}
+
+  function Sender:send(...)
+    deque.pushleft({...})
+    condvar:notify_all()
+  end
+
+  local Receiver = {}
+
+  Receiver.recv = async(function()
+    if deque:is_empty() then
+      await(condvar:wait())
+    end
+    return deque:popright()
+  end)
+
+  Receiver.last = async(function()
+    if deque:is_empty() then
+      await(condvar:wait())
+    end
+    local val = deque:popright()
+    deque:clear()
+    return val
+  end)
+
+  return Sender, Receiver
 end
 
 local pcall_wrap = function(func)
