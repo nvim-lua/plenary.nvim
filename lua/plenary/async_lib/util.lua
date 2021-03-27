@@ -2,7 +2,7 @@ local a = require('plenary.async_lib.async')
 local await = a.await
 local async = a.async
 local co = coroutine
-local VecDeque = require('plenary.async_lib.helpers').VecDeque
+local Deque = require('plenary.async_lib.structs').Deque
 local uv = vim.loop
 
 local M = {}
