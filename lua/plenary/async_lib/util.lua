@@ -214,19 +214,30 @@ M.channel.counter = function()
   local counter = 0
   local condvar = Condvar.new()
 
-  local sender = function()
+  local Sender = {}
+
+  function Sender:send()
     counter = counter + 1
     condvar:notify_all()
   end
 
-  local receiver = async(function()
+  local Receiver = {}
+
+  Receiver.recv = async(function(self)
     if counter == 0 then
       await(condvar:wait())
     end
     counter = counter - 1
   end)
 
-  return sender, receiver
+  Receiver.last = async(function(self)
+    if counter == 0 then
+      await(condvar:wait())
+    end
+    counter = 0
+  end)
+
+  return Sender, Receiver
 end
 
 M.channel.mpsc = function()

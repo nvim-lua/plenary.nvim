@@ -69,4 +69,48 @@ a.describe('channel', function()
       eq(stat, false)
     end)
   end)
+
+  a.describe('counter', function()
+    a.it('should work', function()
+      local tx, rx = channel.counter()
+
+      tx.send()
+      tx.send()
+      tx.send()
+
+      local counter = 0
+
+      local recv_stuff = async(function()
+        for i = 1, 3 do
+          await(rx.recv())
+          counter = counter + 1
+        end
+      end)
+
+      a.run(recv_stuff())
+
+      eq(counter, 3)
+    end)
+
+    a.it('should work when getting last', function()
+      local tx, rx = channel.counter()
+
+      tx.send()
+      tx.send()
+      tx.send()
+
+      local counter = 0
+
+      local recv_stuff = async(function()
+        for i = 1, 3 do
+          await(rx.last())
+          counter = counter + 1
+        end
+      end)
+
+      a.run(recv_stuff())
+
+      eq(counter, 1)
+    end)
+  end)
 end)

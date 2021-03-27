@@ -1,29 +1,29 @@
 local M = {}
 
-VecDeque = {}
-VecDeque.__index = VecDeque
+Deque = {}
+Deque.__index = Deque
 
----@class VecDeque
----A vector double ended queue
+---@class Deque
+---A double ended queue
 ---
----@return VecDeque
-function VecDeque.new()
-  return setmetatable({first = 0, last = -1}, VecDeque)
+---@return Deque
+function Deque.new()
+  return setmetatable({first = 0, last = -1}, Deque)
 end
 
-function VecDeque:pushleft(value)
+function Deque:pushleft(value)
   local first = self.first - 1
   self.first = first
   self[first] = value
 end
 
-function VecDeque:pushright(value)
+function Deque:pushright(value)
   local last = self.last + 1
   self.last = last
   self[last] = value
 end
 
-function VecDeque:popleft()
+function Deque:popleft()
   local first = self.first
   if first > self.last then return nil end
   local value = self[first]
@@ -32,11 +32,11 @@ function VecDeque:popleft()
   return value
 end
 
-function VecDeque:is_empty()
+function Deque:is_empty()
   return self.first > self.last
 end
 
-function VecDeque:popright()
+function Deque:popright()
   local last = self.last
   if self.first > last then return nil end
   local value = self[last]
@@ -45,10 +45,10 @@ function VecDeque:popright()
   return value
 end
 
-function VecDeque:len()
+function Deque:len()
   return self.last - self.first
 end
 
-M.VecDeque = VecDeque
+M.Deque = Deque
 
 return M
