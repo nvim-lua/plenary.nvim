@@ -19,24 +19,6 @@ local S_IF = {
 local path = {}
 path.home = vim.loop.os_homedir()
 
-path.root = (function()
-    if jit then
-        local os = string.lower(jit.os)
-        if os == 'linux' or os == 'osx' or os == 'bsd' then
-            return '/'
-        else
-            return 'C:\\'
-        end
-    else
-        local sep = package.config:sub(1, 1)
-        if sep == '/' then
-            return '/'
-        else
-            return 'C:\\'
-        end
-    end
-end)()
-
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
@@ -48,6 +30,16 @@ path.sep = (function()
   else
     return package.config:sub(1, 1)
   end
+end)()
+
+path.root = (function()
+    if path.sep == '/' then
+        return '/'
+    elseif path.sep == '\\' then
+        -- This isn't the best way to do this, as the user could be working
+        -- on another drive. Maybe use the output of the :pwd command?
+        return 'C:\\'
+    end
 end)()
 
 path.S_IF = S_IF
@@ -446,17 +438,24 @@ function Path:_split()
   return vim.split(self:absolute(), self._sep)
 end
 
+local _get_parent = (function()
+    local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
+    return function(abs_path)
+        return abs_path:match(formatted)
+    end
+end)()
+
 function Path:parent()
-  return self:absolute():match(string.format('^(.+)%s[^%s]+', self._sep, self._sep))
+    return _get_parent(self:absolute())
 end
 
 function Path:parents()
     local results = {}
-    local cur = self
+    local cur = self.filename
     repeat
-        cur = Path:new(cur:parent())
-        table.insert(results, cur.filename)
-    until not cur:parent()
+        cur = _get_parent(cur)
+        table.insert(results, cur)
+    until not cur
     table.insert(results, path.root)
     return results
 end
