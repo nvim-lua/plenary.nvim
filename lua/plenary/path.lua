@@ -33,14 +33,14 @@ path.sep = (function()
 end)()
 
 path.root = (function()
-    if path.sep == '/' then
-        return '/'
-    elseif path.sep == '\\' then
-        local cwd = vim.fn.cwd() -- Get the absolute path of cwd
-        -- Extract the first letter of the path (the drive letter) and
-        -- create the name of the root directory for that drive
-        return cwd[1] .. ':\\'
-    end
+  if path.sep == '/' then
+    return '/'
+  elseif path.sep == '\\' then
+    local cwd = vim.loop.cwd() -- Get the absolute path of cwd
+    -- Extract the first letter of the path (the drive letter) and
+    -- create the name of the root directory for that drive
+    return cwd[1] .. ':\\'
+  end
 end)()
 
 path.S_IF = S_IF
@@ -440,25 +440,25 @@ function Path:_split()
 end
 
 local _get_parent = (function()
-    local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
-    return function(abs_path)
-        return abs_path:match(formatted)
-    end
+  local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
+  return function(abs_path)
+    return abs_path:match(formatted)
+  end
 end)()
 
 function Path:parent()
-    return _get_parent(self:absolute()) or path.root
+  return _get_parent(self:absolute()) or path.root
 end
 
 function Path:parents()
-    local results = {}
-    local cur = self:absolute()
-    repeat
-        cur = _get_parent(cur)
-        table.insert(results, cur)
-    until not cur
-    table.insert(results, path.root)
-    return results
+  local results = {}
+  local cur = self:absolute()
+  repeat
+    cur = _get_parent(cur)
+    table.insert(results, cur)
+  until not cur
+  table.insert(results, path.root)
+  return results
 end
 
 function Path:is_file()
