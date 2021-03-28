@@ -1,3 +1,1 @@
-local Nvim = require('plenary.nvim.generated')
-
-return Nvim
+return require('plenary.nvim.generated')

@@ -10,5 +10,4 @@ function debug_utils.sourced_filename()
   return str:match("^.*/(.*).lua$") or str
 end
 
-
 return debug_utils

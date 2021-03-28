@@ -175,3 +175,5 @@ contents = contents .. '\n' .. 'return Nvim'
 local file = io.open("../lua/plenary/nvim/generated.lua", "w")
 file:write(contents)
 file:close()
+
+print('Done!')
