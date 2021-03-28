@@ -1,4 +1,9 @@
+-- Don't edit this file, it was generated. See scripts/update_nvim_objects.lua
+
+
 local tbl = require('plenary.tbl')
+
+
 
 local Buffer = {}
 Buffer.__index = Buffer
@@ -7,6 +12,13 @@ function Buffer.new(id)
   return setmetatable({id = id}, Buffer)
 end
 
+function Buffer.is_buffer(object)
+  return getmetatable(object) == Buffer
+end
+
+function Buffer.prefix()
+  return "nvim_buf_"
+end
 
 
 
@@ -17,6 +29,13 @@ function Tabpage.new(id)
   return setmetatable({id = id}, Tabpage)
 end
 
+function Tabpage.is_tabpage(object)
+  return getmetatable(object) == Tabpage
+end
+
+function Tabpage.prefix()
+  return "nvim_tabpage_"
+end
 
 
 
@@ -27,19 +46,21 @@ function Window.new(id)
   return setmetatable({id = id}, Window)
 end
 
+function Window.is_window(object)
+  return getmetatable(object) == Window
+end
 
-local objects = {
-  Window = Window,
+function Window.prefix()
+  return "nvim_win_"
+end
+
+
+
+local Nvim = {
   Buffer = Buffer,
   Tabpage = Tabpage,
+  Window = Window,
 }
-
-
-
-local Nvim = {}
-Nvim.__index = function(t, k)
-  return t[k] or objects[k]
-end
 
 
 
@@ -230,7 +251,8 @@ end
 
 
 function Tabpage:list_wins(...)
-  return vim.api.nvim_tabpage_list_wins(self.id, ...)
+  local res = vim.api.nvim_tabpage_list_wins(self.id, ...)
+  return tbl.map_inplace(res, Window.new)
 end
 
 
@@ -254,7 +276,8 @@ end
 
 
 function Tabpage:get_win(...)
-  return vim.api.nvim_tabpage_get_win(self.id, ...)
+  local res = vim.api.nvim_tabpage_get_win(self.id, ...)
+  return Window.new(res)
 end
 
 
@@ -766,7 +789,8 @@ end
 
 
 function Window:get_buf(...)
-  return vim.api.nvim_win_get_buf(self.id, ...)
+  local res = vim.api.nvim_win_get_buf(self.id, ...)
+  return Buffer.new(res)
 end
 
 
@@ -850,7 +874,8 @@ end
 
 
 function Window:get_tabpage(...)
-  return vim.api.nvim_win_get_tabpage(self.id, ...)
+  local res = vim.api.nvim_win_get_tabpage(self.id, ...)
+  return Tabpage.new(res)
 end
 
 
