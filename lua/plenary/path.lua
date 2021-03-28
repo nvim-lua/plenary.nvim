@@ -447,7 +447,7 @@ local _get_parent = (function()
 end)()
 
 function Path:parent()
-    return _get_parent(self:absolute())
+    return _get_parent(self:absolute()) or path.root
 end
 
 function Path:parents()
