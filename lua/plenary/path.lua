@@ -36,9 +36,10 @@ path.root = (function()
     if path.sep == '/' then
         return '/'
     elseif path.sep == '\\' then
-        -- This isn't the best way to do this, as the user could be working
-        -- on another drive. Maybe use the output of the :pwd command?
-        return 'C:\\'
+        local cwd = vim.fn.cwd() -- Get the absolute path of cwd
+        -- Extract the first letter of the path (the drive letter) and
+        -- create the name of the root directory for that drive
+        return cwd[1] .. ':\\'
     end
 end)()
 
