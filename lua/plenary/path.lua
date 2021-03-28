@@ -452,7 +452,7 @@ end
 
 function Path:parents()
     local results = {}
-    local cur = self.filename
+    local cur = self:absolute()
     repeat
         cur = _get_parent(cur)
         table.insert(results, cur)
