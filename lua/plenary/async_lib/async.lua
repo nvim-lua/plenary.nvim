@@ -135,6 +135,7 @@ end
 ---@param future Future
 ---@return any: returns the result of the future when it is done
 M.await = function(future)
+  assert(type(future) == "function", "type error :: expected function to await")
   return future(nil)
 end
 

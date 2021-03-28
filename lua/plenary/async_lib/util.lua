@@ -240,14 +240,17 @@ M.channel.counter = function()
   return Sender, Receiver
 end
 
+---A multiple producer single consumer channel
+---@return table
+---@return table
 M.channel.mpsc = function()
   local deque = Deque.new()
   local condvar = Condvar.new()
 
   local Sender = {}
 
-  function Sender:send(...)
-    deque.pushleft({...})
+  function Sender.send(...)
+    deque:pushleft({...})
     condvar:notify_all()
   end
 
@@ -257,7 +260,7 @@ M.channel.mpsc = function()
     if deque:is_empty() then
       await(condvar:wait())
     end
-    return deque:popright()
+    return unpack(deque:popright())
   end)
 
   Receiver.last = async(function()
@@ -266,7 +269,7 @@ M.channel.mpsc = function()
     end
     local val = deque:popright()
     deque:clear()
-    return val
+    return unpack(val)
   end)
 
   return Sender, Receiver
