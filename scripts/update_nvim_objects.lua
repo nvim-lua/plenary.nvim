@@ -34,7 +34,7 @@ local res = vim.api.${method_real_name}(${should_id}...)
 
 local object_list_return_template = format [[
 local res = vim.api.${method_real_name}(${should_id}...)
-  return tbl.map_inplace(res, ${object_name}.new)]]
+  return tbl.map_ipairs_inplace(res, ${object_name}.new)]]
 
 local normal_return_template = format [[
 return vim.api.${method_real_name}(${should_id}...)]]

@@ -252,7 +252,7 @@ end
 
 function Tabpage:list_wins(...)
   local res = vim.api.nvim_tabpage_list_wins(self.id, ...)
-  return tbl.map_inplace(res, Window.new)
+  return tbl.map_ipairs_inplace(res, Window.new)
 end
 
 
@@ -548,7 +548,7 @@ end
 
 function Nvim:list_bufs(...)
   local res = vim.api.nvim_list_bufs(...)
-  return tbl.map_inplace(res, Buffer.new)
+  return tbl.map_ipairs_inplace(res, Buffer.new)
 end
 
 
@@ -568,7 +568,7 @@ end
 
 function Nvim:list_wins(...)
   local res = vim.api.nvim_list_wins(...)
-  return tbl.map_inplace(res, Window.new)
+  return tbl.map_ipairs_inplace(res, Window.new)
 end
 
 
@@ -614,7 +614,7 @@ end
 
 function Nvim:list_tabpages(...)
   local res = vim.api.nvim_list_tabpages(...)
-  return tbl.map_inplace(res, Tabpage.new)
+  return tbl.map_ipairs_inplace(res, Tabpage.new)
 end
 
 

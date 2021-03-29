@@ -16,8 +16,15 @@ function tbl.apply_defaults(original, defaults)
   return original
 end
 
-function tbl.map_inplace(t, func)
+function tbl.map_pairs_inplace(t, func)
   for key, value in pairs(t) do
+    t[key] = func(value)
+  end
+  return t
+end
+
+function tbl.map_ipairs_inplace(t, func)
+  for key, value in ipairs(t) do
     t[key] = func(value)
   end
   return t
