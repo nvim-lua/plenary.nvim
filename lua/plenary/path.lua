@@ -35,6 +35,7 @@ end)()
 path.root = function(base)
   -- Handle Unix-like paths. The root is always '/'
   if path.sep == '/' then return '/' end
+  base = base or vim.loop.cwd()
   return base:sub(1, 1) .. ':\\'
 end
 
