@@ -32,12 +32,15 @@ path.sep = (function()
   end
 end)()
 
-path.root = function(base)
-  -- Handle Unix-like paths. The root is always '/'
-  if path.sep == '/' then return '/' end
-  base = base or vim.loop.cwd()
-  return base:sub(1, 1) .. ':\\'
-end
+path.root = (function()
+    if path.sep == '/' then return function() return '/' end
+    else
+        return function(base)
+            base = base or vim.loop.cwd()
+            return base:sub(1, 1) .. ':\\'
+        end
+    end
+end)()
 
 path.S_IF = S_IF
 
