@@ -302,7 +302,7 @@ describe('Path', function()
 
   describe('parents', function()
     it('should extract the ancestors of the path', function()
-      local p = Path:new(vim.fn.getcwd())
+      local p = Path:new(vim.loop.cwd())
       local parents = p:parents()
       assert(vim.tbl_islist(parents))
       for _, parent in pairs(parents) do
@@ -310,8 +310,8 @@ describe('Path', function()
       end
     end)
     it('should return itself if it corresponds to path.root', function()
-      local p = Path:new(Path.path.root)
-      assert.are.same(p:parent(), Path.path.root)
+      local p = Path:new(Path.path.root(vim.loop.cwd()))
+      assert.are.same(p:parent(), p.filename)
     end)
   end)
 
