@@ -301,18 +301,18 @@ describe('Path', function()
   end)
 
   describe('parents', function()
-      it('should extract the ancestors of the path', function()
-          local p = Path:new(vim.fn.getcwd())
-          local parents = p:parents()
-          assert(vim.tbl_islist(parents))
-          for _, parent in pairs(parents) do
-              assert.are.same(type(parent), 'string')
-          end
-      end)
-      it('should return itself if it corresponds to path.root', function()
-          local p = Path:new(Path.path.root)
-          assert.are.same(p:parent(), Path.path.root)
-      end)
+    it('should extract the ancestors of the path', function()
+      local p = Path:new(vim.fn.getcwd())
+      local parents = p:parents()
+      assert(vim.tbl_islist(parents))
+      for _, parent in pairs(parents) do
+        assert.are.same(type(parent), 'string')
+      end
+    end)
+    it('should return itself if it corresponds to path.root', function()
+      local p = Path:new(Path.path.root)
+      assert.are.same(p:parent(), Path.path.root)
+    end)
   end)
 
   describe('read parts', function()

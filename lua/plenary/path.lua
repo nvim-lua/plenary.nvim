@@ -32,16 +32,11 @@ path.sep = (function()
   end
 end)()
 
-path.root = (function()
-  if path.sep == '/' then
-    return '/'
-  elseif path.sep == '\\' then
-    local cwd = vim.loop.cwd() -- Get the absolute path of cwd
-    -- Extract the first letter of the path (the drive letter) and
-    -- create the name of the root directory for that drive
-    return cwd[1] .. ':\\'
-  end
-end)()
+path.root = function(base)
+  -- Handle Unix-like paths. The root is always '/'
+  if path.sep == '/' then return '/' end
+  return base:sub(1, 1) .. ':\\'
+end
 
 path.S_IF = S_IF
 
@@ -457,7 +452,7 @@ function Path:parents()
     cur = _get_parent(cur)
     table.insert(results, cur)
   until not cur
-  table.insert(results, path.root)
+  table.insert(results, path.root(self:absolute()))
   return results
 end
 
