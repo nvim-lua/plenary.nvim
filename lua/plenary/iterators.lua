@@ -126,6 +126,13 @@ function Iterator:for_each(fn)
   until state == nil
 end
 
+function Iterator:stateful()
+  return co.wrap(function()
+    self:for_each(function(...)
+      co.yield(...)
+    end)
+  end)
+end
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
@@ -176,10 +183,18 @@ exports.range = range
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
+local map_gen = function(param, state)
+    local gen_x, param_x, fun = param[1], param[2], param[3]
+    return call_if_not_empty(fun, gen_x(param_x, state))
+end
+
 function Iterator:map(fn)
   return wrap(map_gen, {self.gen, self.param, fn}, self.state)
 end
 
+--------------------------------------------------------------------------------
+-- Filtering
+--------------------------------------------------------------------------------
 local filter1_gen = function(fun, gen_x, param_x, state_x, a)
   while true do
     if state_x == nil or fun(a) then break; end
@@ -188,9 +203,6 @@ local filter1_gen = function(fun, gen_x, param_x, state_x, a)
   return state_x, a
 end
 
---------------------------------------------------------------------------------
--- Filtering
---------------------------------------------------------------------------------
 -- call each other
 -- because we can't assign a vararg mutably in a while loop like filter1_gen
 -- so we have to use recursion in calling both of these functions
@@ -226,14 +238,6 @@ end
 
 function Iterator:filter(fn)
   return wrap(filter_gen, {self.gen, self.param, fn}, self.state)
-end
-
-function Iterator:stateful()
-  return co.wrap(function()
-    self:for_each(function(...)
-      co.yield(...)
-    end)
-  end)
 end
 
 --------------------------------------------------------------------------------
