@@ -20,23 +20,23 @@ end
 -- A special hack for zip/chain to skip last two state, if a wrapped iterator
 -- has been passed
 local numargs = function(...)
-    local n = select('#', ...)
-    if n >= 3 then
-        -- Fix last argument
-        local it = select(n - 2, ...)
-        if type(it) == 'table' and getmetatable(it) == Iterator and
-           it.param == select(n - 1, ...) and it.state == select(n, ...) then
-            return n - 2
-        end
+  local n = select('#', ...)
+  if n >= 3 then
+    -- Fix last argument
+    local it = select(n - 2, ...)
+    if type(it) == 'table' and getmetatable(it) == Iterator and
+      it.param == select(n - 1, ...) and it.state == select(n, ...) then
+      return n - 2
     end
-    return n
+  end
+  return n
 end
 
 local return_if_not_empty = function(state_x, ...)
-    if state_x == nil then
-        return nil
-    end
-    return ...
+  if state_x == nil then
+    return nil
+  end
+  return ...
 end
 
 local call_if_not_empty = function(fun, state_x, ...)
@@ -50,7 +50,7 @@ end
 -- Basic Functions
 --------------------------------------------------------------------------------
 local nil_gen = function(_param, _state)
-    return nil
+  return nil
 end
 
 local ipairs_gen = ipairs({}) -- get the generating function from ipairs
@@ -305,47 +305,46 @@ end
 -- call each other
 local chain_gen_r1
 local chain_gen_r2 = function(param, state, state_x, ...)
-    if state_x == nil then
-        local i = state[1]
-        i = i + 1
-        if param[3 * i - 1] == nil then
-            return nil
-        end
-        local state_x = param[3 * i]
-        return chain_gen_r1(param, {i, state_x})
+  if state_x == nil then
+    local i = state[1]
+    i = i + 1
+    if param[3 * i - 1] == nil then
+      return nil
     end
-    return {state[1], state_x}, ...
+    local state_x = param[3 * i]
+    return chain_gen_r1(param, {i, state_x})
+  end
+  return {state[1], state_x}, ...
 end
 
 chain_gen_r1 = function(param, state)
-    local i, state_x = state[1], state[2]
-    local gen_x, param_x = param[3 * i - 2], param[3 * i - 1]
-    return chain_gen_r2(param, state, gen_x(param_x, state[2]))
+  local i, state_x = state[1], state[2]
+  local gen_x, param_x = param[3 * i - 2], param[3 * i - 1]
+  return chain_gen_r2(param, state, gen_x(param_x, state[2]))
 end
 
 local chain = function(...)
-    local n = numargs(...)
-    if n == 0 then
-        return wrap(nil_gen, nil, nil)
-    end
+  local n = numargs(...)
+  if n == 0 then
+    return wrap(nil_gen, nil, nil)
+  end
 
-    local param = { [3 * n] = 0 }
-    local i, gen_x, param_x, state_x
-    for i = 1, n, 1 do
-        local elem = select(i, ...)
-        gen_x, param_x, state_x = iter(elem)
-        param[3 * i - 2] = gen_x
-        param[3 * i - 1] = param_x
-        param[3 * i] = state_x
-    end
+  local param = { [3 * n] = 0 }
+  local i, gen_x, param_x, state_x
+  for i = 1, n, 1 do
+    local elem = select(i, ...)
+    gen_x, param_x, state_x = iter(elem)
+    param[3 * i - 2] = gen_x
+    param[3 * i - 1] = param_x
+    param[3 * i] = state_x
+  end
 
-    return wrap(chain_gen_r1, param, {1, param[3]})
+  return wrap(chain_gen_r1, param, {1, param[3]})
 end
-
-exports.chain = chain
 
 Iterator.chain = chain
 Iterator.__concat = chain
+exports.chain = chain
 
 --------------------------------------------------------------------------------
 -- Operators
