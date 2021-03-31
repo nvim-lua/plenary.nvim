@@ -14,7 +14,9 @@ function List:__tostring()
   if #self == 0 then return '[]' end
   local result = {'['}
   for _, v in ipairs(self) do
-    table.insert(result, tostring(v))
+    local repr = tostring(v)
+    if type(v) == 'string' then repr = '"' .. repr .. '"' end
+    table.insert(result, repr)
     table.insert(result, ', ')
   end
   result[#result] = ']'
