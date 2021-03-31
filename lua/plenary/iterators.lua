@@ -102,13 +102,7 @@ local rawiter = function(obj, param, state)
   error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))
 end
 
-local iter = function(obj, param, state)
-  return wrap(rawiter(obj, param, state))
-end
-
-exports.iter = iter
-
-function wrap(gen, param, state)
+local function wrap(gen, param, state)
   return setmetatable({
     gen = gen,
     param = param,
@@ -116,7 +110,17 @@ function wrap(gen, param, state)
   }, Iterator), param, state
 end
 
+local unwrap = function(self)
+    return self.gen, self.param, self.state
+end
+
+local iter = function(obj, param, state)
+  return wrap(rawiter(obj, param, state))
+end
+
+exports.iter = iter
 exports.wrap = wrap
+exports.unwrap = unwrap
 
 function Iterator:for_each(fn)
   local state = self.state
@@ -333,7 +337,7 @@ local chain = function(...)
   local i, gen_x, param_x, state_x
   for i = 1, n, 1 do
     local elem = select(i, ...)
-    gen_x, param_x, state_x = iter(elem)
+    gen_x, param_x, state_x = unwrap(elem)
     param[3 * i - 2] = gen_x
     param[3 * i - 1] = param_x
     param[3 * i] = state_x
