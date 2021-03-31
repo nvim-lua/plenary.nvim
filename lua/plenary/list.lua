@@ -67,4 +67,8 @@ function List:count(e)
   return n
 end
 
+function List:equal(other)
+  return self:__eq(other)
+end
+
 return List
