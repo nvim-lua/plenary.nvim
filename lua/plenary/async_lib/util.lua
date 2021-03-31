@@ -65,13 +65,6 @@ M.yield_now = async(function()
   await(M.id())
 end)
 
----forces a future to be runned
-M.runned = function(future)
-  return function(step)
-    a.run(future, step)
-  end
-end
-
 local Condvar = {}
 Condvar.__index = Condvar
 
