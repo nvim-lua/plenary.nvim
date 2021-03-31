@@ -9,7 +9,7 @@ local exports = {}
 local Iterator = {}
 Iterator.__index = Iterator
 
-function Iterator:_call(param, state)
+function Iterator:__call(param, state)
   return self.gen(param, state)
 end
 
