@@ -1,13 +1,13 @@
 -- vim:sw=2
 local List = {}
 
-List.__index = List
-
 setmetatable(List, List)
+
+List.__index = List
 
 function List:__call(tbl)
   if type(tbl) == 'table' then return setmetatable(tbl, List) end
-  return nil
+  error 'List constructor must be called with table argument'
 end
 
 function List:__tostring()
@@ -16,8 +16,8 @@ function List:__tostring()
   for _, v in ipairs(self) do
     local repr = tostring(v)
     if type(v) == 'string' then repr = '"' .. repr .. '"' end
-    table.insert(result, repr)
-    table.insert(result, ', ')
+    result[#result + 1] = repr
+    result[#result + 1] = ', '
   end
   result[#result] = ']'
   return table.concat(result)
@@ -37,8 +37,8 @@ end
 
 function List:__concat(other)
   local result = List {}
-  for _, v in ipairs(self) do table.insert(result, v) end
-  for _, v in ipairs(other) do table.insert(result, v) end
+  for _, v in ipairs(self) do result[#result + 1] = v end
+  for _, v in ipairs(other) do result[#result + 1] = v end
   return result
 end
 
@@ -70,5 +70,9 @@ end
 function List:equal(other)
   return self:__eq(other)
 end
+
+local l = List {1, 2, 3}
+
+print(l, #l, vim.tbl_islist(l))
 
 return List
