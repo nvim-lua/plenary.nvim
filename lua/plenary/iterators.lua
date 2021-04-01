@@ -9,6 +9,7 @@ local exports = {}
 local Iterator = {}
 Iterator.__index = Iterator
 
+---Makes a for loop work
 function Iterator:__call(param, state)
   return self.gen(param, state)
 end
@@ -131,11 +132,16 @@ function Iterator:for_each(fn)
 end
 
 function Iterator:stateful()
-  return co.wrap(function()
-    self:for_each(function(...)
-      co.yield(...)
-    end)
-  end)
+  local gen, param, state = self.gen, self.param, self.state
+
+  local function return_and_set_state(...)
+    state = ...
+    return ...
+  end
+
+  return function()
+    return return_and_set_state(gen(param, state))
+  end
 end
 --------------------------------------------------------------------------------
 -- Generators
