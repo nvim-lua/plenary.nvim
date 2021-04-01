@@ -1,3 +1,8 @@
+---@brief [[
+--- NOTE: This API is still under construction.
+---         It may change in the future :)
+---@brief ]]
+
 local exports = require('plenary.async_lib.async')
 exports.uv = require('plenary.async_lib.uv_async')
 exports.util = require('plenary.async_lib.util')
