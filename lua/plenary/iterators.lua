@@ -124,8 +124,7 @@ exports.wrap = wrap
 exports.unwrap = unwrap
 
 function Iterator:for_each(fn)
-  local state = self.state
-  local param = self.param
+  local param, state = self.param, self.state
   repeat
     state = call_if_not_empty(fn, self.gen(param, state))
   until state == nil
@@ -134,13 +133,12 @@ end
 function Iterator:stateful()
   local gen, param, state = self.gen, self.param, self.state
 
-  local function return_and_set_state(...)
+  local function set_state(...)
     state = ...
-    return ...
   end
 
   return function()
-    return return_and_set_state(gen(param, state))
+    return call_if_not_empty(set_state, gen(param, state))
   end
 end
 --------------------------------------------------------------------------------
@@ -335,11 +333,13 @@ end
 
 local chain = function(...)
   local n = numargs(...)
+
   if n == 0 then
     return wrap(nil_gen, nil, nil)
   end
 
   local param = { [3 * n] = 0 }
+
   local i, gen_x, param_x, state_x
   for i = 1, n, 1 do
     local elem = select(i, ...)
