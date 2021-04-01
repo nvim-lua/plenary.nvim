@@ -395,7 +395,7 @@ describe('Path', function()
   end)
 
   describe('parents', function()
-    it('should extract the ancestors of the path', function()
+    pending('should extract the ancestors of the path', function()
       local p = Path:new(vim.loop.cwd())
       assert(vim.tbl_islist(p.parents))
       for _, parent in pairs(p.parents) do

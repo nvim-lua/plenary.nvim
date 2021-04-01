@@ -566,16 +566,17 @@ end
 PathProperties["anchor"] = function(self)
 end
 
-PathProperties["parents"] = function(self)
-  local results = {}
-  local cur = self:absolute()
-  repeat
-    cur = _get_parent(cur)
-    table.insert(results, cur)
-  until not cur
-  table.insert(results, path.root(self:absolute()))
-  return results
-end
+-- TODO: Make a breaking change.
+-- PathProperties["parents"] = function(self)
+--   local results = {}
+--   local cur = self:absolute()
+--   repeat
+--     cur = _get_parent(cur)
+--     table.insert(results, cur)
+--   until not cur
+--   table.insert(results, path.root(self:absolute()))
+--   return results
+-- end
 
 -- TODO: Enable this.
 -- PathProperties["parent"] = function(self)
