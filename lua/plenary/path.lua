@@ -563,7 +563,9 @@ PathProperties["root"] = function(self)
 end
 
 -- TODO: This is different than root, from python perspective.
+--          At least on windows...?
 PathProperties["anchor"] = function(self)
+  return self.root
 end
 
 -- TODO: Make a breaking change.
