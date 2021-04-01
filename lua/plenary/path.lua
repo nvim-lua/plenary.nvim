@@ -7,6 +7,11 @@ local uv = vim.loop
 
 local F = require('plenary.functional')
 
+-- S_IFCHR  = 0o020000  # character device
+-- S_IFBLK  = 0o060000  # block device
+-- S_IFIFO  = 0o010000  # fifo (named pipe)
+-- S_IFLNK  = 0o120000  # symbolic link
+-- S_IFSOCK = 0o140000  # socket file
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -17,6 +22,8 @@ local S_IF = {
 local path = {}
 path.home = vim.loop.os_homedir()
 
+-- Note: path.sep must be evaluated first, because we use it in other places.
+--          So if we don't evaluate it first, things will be weird.
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
@@ -40,6 +47,13 @@ path.root = (function()
   end
 end)()
 
+local function is_root(pathname)
+  if path.sep == '\\' then
+    return string.match(pathname, '^[A-Z]:\\?$')
+  end
+  return pathname == '/'
+end
+
 path.S_IF = S_IF
 
 local band = function(reg, value)
@@ -48,13 +62,6 @@ end
 
 local concat_paths = function(...)
   return table.concat({...}, path.sep)
-end
-
-local function is_root(pathname)
-  if path.sep == '\\' then
-    return string.match(pathname, '^[A-Z]:\\?$')
-  end
-  return pathname == '/'
 end
 
 local _split_by_separator = (function()
@@ -92,7 +99,6 @@ local function _normalize_path(filename)
   return out_file
 end
 
-
 local clean = function(pathname)
   -- Remove double path seps, it's annoying
   pathname = pathname:gsub(path.sep .. path.sep, path.sep)
@@ -104,61 +110,26 @@ local clean = function(pathname)
   return pathname
 end
 
--- S_IFCHR  = 0o020000  # character device
--- S_IFBLK  = 0o060000  # block device
--- S_IFIFO  = 0o010000  # fifo (named pipe)
--- S_IFLNK  = 0o120000  # symbolic link
--- S_IFSOCK = 0o140000  # socket file
-
-
-local Path = {
-  path = path,
-}
-
-local check_self = function(self)
-  if type(self) == 'string' then
-    return Path:new(self)
-  end
-
-  return self
-end
-
 
 ---@class Path
----@field filename string: The name of the file
+--
+--- These are set at start time
+---@field _absolute string: The cached absolute value of the string
+---@field _cwd string: The cwd at the time of creating the string
+---@field _sep string: The separator value for the Path
+--
+--- These are properties defined by PathProperties
+---@field root string: A string representing the (local or global) root, if any.
+---@field parents string[]: A sequence providing access to the logical ancestors of the path.
+---@field name string: A string representing the final path component, excluding the dirve and root, if any.
+---@field suffix string: The file extension of the final component, if any.
+---@field stem string: The final path component, without its suffix.
+local Path = {}
 
-Path.__index = Path
-
--- TODO: Could use this to not have to call new... not sure
--- Path.__call = Path:new
-
---- Fancy "/" usage
----@param self Path: the path
-Path.__div = function(self, other)
-  assert(Path.is_path(self))
-  assert(Path.is_path(other) or type(other) == 'string')
-
-  return self:joinpath(other)
-end
-
---- Concat
----@param self Path: the path
-Path.__tostring = function(self)
-  return self.filename
-end
-
---- Concat
----@param self Path: the path
-Path.__concat = function(self, other)
-  print(self, other)
-  return self.filename .. other
-end
-
-Path.is_path = function(a)
-  return getmetatable(a) == Path
-end
+Path.path = path
 
 --- Path object
+---@return Path
 function Path:new(...)
   local args = {...}
 
@@ -215,11 +186,66 @@ function Path:new(...)
     -- Cached values
     _absolute = uv.fs_realpath(path_string),
     _cwd = uv.fs_realpath('.'),
+    _props = {},
   }
 
   setmetatable(obj, Path)
 
   return obj
+end
+
+
+local check_self = function(self)
+  if type(self) == 'string' then
+    return Path:new(self)
+  end
+
+  return self
+end
+
+local PathProperties = {}
+
+Path.__index = function(t, k)
+  -- Lazily evaluate properties as we use them.
+  --    Since they cannot change per execution.
+  if PathProperties[k] then
+    if not t._props[k] then
+      t._props[k] = PathProperties[k](t)
+    end
+
+    return t._props[k]
+  end
+
+  return rawget(Path, k)
+end
+
+-- TODO: Could use this to not have to call new... not sure
+-- Path.__call = Path:new
+
+--- Fancy "/" usage
+---@param self Path: the path
+Path.__div = function(self, other)
+  assert(Path.is_path(self))
+  assert(Path.is_path(other) or type(other) == 'string')
+
+  return self:joinpath(other)
+end
+
+--- Concat
+---@param self Path: the path
+Path.__tostring = function(self)
+  return self.filename
+end
+
+--- Concat
+---@param self Path: the path
+Path.__concat = function(self, other)
+  print(self, other)
+  return self.filename .. other
+end
+
+Path.is_path = function(a)
+  return getmetatable(a) == Path
 end
 
 function Path:_fs_filename()
@@ -242,12 +268,7 @@ function Path:_st_mode()
   return self:_stat().mode or 0
 end
 
-
---- Join several paths together
-function Path:joinpath(...)
-  return Path:new(self.filename, ...)
-end
-
+--- Get the absolute path
 function Path:absolute()
   if self:is_absolute() then
     return _normalize_path(self.filename)
@@ -516,12 +537,6 @@ function Path:is_file()
   return band(S_IF.REG, self:_st_mode())
 end
 
-function Path:is_absolute()
-  if self._sep == '\\' then
-    return string.match(self.filename, '^[A-Z]:\\.*$')
-  end
-  return string.sub(self.filename, 1, 1) == self._sep
-end
 -- }}}
 
 function Path:_split()
@@ -541,7 +556,17 @@ end
 
 -- https://docs.python.org/3/library/pathlib.html#methods-and-properties {{{
 
-function Path:parents()
+-- TODO: path.drive
+
+PathProperties["root"] = function(self)
+  return path.root(self:absolute())
+end
+
+-- TODO: This is different than root, from python perspective.
+PathProperties["anchor"] = function(self)
+end
+
+PathProperties["parents"] = function(self)
   local results = {}
   local cur = self:absolute()
   repeat
@@ -552,13 +577,64 @@ function Path:parents()
   return results
 end
 
--- TODO:
---  Maybe I can use libuv for this?
-function Path:open()
+-- TODO: Enable this.
+-- PathProperties["parent"] = function(self)
+-- end
+
+PathProperties["name"] = function(self)
+  return self:absolute():match(string.format('%s([^%s]+)$', path.sep, path.sep)) or ''
 end
 
-function Path:close()
+PathProperties["suffix"] = function(self)
+  return self.filename:match('%.[^.]*$') or ''
 end
+
+-- TODO: path.suffixes
+
+PathProperties["stem"] = function(self)
+  local name = self.name
+  local start = name:find("%.[^.]*$")
+
+  if start then
+    return name:sub(1, start - 1)
+  else
+    return name
+  end
+end
+
+-- TODO: as_posix()
+
+function Path:as_uri()
+  return vim.uri_from_fname(self:absolute())
+end
+
+function Path:is_absolute()
+  if self._sep == '\\' then
+    return string.match(self.filename, '^[A-Z]:\\.*$')
+  end
+  return string.sub(self.filename, 1, 1) == self._sep
+end
+
+-- TODO: is_relative_to()
+-- TODO: is_reserved()
+
+--- Join several paths together
+function Path:joinpath(...)
+  return Path:new(self.filename, ...)
+end
+
+-- TODO: match()
+-- TODO: relative_to()
+-- TODO: with_name()
+-- TODO: with_stem()
+-- TODO: with_suffix()
+
+-- }}}
+
+-- TODO:
+--  Maybe I can use libuv for this?
+-- function Path:open() end
+-- function Path:close() end
 
 function Path:write(txt, flag, mode)
   assert(flag, [[Path:write_text requires a flag! For example: 'w' or 'a']])

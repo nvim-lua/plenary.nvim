@@ -1,17 +1,19 @@
 local Path = require("plenary.path")
 local path = Path.path
 
+local eq = assert.are.same
+
 describe('Path', function()
   it('should find valid files', function()
     local p = Path:new("README.md")
     assert(p.filename == "README.md", p.filename)
-    assert.are.same(p.filename, "README.md")
+    eq(p.filename, "README.md")
   end)
 
   describe('absolute', function()
     it('.absolute()', function()
       local p = Path:new { "README.md" , sep = '/'}
-      assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
+      eq(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
     end)
 
     it('can determine absolute paths', function()
@@ -27,24 +29,24 @@ describe('Path', function()
 
     it('will normalize the path', function()
       local p = Path:new { "lua", "..", "README.md" , sep = '/'}
-      assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
+      eq(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
     end)
   end)
 
   it('can join paths by constructor or join path', function()
-    assert.are.same(Path:new("lua", "plenary"), Path:new("lua"):joinpath("plenary"))
+    eq(Path:new("lua", "plenary"), Path:new("lua"):joinpath("plenary"))
   end)
 
   it('can join paths with /', function()
-    assert.are.same(Path:new("lua", "plenary"), Path:new("lua") / "plenary")
+    eq(Path:new("lua", "plenary"), Path:new("lua") / "plenary")
   end)
 
   it('can join paths with paths', function()
-    assert.are.same(Path:new("lua", "plenary"), Path:new("lua", Path:new("plenary")))
+    eq(Path:new("lua", "plenary"), Path:new("lua", Path:new("plenary")))
   end)
 
   it('inserts slashes', function()
-    assert.are.same(
+    eq(
     'lua' .. path.sep .. 'plenary',
       Path:new("lua", "plenary").filename
     )
@@ -52,39 +54,39 @@ describe('Path', function()
 
   describe('.exists()', function()
     it('finds files that exist', function()
-      assert.are.same(true, Path:new("README.md"):exists())
+      eq(true, Path:new("README.md"):exists())
     end)
 
     it('returns false for files that do not exist', function()
-      assert.are.same(false, Path:new("asdf.md"):exists())
+      eq(false, Path:new("asdf.md"):exists())
     end)
   end)
 
   describe('.is_dir()', function()
     it('should find directories that exist', function()
-      assert.are.same(true, Path:new("lua"):is_dir())
+      eq(true, Path:new("lua"):is_dir())
     end)
 
     it('should return false when the directory does not exist', function()
-      assert.are.same(false, Path:new("asdf"):is_dir())
+      eq(false, Path:new("asdf"):is_dir())
     end)
 
     it('should not show files as directories', function()
-      assert.are.same(false, Path:new("README.md"):is_dir())
+      eq(false, Path:new("README.md"):is_dir())
     end)
   end)
 
   describe('.is_file()', function()
     it('should not allow directories', function()
-      assert.are.same(true, not Path:new("lua"):is_file())
+      eq(true, not Path:new("lua"):is_file())
     end)
 
     it('should return false when the file does not exist', function()
-      assert.are.same(true, not Path:new("asdf"):is_file())
+      eq(true, not Path:new("asdf"):is_file())
     end)
 
     it('should show files as file', function()
-      assert.are.same(true, Path:new("README.md"):is_file())
+      eq(true, Path:new("README.md"):is_file())
     end)
   end)
 
@@ -94,7 +96,14 @@ describe('Path', function()
     local with_colon = Path:new('lua')
     local no_colon = Path.new('lua')
 
-    assert.are.same(with_colon, no_colon)
+    eq(with_colon, no_colon)
+    end)
+  end)
+
+  describe('.root', function()
+    it('accesses root without calling the function', function()
+      local p = Path:new { 'lua', 'plenary', 'path.lua' }
+      eq(path.sep, p.root)
     end)
   end)
 
@@ -103,7 +112,7 @@ describe('Path', function()
       local p = Path:new { 'lua', 'plenary', 'path.lua' }
       local absolute = vim.loop.cwd() .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative()
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take absolute paths and make them relative to a given path', function()
@@ -112,14 +121,14 @@ describe('Path', function()
       local p = Path:new { 'aoeu', 'agen.lua'}
       local absolute = r.filename .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename)
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take double separator absolute paths and make them relative to the cwd', function()
       local p = Path:new { 'lua', 'plenary', 'path.lua' }
       local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative()
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take double separator absolute paths and make them relative to a given path', function()
@@ -128,7 +137,7 @@ describe('Path', function()
       local p = Path:new { 'aoeu', 'agen.lua'}
       local absolute = r.filename .. path.sep .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename)
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take absolute paths and make them relative to a given path with trailing separator', function()
@@ -137,7 +146,7 @@ describe('Path', function()
       local p = Path:new { 'aoeu', 'agen.lua'}
       local absolute = r.filename .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take absolute paths and make them relative to the root directory', function()
@@ -145,14 +154,14 @@ describe('Path', function()
       local p = Path:new { 'home', 'prime', 'aoeu', 'agen.lua'}
       local absolute = root .. p.filename
       local relative = Path:new(absolute):make_relative(root)
-      assert.are.same(relative, p.filename)
+      eq(relative, p.filename)
     end)
 
     it('can take absolute paths and make them relative to themselves', function()
       local root = path.sep == "\\" and "c:\\" or "/"
       local p = Path:new { root, 'home', 'prime', 'aoeu', 'agen.lua'}
       local relative = Path:new(p.filename):make_relative(p.filename)
-      assert.are.same(relative, ".")
+      eq(relative, ".")
     end)
   end)
 
@@ -160,20 +169,20 @@ describe('Path', function()
     it('can take paths with double separators change them to single separators', function()
       local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, '/lua/plenary/path.lua')
+      eq(final, '/lua/plenary/path.lua')
     end)
     -- this may be redundant since normalize just calls make_relative which is tested above
     it('can take absolute paths with double seps'
       .. 'and make them relative with single seps', function()
       local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, '/lua/plenary/path.lua')
+      eq(final, '/lua/plenary/path.lua')
     end)
 
     it('can remove the .. in paths', function()
       local orig = '/lua//plenary/path.lua/foo/bar/../..'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, '/lua/plenary/path.lua')
+      eq(final, '/lua/plenary/path.lua')
     end)
   end)
 
@@ -181,7 +190,7 @@ describe('Path', function()
     it('can shorten a path', function()
       local long_path = '/this/is/a/long/path'
       local short_path = Path:new(long_path):shorten()
-      assert.are.same(short_path, '/t/i/a/l/path')
+      eq(short_path, '/t/i/a/l/path')
     end)
   end)
 
@@ -189,17 +198,17 @@ describe('Path', function()
     it('can shorten a path components to a given length', function()
       local long_path = '/this/is/a/long/path'
       local short_path = Path:new(long_path):shorten(2)
-      assert.are.same(short_path, '/th/is/a/lo/path')
+      eq(short_path, '/th/is/a/lo/path')
 
       -- without the leading /
       long_path = 'this/is/a/long/path'
       short_path = Path:new(long_path):shorten(3)
-      assert.are.same(short_path, 'thi/is/a/lon/path')
+      eq(short_path, 'thi/is/a/lon/path')
 
       -- where len is greater than the length of the final component
       long_path = 'this/is/an/extremely/long/path'
       short_path = Path:new(long_path):shorten(5)
-      assert.are.same(short_path, 'this/is/an/extre/long/path')
+      eq(short_path, 'this/is/an/extre/long/path')
     end)
   end)
 
@@ -262,7 +271,7 @@ describe('Path', function()
       print(p:_stat().mtime.sec > last_mtime)
       assert(p:exists())
 
-      assert.are.same(lines, p:readlines())
+      eq(lines, p:readlines())
     end)
 
     it('does not create dirs if nested in none existing dirs and parents not set', function()
@@ -297,7 +306,7 @@ describe('Path', function()
       assert(p:exists())
 
       assert(pcall(p.rename, p, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same("not_a_random_filename.lua", p.filename)
+      eq("not_a_random_filename.lua", p.filename)
 
       p:rm()
     end)
@@ -309,7 +318,7 @@ describe('Path', function()
 
       assert(not pcall(p.rename, p, { new_name = "" }))
       assert(not pcall(p.rename, p))
-      assert.are.same("some_random_filename.lua", p.filename)
+      eq("some_random_filename.lua", p.filename)
 
       p:rm()
     end)
@@ -320,7 +329,7 @@ describe('Path', function()
       assert(p:exists())
 
       assert(pcall(p.rename, p, { new_name = "../some_random_filename.lua" }))
-      assert.are.same(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
+      eq(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
 
       p:rm()
     end)
@@ -334,7 +343,7 @@ describe('Path', function()
       assert(p2:exists())
 
       assert(not pcall(p1.rename, p1, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same(p1.filename, "a_random_filename.lua")
+      eq(p1.filename, "a_random_filename.lua")
 
       p1:rm()
       p2:rm()
@@ -349,8 +358,8 @@ describe('Path', function()
       assert(p1:exists())
 
       assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs" }))
-      assert.are.same(p1.filename, "a_random_filename.rs")
-      assert.are.same(p2.filename, "not_a_random_filename.rs")
+      eq(p1.filename, "a_random_filename.rs")
+      eq(p2.filename, "not_a_random_filename.rs")
 
       p1:rm()
       p2:rm()
@@ -377,8 +386,8 @@ describe('Path', function()
       assert(p2:exists())
 
       assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs" }))
-      assert.are.same(p1.filename, "a_random_filename.rs")
-      assert.are.same(p2.filename, "not_a_random_filename.rs")
+      eq(p1.filename, "a_random_filename.rs")
+      eq(p2.filename, "not_a_random_filename.rs")
 
       p1:rm()
       p2:rm()
@@ -388,15 +397,15 @@ describe('Path', function()
   describe('parents', function()
     it('should extract the ancestors of the path', function()
       local p = Path:new(vim.loop.cwd())
-      local parents = p:parents()
-      assert(vim.tbl_islist(parents))
-      for _, parent in pairs(parents) do
-        assert.are.same(type(parent), 'string')
+      assert(vim.tbl_islist(p.parents))
+      for _, parent in pairs(p.parents) do
+        eq(type(parent), 'string')
       end
     end)
+
     it('should return itself if it corresponds to path.root', function()
       local p = Path:new(Path.path.root(vim.loop.cwd()))
-      assert.are.same(p:parent(), p.filename)
+      eq(p:parent(), p.filename)
     end)
   end)
 
@@ -414,14 +423,14 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:]]
-      assert.are.same(should, data)
+      eq(should, data)
     end)
 
     it('should read the first line of file', function()
       local p = Path:new('LICENSE')
       local data = p:head(1)
       local should = [[MIT License]]
-      assert.are.same(should, data)
+      eq(should, data)
     end)
 
     it('head should max read whole file', function()
@@ -448,7 +457,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      eq(should, data)
     end)
 
     it('should read tail of file', function()
@@ -464,14 +473,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      eq(should, data)
     end)
 
     it('should read the last line of file', function()
       local p = Path:new('LICENSE')
       local data = p:tail(1)
       local should = [[SOFTWARE.]]
-      assert.are.same(should, data)
+      eq(should, data)
     end)
 
     it('tail should max read whole file', function()
@@ -498,7 +507,28 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      eq(should, data)
+    end)
+  end)
+
+  describe('properties', function()
+    it('has .name', function()
+      -- TODO?
+      -- eq('', Path:new('lua/').name)
+
+      eq('LICENSE', Path:new('LICENSE').name)
+      eq('setup.py', Path:new({ 'example', 'setup.py' }).name)
+      eq('setup.py', Path:new({ 'more', 'nested', 'example', 'setup.py' }).name)
+    end)
+
+    it('has .suffix', function()
+      eq('', Path:new('LICENSE').suffix)
+    end)
+
+    it('has .stem', function()
+      eq('library.tar', Path:new('my/library.tar.gz').stem)
+      eq('library', Path:new('my/library.tar').stem)
+      eq('library', Path:new('my/library').stem)
     end)
   end)
 end)
