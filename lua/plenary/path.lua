@@ -32,6 +32,16 @@ path.sep = (function()
   end
 end)()
 
+path.root = (function()
+  if path.sep == '/' then return function() return '/' end
+  else
+    return function(base)
+      base = base or vim.loop.cwd()
+      return base:sub(1, 1) .. ':\\'
+    end
+  end
+end)()
+
 path.S_IF = S_IF
 
 local band = function(reg, value)
@@ -370,7 +380,7 @@ function Path:touch(opts)
   end
 
   if parents then
-    Path:new(self:parents()):mkdir({ parents = true })
+    Path:new(self:parent()):mkdir({ parents = true })
   end
 
   local fd = uv.fs_open(self:_fs_filename(), "w", mode)
@@ -428,8 +438,26 @@ function Path:_split()
   return vim.split(self:absolute(), self._sep)
 end
 
+local _get_parent = (function()
+  local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
+  return function(abs_path)
+    return abs_path:match(formatted)
+  end
+end)()
+
+function Path:parent()
+  return _get_parent(self:absolute()) or path.root(self:absolute())
+end
+
 function Path:parents()
-  return self:absolute():match(string.format('^(.+)%s[^%s]+', self._sep, self._sep))
+  local results = {}
+  local cur = self:absolute()
+  repeat
+    cur = _get_parent(cur)
+    table.insert(results, cur)
+  until not cur
+  table.insert(results, path.root(self:absolute()))
+  return results
 end
 
 function Path:is_file()
