@@ -123,11 +123,17 @@ local check_self = function(self)
   return self
 end
 
+
+---@class Path
+---@field filename string: The name of the file
+
 Path.__index = Path
 
 -- TODO: Could use this to not have to call new... not sure
 -- Path.__call = Path:new
 
+--- Fancy "/" usage
+---@param self Path: the path
 Path.__div = function(self, other)
   assert(Path.is_path(self))
   assert(Path.is_path(other) or type(other) == 'string')
@@ -135,11 +141,14 @@ Path.__div = function(self, other)
   return self:joinpath(other)
 end
 
+--- Concat
+---@param self Path: the path
 Path.__tostring = function(self)
   return self.filename
 end
 
--- TODO: See where we concat the table, and maybe we could make this work.
+--- Concat
+---@param self Path: the path
 Path.__concat = function(self, other)
   print(self, other)
   return self.filename .. other
@@ -149,7 +158,7 @@ Path.is_path = function(a)
   return getmetatable(a) == Path
 end
 
-
+--- Path object
 function Path:new(...)
   local args = {...}
 
@@ -234,6 +243,7 @@ function Path:_st_mode()
 end
 
 
+--- Join several paths together
 function Path:joinpath(...)
   return Path:new(self.filename, ...)
 end
@@ -529,6 +539,8 @@ function Path:parent()
   return _get_parent(self:absolute()) or path.root(self:absolute())
 end
 
+-- https://docs.python.org/3/library/pathlib.html#methods-and-properties {{{
+
 function Path:parents()
   local results = {}
   local cur = self:absolute()
@@ -538,13 +550,6 @@ function Path:parents()
   until not cur
   table.insert(results, path.root(self:absolute()))
   return results
-end
-
-function Path:is_file()
-  local stat = uv.fs_stat(self:expand())
-  if stat then
-    return stat.type == "file" and true or nil
-  end
 end
 
 -- TODO:
