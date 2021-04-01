@@ -128,6 +128,9 @@ for the difficulty of getting them setup, particularly on other platforms or in 
 Please take a look at the new APIs and make any issues for things that aren't clear. I am happy to fix them
 and make it work well :)
 
+OTHER OTHER NOTE:
+Take a look at some test examples [here](TESTS_README.md).
+
 #### Colors
 To have "Success" in green and "Failed" in red, you need [nvim-terminal.lua](https://github.com/norcalli/nvim-terminal.lua).
 In order for it to work, make sure to run the setup function in your config.
