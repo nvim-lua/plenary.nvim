@@ -185,9 +185,68 @@ local range = function(start, stop, step)
     return wrap(range_rev_gen, {stop, step}, start - step)
   end
 end
-
 exports.range = range
 
+local duplicate_table_gen = function(param_x, state_x)
+  return state_x + 1, unpack(param_x)
+end
+
+local duplicate_fun_gen = function(param_x, state_x)
+  return state_x + 1, param_x(state_x)
+end
+
+local duplicate_gen = function(param_x, state_x)
+  return state_x + 1, param_x
+end
+
+local duplicate = function(...)
+  if select('#', ...) <= 1 then
+    return wrap(duplicate_gen, select(1, ...), 0)
+  else
+    return wrap(duplicate_table_gen, {...}, 0)
+  end
+end
+exports.duplicate = duplicate
+
+local tabulate = function(fun)
+  assert(type(fun) == "function")
+  return wrap(duplicate_fun_gen, fun, 0)
+end
+exports.tabulate = tabulate
+
+local zeros = function()
+  return wrap(duplicate_gen, 0, 0)
+end
+exports.zeros = zeros
+
+local ones = function()
+  return wrap(duplicate_gen, 1, 0)
+end
+exports.ones = ones
+
+local rands_gen = function(param_x, _state_x)
+  return 0, math.random(param_x[1], param_x[2])
+end
+
+local rands_nil_gen = function(_param_x, _state_x)
+  return 0, math.random()
+end
+
+local rands = function(n, m)
+  if n == nil and m == nil then
+    return wrap(rands_nil_gen, 0, 0)
+  end
+  assert(type(n) == "number", "invalid first arg to rands")
+  if m == nil then
+    m = n
+    n = 0
+  else
+    assert(type(m) == "number", "invalid second arg to rands")
+  end
+  assert(n < m, "empty interval")
+  return wrap(rands_gen, {n, m - 1}, 0)
+end
+exports.rands = rands
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
@@ -270,17 +329,17 @@ function Iterator:all(fn)
 end
 
 function Iterator:find(val_or_fn)
-  local fn
-  if type(val_or_fn) ~= "function" then
-    fn = function(...)
-      return ... == val_or_fn
-    end
-  else
-    fn = val_or_fn
-  end
-
   local gen, param, state = self.gen, self.param, self.state
-  return return_if_not_empty(filter_detect(fn, gen, param, gen(param, state)))
+  if type(val_or_fn) == "function" then
+    return return_if_not_empty(filter_detect(val_or_fn, gen, param, gen(param, state)))
+  else
+    for _, r in gen, param, state do
+      if r == val_or_fn then
+        return r
+      end
+    end
+    return nil
+  end
 end
 
 function Iterator:tolist()
@@ -314,12 +373,11 @@ end
 local chain_gen_r1
 local chain_gen_r2 = function(param, state, state_x, ...)
   if state_x == nil then
-    local i = state[1]
-    i = i + 1
+    local i = state[1] + 1
     if param[3 * i - 1] == nil then
       return nil
     end
-    local state_x = param[3 * i]
+    state_x = param[3 * i]
     return chain_gen_r1(param, {i, state_x})
   end
   return {state[1], state_x}, ...
@@ -328,7 +386,7 @@ end
 chain_gen_r1 = function(param, state)
   local i, state_x = state[1], state[2]
   local gen_x, param_x = param[3 * i - 2], param[3 * i - 1]
-  return chain_gen_r2(param, state, gen_x(param_x, state[2]))
+  return chain_gen_r2(param, state, gen_x(param_x, state_x))
 end
 
 local chain = function(...)
