@@ -71,8 +71,8 @@ function List:equal(other)
   return self:__eq(other)
 end
 
-local l = List {1, 2, 3}
-
-print(l, #l, vim.tbl_islist(l))
+function List:slice(a, b)
+  return List(vim.list_slice(self, a, b))
+end
 
 return List
