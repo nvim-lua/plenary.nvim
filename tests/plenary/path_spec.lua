@@ -300,6 +300,21 @@ describe('Path', function()
     end)
   end)
 
+  describe('parents', function()
+    it('should extract the ancestors of the path', function()
+      local p = Path:new(vim.loop.cwd())
+      local parents = p:parents()
+      assert(vim.tbl_islist(parents))
+      for _, parent in pairs(parents) do
+        assert.are.same(type(parent), 'string')
+      end
+    end)
+    it('should return itself if it corresponds to path.root', function()
+      local p = Path:new(Path.path.root(vim.loop.cwd()))
+      assert.are.same(p:parent(), p.filename)
+    end)
+  end)
+
   describe('read parts', function()
     it('should read head of file', function()
       local p = Path:new('LICENSE')
