@@ -18,7 +18,8 @@ local default_config = {
   plugin = 'plenary',
 
   -- Should print the output to neovim while running
-  use_console = true,
+  -- values: 'sync','async',false
+  use_console = 'async',
 
   -- Should highlighting be used in console (using echohl)
   highlights = true,
@@ -103,8 +104,8 @@ log.new = function(config, standalone)
 
     -- Output to console
     if config.use_console then
-      vim.schedule(function()
-        local console_string = string.format(
+      local log_to_console = function()
+      local console_string = string.format(
           "[%-6s%s] %s: %s",
           nameupper,
           os.date("%H:%M:%S"),
@@ -129,7 +130,12 @@ log.new = function(config, standalone)
         if config.highlights and level_config.hl then
           vim.cmd "echohl NONE"
         end
-      end)
+      end
+      if config.use_console == 'sync' then
+        log_to_console()
+      else
+        vim.schedule(log_to_console)
+      end
     end
 
     -- Output to log file
