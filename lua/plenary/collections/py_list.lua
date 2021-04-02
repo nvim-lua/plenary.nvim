@@ -115,4 +115,14 @@ function List:extend(other)
   end
 end
 
+function List:reverse()
+  local n = #self
+  local i = 1
+  while i < n do
+    self[i], self[n] = self[n], self[i]
+    i = i + 1
+    n = n - 1
+  end
+end
+
 return List
