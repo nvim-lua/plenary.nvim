@@ -1,4 +1,4 @@
-local List = require("plenary.py_list")
+local List = require("plenary.collections.py_list")
 
 describe('List', function()
   it('should be detected as a list by vim.tbl_islist()', function()
