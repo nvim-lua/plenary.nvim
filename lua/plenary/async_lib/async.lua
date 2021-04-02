@@ -10,7 +10,7 @@ local function callback_or_next(step, thread, callback, ...)
   local stat = f.first(...)
 
   if not stat then
-    error(string.format("The coroutine failed with this message: %s", ret[1]))
+    error(string.format("The coroutine failed with this message: %s", f.second(...)))
   end
 
   if co.status(thread) == "dead" then
