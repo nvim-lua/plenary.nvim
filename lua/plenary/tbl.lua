@@ -16,4 +16,12 @@ function tbl.apply_defaults(original, defaults)
   return original
 end
 
+function tbl.copy_one_level(tbl)
+  local res = {}
+  for k, v in pairs(tbl) do
+    res[k] = v
+  end
+  return res
+end
+
 return tbl
