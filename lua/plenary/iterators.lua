@@ -142,15 +142,11 @@ function Iterator:for_each(fn)
 end
 
 function Iterator:stateful()
-  local gen, param, state = self.gen, self.param, self.state
-
-  local function set_state(...)
-    state = ...
-  end
-
-  return function()
-    return call_if_not_empty(set_state, gen(param, state))
-  end
+  return co.wrap(function()
+    self:for_each(function(...)
+      co.yield(...)
+    end)
+  end)
 end
 
 function Iterator:next()
@@ -274,35 +270,38 @@ function Iterator:map(fn)
   return wrap(map_gen, {self.gen, self.param, fn}, self.state)
 end
 
-local flatten_gen1 = function(param, state, state_x, ...)
-  if state_x == nil then
-    return nil
+local flatten_gen1
+do
+  local it = function(new_iter, state_x, ...)
+    return {new_iter.gen, new_iter.param, state_x}, ...
   end
 
-  local first_arg = f.first(...)
+  flatten_gen1 = function(param, state, state_x, ...)
+    if state_x == nil then
+      return nil
+    end
 
-  -- experimental part
-  if getmetatable(first_arg) == Iterator then
-    print('found metatable')
-    local new_iter = (first_arg .. wrap(state[1], param, state_x)):flatten()
-    return (function(state_x, ...)
-      -- dump('state', state_x)
-      -- dump('got', ...)
-      return {new_iter, state_x}, ...
-    end)(new_iter.gen(new_iter.param, new_iter.state))
-    -- return {state[1], state_x}, ...
+    local first_arg = f.first(...)
+
+    -- experimental part
+    if getmetatable(first_arg) == Iterator then
+      -- attach the iterator to the rest
+      local new_iter = first_arg:chain(wrap(state[1], param, state_x)):flatten()
+      -- then advance
+      return it(new_iter, new_iter:next())
+    end
+
+    return {state[1], state[2], state_x}, ...
   end
-
-  return {state[1], state_x}, ...
 end
 
-local flatten_gen = function(param, state)
-  local gen_x, state_x = state[1], state[2]
-  return flatten_gen1(param, state, gen_x(param, state_x))
+local flatten_gen = function(_, state)
+  local gen_x, param_x, state_x = state[1], state[2], state[3]
+  return flatten_gen1(param_x, state, gen_x(param_x, state_x))
 end
 
 function Iterator:flatten()
-  return wrap(flatten_gen, self.param, {self.gen, self.state})
+  return wrap(flatten_gen, false, {self.gen, self.param, self.state})
 end
 
 --------------------------------------------------------------------------------
