@@ -63,4 +63,13 @@ describe('iterators', function()
     assert(not iter())
     assert(not iter())
   end)
+
+  it('should be able to flatten', function()
+    -- local iter = i.range(3):flatten()
+    -- iter:for_each(function(x) print(x) end)
+
+    local iter = i.range(3):map(function(_) return i.iter { 5, 7, 9 } end):flatten()
+    eq(#iter:tolist(), 6)
+    -- iter:for_each(function(x) print(x) end)
+  end)
 end)

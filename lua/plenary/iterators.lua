@@ -1,5 +1,6 @@
 -- Adaptation of luafun for neovim
 local co = coroutine
+local f = require('plenary.functional')
 
 --------------------------------------------------------------------------------
 -- Tools
@@ -45,6 +46,16 @@ local call_if_not_empty = function(fun, state_x, ...)
     return nil
   end
   return state_x, fun(...)
+end
+
+local call_with_state = function(fun, state_x, ...)
+  return fun(state_x, ...)
+end
+
+local id = function(...) return ... end
+
+local id_cb = function(fn, ...)
+  return fn(...)
 end
 
 --------------------------------------------------------------------------------
@@ -140,6 +151,10 @@ function Iterator:stateful()
   return function()
     return call_if_not_empty(set_state, gen(param, state))
   end
+end
+
+function Iterator:next()
+  return self.gen(self.param, self.state)
 end
 --------------------------------------------------------------------------------
 -- Generators
@@ -251,12 +266,43 @@ exports.rands = rands
 -- Transformations
 --------------------------------------------------------------------------------
 local map_gen = function(param, state)
-    local gen_x, param_x, fun = param[1], param[2], param[3]
-    return call_if_not_empty(fun, gen_x(param_x, state))
+  local gen_x, param_x, fun = param[1], param[2], param[3]
+  return call_if_not_empty(fun, gen_x(param_x, state))
 end
 
 function Iterator:map(fn)
   return wrap(map_gen, {self.gen, self.param, fn}, self.state)
+end
+
+local flatten_gen1 = function(param, state, state_x, ...)
+  if state_x == nil then
+    return nil
+  end
+
+  local first_arg = f.first(...)
+
+  -- experimental part
+  if getmetatable(first_arg) == Iterator then
+    print('found metatable')
+    local new_iter = (first_arg .. wrap(state[1], param, state_x)):flatten()
+    return (function(state_x, ...)
+      -- dump('state', state_x)
+      -- dump('got', ...)
+      return {new_iter, state_x}, ...
+    end)(new_iter.gen(new_iter.param, new_iter.state))
+    -- return {state[1], state_x}, ...
+  end
+
+  return {state[1], state_x}, ...
+end
+
+local flatten_gen = function(param, state)
+  local gen_x, state_x = state[1], state[2]
+  return flatten_gen1(param, state, gen_x(param, state_x))
+end
+
+function Iterator:flatten()
+  return wrap(flatten_gen, self.param, {self.gen, self.state})
 end
 
 --------------------------------------------------------------------------------
