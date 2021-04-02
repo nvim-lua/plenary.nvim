@@ -75,6 +75,15 @@ function List:pop(i)
   return result
 end
 
+function List:remove(e)
+  local i = self:index(e)
+  if i == -1 then
+    error(('Element not found: %s'):format(e))
+  else
+    self:pop(i)
+  end
+end
+
 function List:contains(e)
   for _, v in ipairs(self) do if v == e then return true end end
   return false
@@ -92,6 +101,18 @@ end
 
 function List:slice(a, b)
   return List(vim.list_slice(self, a, b))
+end
+
+function List:copy()
+  return self:slice(1, #self)
+end
+
+function List:extend(other)
+  if type(other) == 'table' and vim.tbl_islist(other) then
+    vim.list_extend(self, other)
+  else
+    error 'Argument must be a List or list-like table'
+  end
 end
 
 return List
