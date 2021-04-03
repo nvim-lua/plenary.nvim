@@ -12,7 +12,7 @@ Iterator.__index = Iterator
 
 ---Makes a for loop work
 function Iterator:__call(param, state)
-  return self.gen(param, state)
+  return self.gen(param or self.param, state or self.state)
 end
 
 function Iterator:__tostring()
@@ -119,7 +119,15 @@ local function wrap(gen, param, state)
     gen = gen,
     param = param,
     state = state
-  }, Iterator), param, state
+  }, Iterator)
+end
+
+local no_return_wrap = function(gen, param, state)
+  return setmetatable({
+    gen = gen,
+    param = param,
+    state = state
+  }, Iterator)
 end
 
 local unwrap = function(self)
@@ -273,10 +281,11 @@ end
 local flatten_gen1
 do
   local it = function(new_iter, state_x, ...)
+    if state_x == nil then return nil end
     return {new_iter.gen, new_iter.param, state_x}, ...
   end
 
-  flatten_gen1 = function(param, state, state_x, ...)
+  flatten_gen1 = function(state, state_x, ...)
     if state_x == nil then
       return nil
     end
@@ -286,9 +295,9 @@ do
     -- experimental part
     if getmetatable(first_arg) == Iterator then
       -- attach the iterator to the rest
-      local new_iter = first_arg:chain(wrap(state[1], param, state_x)):flatten()
-      -- then advance
-      return it(new_iter, new_iter:next())
+      local new_iter = exports.chain(first_arg, no_return_wrap(state[1], state[2], state_x)):flatten()
+      -- return {new_iter.gen, new_iter.param, state_x}, res
+      return it(new_iter, new_iter.gen(new_iter.param, new_iter.state))
     end
 
     return {state[1], state[2], state_x}, ...
@@ -296,8 +305,9 @@ do
 end
 
 local flatten_gen = function(_, state)
+  if state == nil then return end
   local gen_x, param_x, state_x = state[1], state[2], state[3]
-  return flatten_gen1(param_x, state, gen_x(param_x, state_x))
+  return flatten_gen1(state, gen_x(param_x, state_x))
 end
 
 function Iterator:flatten()

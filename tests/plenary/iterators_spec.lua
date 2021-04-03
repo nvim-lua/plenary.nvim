@@ -79,6 +79,11 @@ describe('iterators', function()
     eq(iter:tolist(), { 5, 7, 9, 5, 7, 9, 5, 7, 9 })
   end)
 
+  it('should be able to flatten very nested stuff', function()
+    local iter = i.iter { 5, 6, i.iter { i.iter { 5, 5 }, 7, 8 }, i.iter { 9, 10, i.iter { 1, 2 } } }:flatten()
+    eq(iter:tolist(), { 5, 6, 5, 5, 7, 8, 9, 10, 1, 2 })
+  end)
+
   it('chaining nil should work', function()
     local iter = i.iter(""):chain(i.iter { 5, 7, 9 })
     eq(#iter:tolist(), 3)
