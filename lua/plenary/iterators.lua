@@ -149,9 +149,6 @@ function Iterator:stateful()
   end)
 end
 
-function Iterator:next()
-  return self.gen(self.param, self.state)
-end
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
