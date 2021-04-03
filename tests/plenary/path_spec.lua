@@ -94,16 +94,60 @@ describe('Path', function()
   end)
 
   describe(':make_relative', function()
-    it('can take absoluate paths and make them relative to the cwd', function()
-      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
+    it('can take absolute paths and make them relative to the cwd', function()
+      local p = Path:new { 'lua', 'plenary', 'path.lua' }
+      local absolute = vim.loop.cwd() .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative()
-      assert.are.same(relative, 'lua/plenary/path.lua')
+      assert.are.same(relative, p.filename)
     end)
 
-    it('can take absoluate paths and make them relative to a given path', function()
-      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
-      local relative = Path:new(absolute):make_relative(vim.loop.cwd() .. '/lua')
-      assert.are.same(relative, 'plenary/path.lua')
+    it('can take absolute paths and make them relative to a given path', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take double separator absolute paths and make them relative to the cwd', function()
+      local p = Path:new { 'lua', 'plenary', 'path.lua' }
+      local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take double separator absolute paths and make them relative to a given path', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to a given path with trailing separator', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to the root directory', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local p = Path:new { 'home', 'prime', 'aoeu', 'agen.lua'}
+      local absolute = root .. p.filename
+      local relative = Path:new(absolute):make_relative(root)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to themselves', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local p = Path:new { root, 'home', 'prime', 'aoeu', 'agen.lua'}
+      local relative = Path:new(p.filename):make_relative(p.filename)
+      assert.are.same(relative, ".")
     end)
   end)
 
@@ -297,6 +341,21 @@ describe('Path', function()
 
       p1:rm()
       p2:rm()
+    end)
+  end)
+
+  describe('parents', function()
+    it('should extract the ancestors of the path', function()
+      local p = Path:new(vim.loop.cwd())
+      local parents = p:parents()
+      assert(vim.tbl_islist(parents))
+      for _, parent in pairs(parents) do
+        assert.are.same(type(parent), 'string')
+      end
+    end)
+    it('should return itself if it corresponds to path.root', function()
+      local p = Path:new(Path.path.root(vim.loop.cwd()))
+      assert.are.same(p:parent(), p.filename)
     end)
   end)
 
