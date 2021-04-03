@@ -1,4 +1,10 @@
--- Adaptation of luafun for neovim
+---@brief [[
+---An adaptation of luafun for neovim.
+---This library will use neovim specific functions.
+---Some documentation is the same as from luafun.
+---Some extra functions are present that are not in luafun
+---@brief ]]
+
 local co = coroutine
 local f = require('plenary.functional')
 
@@ -525,9 +531,11 @@ chain_gen_r1 = function(param, state)
   return chain_gen_r2(param, state, gen_x(param_x, state_x))
 end
 
----Iterator adapter that chains iterators together.
----The iterators will be called one after another from left to right.
----@param nil ...
+---Make an iterator that returns elements from the first iterator until it is exhausted, then proceeds to the next iterator,
+---until all of the iterators are exhausted.
+---Used for treating consecutive iterators as a single iterator.
+---Infinity iterators are supported, but are not recommended.
+---@param ...: the iterators to chain
 ---@return Iterator
 local chain = function(...)
   local n = numargs(...)
@@ -553,6 +561,54 @@ end
 Iterator.chain = chain
 Iterator.__concat = chain
 exports.chain = chain
+
+local function zip_gen_r(param, state, state_new, ...)
+  if #state_new == #param / 2 then
+    return state_new, ...
+  end
+
+  local i = #state_new + 1
+  local gen_x, param_x = param[2 * i - 1], param[2 * i]
+  local state_x, r = gen_x(param_x, state[i])
+  if state_x == nil then
+    return nil
+  end
+  table.insert(state_new, state_x)
+  return zip_gen_r(param, state, state_new, r, ...)
+end
+
+local zip_gen = function(param, state)
+  return zip_gen_r(param, state, {})
+end
+
+---Return a new iterator where i-th return value contains the i-th element from each of the iterators.
+---The returned iterator is truncated in length to the length of the shortest iterator.
+---For multi-return iterators only the first variable is used.
+---@param ...: the iterators to zip
+---@return Iterator
+local zip = function(...)
+  local n = numargs(...)
+  if n == 0 then
+    return wrap(nil_gen, nil, nil)
+  end
+  local param = { [2 * n] = 0 }
+  local state = { [n] = 0 }
+
+  local i, gen_x, param_x, state_x
+  for i = 1, n, 1 do
+    local it = select(n - i + 1, ...)
+    gen_x, param_x, state_x = rawiter(it)
+    param[2 * i - 1] = gen_x
+    param[2 * i] = param_x
+    state[i] = state_x
+  end
+
+  return wrap(zip_gen, param, state)
+end
+
+Iterator.zip = zip
+Iterator.__div = zip
+exports.zip = zip
 
 --------------------------------------------------------------------------------
 -- Operators
