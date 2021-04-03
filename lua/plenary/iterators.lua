@@ -122,14 +122,6 @@ local function wrap(gen, param, state)
   }, Iterator)
 end
 
-local no_return_wrap = function(gen, param, state)
-  return setmetatable({
-    gen = gen,
-    param = param,
-    state = state
-  }, Iterator)
-end
-
 local unwrap = function(self)
     return self.gen, self.param, self.state
 end
@@ -295,8 +287,8 @@ do
     -- experimental part
     if getmetatable(first_arg) == Iterator then
       -- attach the iterator to the rest
-      local new_iter = exports.chain(first_arg, no_return_wrap(state[1], state[2], state_x)):flatten()
-      -- return {new_iter.gen, new_iter.param, state_x}, res
+      local new_iter = (first_arg .. wrap(state[1], state[2], state_x)):flatten()
+      -- advance the iterator by one
       return it(new_iter, new_iter.gen(new_iter.param, new_iter.state))
     end
 
