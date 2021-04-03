@@ -10,12 +10,11 @@ setmetatable(List, List)
 ---@see http://www.lua.org/manual/5.1/manual.html#2.10.2
 local lendb = setmetatable({}, {__mode = 'k'})
 
-List.__index = List
-
 function List:__call(tbl)
   if type(tbl) == 'table' then
     local len = #tbl
-    local obj = setmetatable(tbl, List)
+    local obj = setmetatable(tbl, self)
+    self.__index = self
     lendb[obj] = len
     return obj
   end
@@ -23,6 +22,7 @@ function List:__call(tbl)
 end
 
 function List:__tostring()
+  if rawequal(self, List) then return '<List class>' end
   if #self == 0 then return '[]' end
   local result = {'['}
   for _, v in ipairs(self) do
@@ -122,6 +122,23 @@ function List:reverse()
     self[i], self[n] = self[n], self[i]
     i = i + 1
     n = n - 1
+  end
+  return self
+end
+
+function List:iter()
+  local i = 0
+  return function()
+    i = i + 1
+    if i <= #self then return self[i], i end
+  end
+end
+
+function List:riter()
+  local i = #self + 1
+  return function()
+    i = i - 1
+    if i > 0 then return self[i], i end
   end
 end
 
