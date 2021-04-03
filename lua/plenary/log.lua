@@ -151,7 +151,8 @@ log.new = function(config, standalone)
     end
 
     -- log.fmt_info("These are %s strings", "formatted")
-    obj[("fmt_%s" ):format(x.name)] = function()
+    obj[("fmt_%s" ):format(x.name)] = function(...)
+      local args = {...}
       return log_at_level(i, x, function(...)
         local passed = {...}
         local fmt = table.remove(passed, 1)
@@ -160,7 +161,7 @@ log.new = function(config, standalone)
           table.insert(inspected, vim.inspect(v))
         end
         return string.format(fmt, unpack(inspected))
-      end)
+      end, unpack(args))
     end
 
     -- log.lazy_info(expensive_to_calculate)
