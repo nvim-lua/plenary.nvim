@@ -133,13 +133,13 @@ end
 local function iter_forward(seq, i)
   i = i + 1
   local v = seq[i]
-  if v then return v, i end
+  if v then return i, v end
 end
 
 local function iter_backward(seq, i)
   i = i - 1
   local v = seq[i]
-  if v then return v, i end
+  if v then return i, v end
 end
 
 function List:iter()
