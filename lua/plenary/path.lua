@@ -32,6 +32,16 @@ path.sep = (function()
   end
 end)()
 
+path.root = (function()
+  if path.sep == '/' then return function() return '/' end
+  else
+    return function(base)
+      base = base or vim.loop.cwd()
+      return base:sub(1, 1) .. ':\\'
+    end
+  end
+end)()
+
 path.S_IF = S_IF
 
 local band = function(reg, value)
@@ -40,6 +50,24 @@ end
 
 local concat_paths = function(...)
   return table.concat({...}, path.sep)
+end
+
+local function is_root(pathname)
+  if path.sep == '\\' then
+    return string.match(pathname, '^[A-Z]:\\?$')
+  end
+  return pathname == '/'
+end
+
+local clean = function(pathname)
+  -- Remove double path seps, it's annoying
+  pathname = pathname:gsub(path.sep .. path.sep, path.sep)
+
+  -- Remove trailing path sep if not root
+  if not is_root(pathname) and pathname:sub(-1) == path.sep then
+    return pathname:sub(1, -2)
+  end
+  return pathname
 end
 
 -- S_IFCHR  = 0o020000  # character device
@@ -213,27 +241,30 @@ function Path:expand()
 end
 
 function Path:make_relative(cwd)
-  cwd = F.if_nil(cwd, self._cwd, cwd)
-  if self.filename:sub(1, #cwd) == cwd  then
-    local offset =  0
-    -- if  cwd does ends in the os separator, we need to take it off
-    if cwd:sub(#cwd, #cwd) ~= path.separator then
-      offset = 1
-    end
+  self.filename = clean(self.filename)
+  cwd = clean(F.if_nil(cwd, self._cwd, cwd))
 
-    self.filename = self.filename:sub(#cwd + 1 + offset, #self.filename)
+  if self.filename:sub(1, #cwd) == cwd then
+    if #self.filename == #cwd then
+      self.filename = "."
+    else
+      -- skip path separator, unless cwd is root
+      local offset = 2
+      if cwd:sub(-1) == path.sep then
+        offset = 1
+      end
+      self.filename = self.filename:sub(#cwd + offset, -1)
+    end
   end
 
   return self.filename
 end
 
 function Path:normalize(cwd)
-  cwd = F.if_nil(cwd, self._cwd, cwd)
   self:make_relative(cwd)
+
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
-  -- Remove double path seps, it's annoying
-  self.filename = self.filename:gsub(path.sep .. path.sep, path.sep)
 
   return self.filename
 end
@@ -370,7 +401,7 @@ function Path:touch(opts)
   end
 
   if parents then
-    Path:new(self:parents()):mkdir({ parents = true })
+    Path:new(self:parent()):mkdir({ parents = true })
   end
 
   local fd = uv.fs_open(self:_fs_filename(), "w", mode)
@@ -428,8 +459,26 @@ function Path:_split()
   return vim.split(self:absolute(), self._sep)
 end
 
+local _get_parent = (function()
+  local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
+  return function(abs_path)
+    return abs_path:match(formatted)
+  end
+end)()
+
+function Path:parent()
+  return _get_parent(self:absolute()) or path.root(self:absolute())
+end
+
 function Path:parents()
-  return self:absolute():match(string.format('^(.+)%s[^%s]+', self._sep, self._sep))
+  local results = {}
+  local cur = self:absolute()
+  repeat
+    cur = _get_parent(cur)
+    table.insert(results, cur)
+  until not cur
+  table.insert(results, path.root(self:absolute()))
+  return results
 end
 
 function Path:is_file()
