@@ -1,10 +1,6 @@
 local List = require("plenary.collections.py_list")
 
 describe('List', function()
-  it('should be detected as a list by vim.tbl_islist()', function()
-    local l = List {1, 2, 3}
-    assert(vim.tbl_islist(l))
-  end)
   it('should be equal if all elements are equal', function()
     local l1 = List {1, 2, 3}
     local l2 = List {1, 2, 3}

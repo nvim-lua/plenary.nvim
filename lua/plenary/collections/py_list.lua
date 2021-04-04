@@ -3,19 +3,12 @@ local List = {}
 
 setmetatable(List, List)
 
--- This is an ephemeron table, meaning that it's a table whose keys are weak
--- references. This allows to keep track of the list's length without having to
--- do so inside the object itself.
---
----@see http://www.lua.org/manual/5.1/manual.html#2.10.2
-local lendb = setmetatable({}, {__mode = 'k'})
-
 function List:__call(tbl)
   if type(tbl) == 'table' then
     local len = #tbl
     local obj = setmetatable(tbl, self)
     self.__index = self
-    lendb[obj] = len
+    obj._len = len
     return obj
   end
   error 'List constructor must be called with table argument'
@@ -48,7 +41,7 @@ function List:__mul(other)
 end
 
 function List:__len()
-  return lendb[self]
+  return self._len
 end
 
 function List:__concat(other)
@@ -60,7 +53,7 @@ end
 
 function List:append(other)
   self[#self + 1] = other
-  lendb[self] = lendb[self] + 1
+  self._len = self._len + 1
 end
 
 function List:index(other)
@@ -71,7 +64,7 @@ end
 function List:pop(i)
   i = i or #self
   local result = table.remove(self, i)
-  lendb[self] = lendb[self] - 1
+  self._len = self._len - 1
   return result
 end
 
