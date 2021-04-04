@@ -54,7 +54,7 @@ end
 
 local function is_root(pathname)
   if path.sep == '\\' then
-    return string.match(pathname, '^[A-Z]:\\$')
+    return string.match(pathname, '^[A-Z]:\\?$')
   end
   return pathname == '/'
 end
