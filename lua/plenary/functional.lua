@@ -78,9 +78,9 @@ function f.last(...)
 end
 
 return setmetatable({}, {
-  __index = function(t, k)
+  __index = function(_, k)
     if k == "if_nil" then
-      return t[k]
+      return f[k]
     end
 
     error("`plenary.functional` is deprecated. Please use `plenary.iterators` or `plenary.vararg`")
