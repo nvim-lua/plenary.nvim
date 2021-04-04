@@ -2,6 +2,7 @@ local co = coroutine
 local errors = require('plenary.errors')
 local traceback_error = errors.traceback_error
 local f = require('plenary.functional')
+local tbl = require('plenary.tbl')
 
 local M = {}
 
@@ -55,16 +56,19 @@ M.wrap = function(func, argc)
   end
 
   return function(...)
-    local params = {...}
+    local params = tbl.pack(...)
 
     local function future(step)
       if step then
         if type(argc) == "number" then
           params[argc] = step
+          params.n = argc
         else
           table.insert(params, step) -- change once not optional
+          params.n = params.n + 1
         end
-        return func(unpack(params))
+
+        return func(tbl.unpack(params))
       else
         return co.yield(future)
       end
@@ -180,10 +184,10 @@ M.async = function(func)
   end
 
   return function(...)
-    local args = {...}
+    local args = tbl.pack(...)
     local function future(step)
       if step == nil then
-        return func(unpack(args))
+        return func(tbl.unpack(args))
       else
         execute(future, step)
       end
