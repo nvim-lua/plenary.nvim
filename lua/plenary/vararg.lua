@@ -26,25 +26,8 @@ function v.last(...)
 end
 
 ---flips binary arguments
-function v.flip(...)
-  assert(v.len(...) == 2, "Args must be of length 2")
-  return v.rotate(...)
-end
-
----rotates arguments to the left
-function v.rotate(...)
-  local first = v.first(...)
-  return select(2, ...), first
-end
-
-function v.double(...)
-  return ..., ...
-end
-
-function v.duplicate(n, ...)
-  assert(n > 0, "n must be greater than 0")
-  if n == 1 then return ... end
-  return ..., v.duplicate(n - 1, ...)
+function v.flip(a, b)
+  return b, a
 end
 
 return v
