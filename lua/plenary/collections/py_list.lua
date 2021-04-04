@@ -132,6 +132,8 @@ end
 
 -- Iterator stuff
 
+local Iterator = require 'plenary.iterators'
+
 local function forward_list_gen(param, state)
   state = state + 1
   local v = param[state]
@@ -145,11 +147,11 @@ local function backward_list_gen(param, state)
 end
 
 function List:iter()
-  return forward_list_gen, self, 0
+  return Iterator.wrap(forward_list_gen, self, 0)
 end
 
 function List:riter()
-  return backward_list_gen, self, #self + 1
+  return Iterator.wrap(backward_list_gen, self, #self + 1)
 end
 
 return List
