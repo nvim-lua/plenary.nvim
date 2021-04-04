@@ -1,4 +1,5 @@
 local i = require('plenary.iterators')
+local f = require('plenary.functional')
 
 local config = {}
 
@@ -58,27 +59,33 @@ function Schema:merge(user_config)
   return new_config
 end
 
+---Gets the descriptions
+---@return Iterator
 function Schema:descriptions()
-  return i.iter(self)
-    :map(function(k, v)
-      if getmetatable(v) == Schema then
-        return k, v:descriptions()
-      else
-        return k, v.description
-      end
+  return self:into_iter()
+    :map(function(...)
+      local args = {...}
+      local description = table.remove(args).description
+      return {
+        keys = args,
+        description = description,
+      }
     end)
-    :tomap()
 end
 
+---@return Iterator
 function Schema:into_iter()
   return i.iter(self)
     :map(function(k, v)
       if getmetatable(v) == Schema then
-        return k, v:into_iter()
+        return v:into_iter():map(function(...)
+          return k, ...
+        end)
       else
         return k, v
       end
     end)
+    :flatten()
 end
 
 config.Schema = Schema.new
