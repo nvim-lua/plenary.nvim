@@ -3,11 +3,15 @@ local List = {}
 
 setmetatable(List, List)
 
+function List:__index(key)
+  local field = List[key]
+  if field then return field end
+end
+
 function List:__call(tbl)
   if type(tbl) == 'table' then
     local len = #tbl
     local obj = setmetatable(tbl, self)
-    self.__index = self
     obj._len = len
     return obj
   end
@@ -49,6 +53,11 @@ function List:__concat(other)
   for _, v in ipairs(self) do result[#result + 1] = v end
   for _, v in ipairs(other) do result[#result + 1] = v end
   return result
+end
+
+function List.is_list(tbl)
+  local meta = getmetatable(tbl) or {}
+  return meta == List
 end
 
 function List:append(other)
