@@ -4,8 +4,10 @@ local List = {}
 setmetatable(List, List)
 
 function List:__index(key)
-  local field = List[key]
-  if field then return field end
+  if self ~= List then
+    local field = List[key]
+    if field then return field end
+  end
 end
 
 function List:__call(tbl)
@@ -128,20 +130,24 @@ function List:reverse()
   return self
 end
 
+local function iter_forward(seq, i)
+  i = i + 1
+  local v = seq[i]
+  if v then return v, i end
+end
+
+local function iter_backward(seq, i)
+  i = i - 1
+  local v = seq[i]
+  if v then return v, i end
+end
+
 function List:iter()
-  local i = 0
-  return function()
-    i = i + 1
-    if i <= #self then return self[i], i end
-  end
+  return iter_forward, self, 0
 end
 
 function List:riter()
-  local i = #self + 1
-  return function()
-    i = i - 1
-    if i > 0 then return self[i], i end
-  end
+  return iter_backward, self, #self + 1
 end
 
 return List
