@@ -1,6 +1,12 @@
 local List = require("plenary.collections.py_list")
 
 describe('List', function()
+  it('should detect whether a value is an instance of List', function()
+    local l = List {1, 2}
+    local n = 42
+    assert(List.is_list(l))
+    assert(not List.is_list(n))
+  end)
   it('should be equal if all elements are equal', function()
     local l1 = List {1, 2, 3}
     local l2 = List {1, 2, 3}
