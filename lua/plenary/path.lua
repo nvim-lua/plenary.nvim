@@ -257,7 +257,7 @@ local function shorten_len(filename, len)
 end
 
 local shorten = (function()
-  if jit then
+  if jit and path.sep ~= '\\' then
     local ffi = require('ffi') ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
