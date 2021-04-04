@@ -77,4 +77,12 @@ function f.last(...)
   return x
 end
 
-return f
+return setmetatable({}, {
+  __index = function(t, k)
+    if k == "if_nil" then
+      return t[k]
+    end
+
+    error("`plenary.functional` is deprecated. Please use `plenary.iterators` or `plenary.vararg`")
+  end
+})
