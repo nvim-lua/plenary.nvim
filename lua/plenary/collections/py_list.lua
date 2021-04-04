@@ -130,24 +130,26 @@ function List:reverse()
   return self
 end
 
-local function iter_forward(seq, i)
-  i = i + 1
-  local v = seq[i]
-  if v then return i, v end
+-- Iterator stuff
+
+local function forward_list_gen(param, state)
+  state = state + 1
+  local v = param[state]
+  if v then return state, v end
 end
 
-local function iter_backward(seq, i)
-  i = i - 1
-  local v = seq[i]
-  if v then return i, v end
+local function backward_list_gen(param, state)
+  state = state - 1
+  local v = param[state]
+  if v then return state, v end
 end
 
 function List:iter()
-  return iter_forward, self, 0
+  return forward_list_gen, self, 0
 end
 
 function List:riter()
-  return iter_backward, self, #self + 1
+  return backward_list_gen, self, #self + 1
 end
 
 return List
