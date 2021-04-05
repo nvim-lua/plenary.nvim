@@ -14,9 +14,7 @@ Job.__concat = function(lhs, rhs)
 end
 
 function Job.new(opts)
-  local self = setmetatable({opts = opts}, Job)
-
-  return self
+  return setmetatable({opts = opts}, Job)
 end
 
 -- TODO: add support for piping jobs to each other

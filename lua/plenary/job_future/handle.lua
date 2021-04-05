@@ -13,22 +13,24 @@ function Handle.new(spawn_opts)
   local stdout_eof_tx, stdout_eof_rx = channel.oneshot()
   local stderr_eof_tx, stderr_eof_rx = channel.oneshot()
 
+  local buf_read = not spawn_opts.raw_read
+
   local self = setmetatable({
     -- data that was received
-    stdout_data = "",
-    stderr_data = "",
+    stdout_data = buf_read and "",
+    stderr_data = buf_read and "",
 
     -- control flow
     exit_tx = exit_tx,
     exit_rx = exit_rx,
-    stdout_eof_tx = stdout_eof_tx,
-    stdout_eof_rx  = stdout_eof_rx,
-    stderr_eof_tx = stderr_eof_tx,
-    stderr_eof_rx = stderr_eof_rx,
+    stdout_eof_tx = buf_read and stdout_eof_tx,
+    stdout_eof_rx  = buf_read and stdout_eof_rx,
+    stderr_eof_tx = buf_read and stderr_eof_tx,
+    stderr_eof_rx = buf_read and stderr_eof_rx,
 
     -- data condvars
-    stdout_data_condvar = Condvar.new(),
-    stderr_data_condvar = Condvar.new(),
+    stdout_data_condvar = buf_read and Condvar.new(),
+    stderr_data_condvar = buf_read and Condvar.new(),
 
     -- lock
     dead = false,
