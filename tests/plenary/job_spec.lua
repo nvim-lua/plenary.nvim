@@ -392,8 +392,7 @@ describe('Job', function()
 
       local second_job = Job:new{ command = 'false' }
 
-      first_job:after(function() code = code + 10 end)
-      first_job:and_then(second_job)
+      first_job:after(function() code = code + 10 end):and_then(second_job)
       second_job:after(function(_, c) code = code + c end)
 
       first_job:sync()

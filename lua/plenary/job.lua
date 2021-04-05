@@ -555,6 +555,7 @@ end
 
 function Job:after(fn)
   self:add_on_exit_callback(fn)
+  return self
 end
 
 function Job:and_then_on_success(next_job)
