@@ -325,6 +325,49 @@ local rands = function(n, m)
 end
 exports.rands = rands
 
+local split_gen = function(param, state)
+  local input, sep = param[1], param[2]
+  local input_len = #input
+
+  if state > input_len + 1 then
+    return
+  end
+
+  local start, finish = string.find(input, sep, state, true)
+  if not start then
+    start = input_len + 1
+    finish = input_len + 1
+  end
+
+  local sub_str = input:sub(state, start - 1)
+
+  return finish + 1, sub_str
+end
+
+---Return an iterator of substrings separated by a string
+---@param input string: the string to split
+---@param sep string: the separator to find and split based on
+---@return Iterator
+local split = function(input, sep)
+  return wrap(split_gen, {input, sep}, 1)
+end
+exports.split = split
+
+---Splits a string based on a single space
+---An alias for split(input, " ")
+---@param input any
+---@return any
+local words = function(input)
+  return split(input, " ")
+end
+exports.words = words
+
+local lines = function(input)
+  -- TODO: platform specific linebreaks
+  return split(input, "\n")
+end
+exports.lines = lines
+
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
@@ -609,53 +652,5 @@ end
 Iterator.zip = zip
 Iterator.__div = zip
 exports.zip = zip
-
---------------------------------------------------------------------------------
--- Operators
---------------------------------------------------------------------------------
-exports.operator = {
-    ----------------------------------------------------------------------------
-    -- Comparison operators
-    ----------------------------------------------------------------------------
-    lt  = function(a, b) return a < b end,
-    le  = function(a, b) return a <= b end,
-    eq  = function(a, b) return a == b end,
-    ne  = function(a, b) return a ~= b end,
-    ge  = function(a, b) return a >= b end,
-    gt  = function(a, b) return a > b end,
-
-    ----------------------------------------------------------------------------
-    -- Arithmetic operators
-    ----------------------------------------------------------------------------
-    add = function(a, b) return a + b end,
-    div = function(a, b) return a / b end,
-    floordiv = function(a, b) return math.floor(a/b) end,
-    intdiv = function(a, b)
-        local q = a / b
-        if a >= 0 then return math.floor(q) else return math.ceil(q) end
-    end,
-    mod = function(a, b) return a % b end,
-    mul = function(a, b) return a * b end,
-    neq = function(a) return -a end,
-    unm = function(a) return -a end, -- an alias
-    pow = function(a, b) return a ^ b end,
-    sub = function(a, b) return a - b end,
-    truediv = function(a, b) return a / b end,
-
-    ----------------------------------------------------------------------------
-    -- String operators
-    ----------------------------------------------------------------------------
-    concat = function(a, b) return a..b end,
-    len = function(a) return #a end,
-    length = function(a) return #a end, -- an alias
-
-    ----------------------------------------------------------------------------
-    -- Logical operators
-    ----------------------------------------------------------------------------
-    land = function(a, b) return a and b end,
-    lor = function(a, b) return a or b end,
-    lnot = function(a) return not a end,
-    truth = function(a) return not not a end,
-}
 
 return exports
