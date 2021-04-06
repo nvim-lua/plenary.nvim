@@ -422,7 +422,7 @@ function Path:rm(opts)
     -- first unlink all files
     scan.scan_dir(abs, { hidden = true, on_insert = function(file) uv.fs_unlink(file) end})
 
-    local dirs = scan.scan_dir(abs, { add_dirs = true })
+    local dirs = scan.scan_dir(abs, { add_dirs = true, hidden = true })
     -- iterate backwards to clean up remaining dirs
     for i = #dirs, 1, -1 do
       uv.fs_rmdir(dirs[i])
