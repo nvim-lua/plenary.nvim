@@ -468,7 +468,11 @@ function Job:wait(timeout, wait_interval, should_redraw)
   wait_interval = wait_interval or 10
 
   if self.handle == nil then
-    vim.api.nvim_err_writeln(vim.inspect(self))
+    local msg = vim.inspect(self)
+    vim.schedule(function()
+      vim.api.nvim_err_writeln(msg)
+    end)
+
     return
   end
 
