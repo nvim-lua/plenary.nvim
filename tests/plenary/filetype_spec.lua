@@ -78,7 +78,7 @@ describe('filetype', function()
     end)
 
     it('should work for bash', function()
-      assert.are.same('bash', filetype._parse_shebang('#!/bin/bash'))
+      assert.are.same('sh', filetype._parse_shebang('#!/bin/bash'))
     end)
 
     it('should work for usr/bin/env shell', function()
