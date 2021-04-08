@@ -18,11 +18,14 @@ end
 function Job.new(opts)
   local command, args = shared.get_command_and_args(opts)
 
+  local interactive = opts.interactive
+  if interactive == nil then interactive = true end
+
   return setmetatable({
     command = command,
     args = args,
     writer = opts.writer,
-    interactive = opts.interactive,
+    interactive = interactive,
 
     _raw_cd = opts.cwd,
     _opts = opts,
@@ -32,7 +35,7 @@ end
 -- TODO: add support for piping jobs to each other
 ---Thin wrapper around Job:spawn
 Job.output = async(function(self)
-  assert(not self.interactive, "Cannot get the output of an interactive job")
+  assert(not self.interactive == true, "Cannot get the output of an interactive job")
 
   local handle = self:spawn()
 
