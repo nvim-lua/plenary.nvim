@@ -6,7 +6,6 @@
 ---@brief ]]
 
 local co = coroutine
-local utf8 = require('plenary.utf8')
 local f = require('plenary.functional')
 
 --------------------------------------------------------------------------------
@@ -118,8 +117,8 @@ local rawiter = function(obj, param, state)
     end
 
     ---TODO: handle multibyte characters, maybe in mbyte.c
-    return utf8.chars_gen, obj, 1
-    -- return bytes_gen, obj, 0
+    -- return utf8.chars_gen, obj, 1
+    return bytes_gen, obj, 0
   end
 
   error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))

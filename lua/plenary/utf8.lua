@@ -1,3 +1,9 @@
+---@brief [[
+---Borrowed from https://github.com/britzl/gooey/blob/master/gooey/internal/utf8.lua
+---Simple utf8 library.
+---No support for regex.
+---@brief ]]
+
 local i = require('plenary.iterators')
 local byte    = string.byte
 local char    = string.char
@@ -12,8 +18,12 @@ local upper   = string.upper
 
 local utf8 = {}
 
--- returns the number of bytes used by the UTF-8 character at byte i in s
--- also doubles as a UTF-8 character validator
+---Returns the number of bytes used by the UTF-8 character at byte i in s.
+---Also doubles as a UTF-8 character validator.
+---This way we don't have to do this terrible thing anymore: [%z\1-\127\194-\244][\128-\191]*.
+---@param s string
+---@param i number
+---@return number
 function utf8.charbytes(s, i)
   -- argument defaults
   i = i or 1
@@ -175,20 +185,13 @@ function utf8.sub(s, i, j)
 end
 
 function utf8.chars_gen(param, state)
-    local char_count = 0
-    local str = param
-    local length = #param
-    local sub_len = 1
+    local str, length = param[1], param[2]
     local byte_pos = state
     local start = byte_pos
 
-    repeat
-      if byte_pos > length then return end
-      char_count  = char_count + 1
-      local bytes = utf8.charbytes(str, byte_pos)
-      byte_pos    = byte_pos + bytes
-
-    until char_count == sub_len
+    if byte_pos > length then return nil end
+    local bytes = utf8.charbytes(str, byte_pos)
+    byte_pos    = byte_pos + bytes
 
     local last  = byte_pos-1
     local slice = sub(str,start,last)
@@ -196,7 +199,7 @@ function utf8.chars_gen(param, state)
 end
 
 function utf8.chars(str)
-  return i.wrap(utf8.chars_gen, str, 1)
+  return i.wrap(utf8.chars_gen, {str, #str}, 1)
 end
 
 return utf8
