@@ -1,6 +1,11 @@
 local utf8 = require('plenary.utf8')
 local i = require('plenary.iterators')
-local eq = assert.are.same
+local eq = function(a, b)
+  assert(vim.deep_equal(a, b))
+end
+local not_eq = function(a, b)
+  assert(not vim.deep_equal(a, b))
+end
 
 describe('utf8', function()
   describe('code point iterator', function()
@@ -10,7 +15,7 @@ describe('utf8', function()
 
     it('should iterate', function()
       eq(utf8.chars("Привет"):tolist(), {"П", "р", "и", "в", "е", "т"})
-      assert(i.bytes("Привет") ~= {"П", "р", "и", "в", "е", "т"})
+      not_eq(i.bytes("Привет") ~= {"П", "р", "и", "в", "е", "т"})
     end)
 
     it('should iterator over emojis', function()
@@ -21,5 +26,21 @@ describe('utf8', function()
   end)
 
   describe('char bytes', function()
+    it('should do correctly', function()
+      local emoji = "💖"
+      eq(utf8.charbytes(emoji), 4)
+
+      local c = "П"
+      eq(utf8.charbytes(c), 2)
+
+      c = '®'
+      eq(utf8.charbytes(c), 2)
+
+      c = 'a'
+      eq(utf8.charbytes(c), 1)
+
+      c = '😊'
+      eq(utf8.charbytes(c), 4)
+    end)
   end)
 end)

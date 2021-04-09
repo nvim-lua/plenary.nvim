@@ -2,6 +2,7 @@
 ---Borrowed from https://github.com/britzl/gooey/blob/master/gooey/internal/utf8.lua
 ---Simple utf8 library.
 ---No support for regex.
+---We might want to use mbyte.c later
 ---@brief ]]
 
 local i = require('plenary.iterators')
