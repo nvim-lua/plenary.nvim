@@ -1,14 +1,5 @@
 local f = {}
 
-function f.map(fun, iter)
-  local results = {}
-  for _, v in pairs(iter) do
-    table.insert(results, fun(v))
-  end
-
-  return results
-end
-
 function f.kv_pairs(t)
   local results = {}
   for k, v in pairs(t) do
