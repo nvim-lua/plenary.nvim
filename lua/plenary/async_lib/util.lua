@@ -84,10 +84,10 @@ end, 2)
 function Condvar:notify_all()
   if #self.handles == 0 then return end
 
-  for _, callback in ipairs(self.handles) do
+  for i, callback in ipairs(self.handles) do
     callback()
+    self.handles[i] = nil
   end
-  self.handles = {} -- reset all handles as they have been used up
 end
 
 ---notify randomly one person that is waiting on this Condvar
