@@ -83,7 +83,7 @@ function harness.test_directory(directory, opts)
       end
 
       return Job:new {
-        command = 'nvim',
+        command = vim.v.progpath,
         args = args,
 
         -- Can be turned on to debug
