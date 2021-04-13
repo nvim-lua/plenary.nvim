@@ -52,6 +52,24 @@ local concat_paths = function(...)
   return table.concat({...}, path.sep)
 end
 
+local function is_root(pathname)
+  if path.sep == '\\' then
+    return string.match(pathname, '^[A-Z]:\\?$')
+  end
+  return pathname == '/'
+end
+
+local clean = function(pathname)
+  -- Remove double path seps, it's annoying
+  pathname = pathname:gsub(path.sep .. path.sep, path.sep)
+
+  -- Remove trailing path sep if not root
+  if not is_root(pathname) and pathname:sub(-1) == path.sep then
+    return pathname:sub(1, -2)
+  end
+  return pathname
+end
+
 -- S_IFCHR  = 0o020000  # character device
 -- S_IFBLK  = 0o060000  # block device
 -- S_IFIFO  = 0o010000  # fifo (named pipe)
@@ -223,27 +241,30 @@ function Path:expand()
 end
 
 function Path:make_relative(cwd)
-  cwd = F.if_nil(cwd, self._cwd, cwd)
-  if self.filename:sub(1, #cwd) == cwd  then
-    local offset =  0
-    -- if  cwd does ends in the os separator, we need to take it off
-    if cwd:sub(#cwd, #cwd) ~= path.separator then
-      offset = 1
-    end
+  self.filename = clean(self.filename)
+  cwd = clean(F.if_nil(cwd, self._cwd, cwd))
 
-    self.filename = self.filename:sub(#cwd + 1 + offset, #self.filename)
+  if self.filename:sub(1, #cwd) == cwd then
+    if #self.filename == #cwd then
+      self.filename = "."
+    else
+      -- skip path separator, unless cwd is root
+      local offset = 2
+      if cwd:sub(-1) == path.sep then
+        offset = 1
+      end
+      self.filename = self.filename:sub(#cwd + offset, -1)
+    end
   end
 
   return self.filename
 end
 
 function Path:normalize(cwd)
-  cwd = F.if_nil(cwd, self._cwd, cwd)
   self:make_relative(cwd)
+
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
-  -- Remove double path seps, it's annoying
-  self.filename = self.filename:gsub(path.sep .. path.sep, path.sep)
 
   return self.filename
 end
@@ -401,7 +422,7 @@ function Path:rm(opts)
     -- first unlink all files
     scan.scan_dir(abs, { hidden = true, on_insert = function(file) uv.fs_unlink(file) end})
 
-    local dirs = scan.scan_dir(abs, { add_dirs = true })
+    local dirs = scan.scan_dir(abs, { add_dirs = true, hidden = true })
     -- iterate backwards to clean up remaining dirs
     for i = #dirs, 1, -1 do
       uv.fs_rmdir(dirs[i])

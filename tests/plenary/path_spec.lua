@@ -94,16 +94,60 @@ describe('Path', function()
   end)
 
   describe(':make_relative', function()
-    it('can take absoluate paths and make them relative to the cwd', function()
-      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
+    it('can take absolute paths and make them relative to the cwd', function()
+      local p = Path:new { 'lua', 'plenary', 'path.lua' }
+      local absolute = vim.loop.cwd() .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative()
-      assert.are.same(relative, 'lua/plenary/path.lua')
+      assert.are.same(relative, p.filename)
     end)
 
-    it('can take absoluate paths and make them relative to a given path', function()
-      local absolute = vim.loop.cwd() .. '/lua/plenary/path.lua'
-      local relative = Path:new(absolute):make_relative(vim.loop.cwd() .. '/lua')
-      assert.are.same(relative, 'plenary/path.lua')
+    it('can take absolute paths and make them relative to a given path', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take double separator absolute paths and make them relative to the cwd', function()
+      local p = Path:new { 'lua', 'plenary', 'path.lua' }
+      local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take double separator absolute paths and make them relative to a given path', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to a given path with trailing separator', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local r = Path:new { root, 'home', 'prime' }
+      local p = Path:new { 'aoeu', 'agen.lua'}
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to the root directory', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local p = Path:new { 'home', 'prime', 'aoeu', 'agen.lua'}
+      local absolute = root .. p.filename
+      local relative = Path:new(absolute):make_relative(root)
+      assert.are.same(relative, p.filename)
+    end)
+
+    it('can take absolute paths and make them relative to themselves', function()
+      local root = path.sep == "\\" and "c:\\" or "/"
+      local p = Path:new { root, 'home', 'prime', 'aoeu', 'agen.lua'}
+      local relative = Path:new(p.filename):make_relative(p.filename)
+      assert.are.same(relative, ".")
     end)
   end)
 
@@ -193,14 +237,18 @@ describe('Path', function()
     it('does create dirs if nested in none existing dirs', function()
       local p1 = Path:new({ "nested", "nested2", "test_file.lua" })
       local p2 = Path:new({ "nested", "asdf", ".hidden" })
+      local d1 = Path:new({ "nested", "dir", ".hidden" })
       assert(pcall(p1.touch, p1, { parents = true }))
       assert(pcall(p2.touch, p2, { parents = true }))
+      assert(pcall(d1.mkdir, d1, { parents = true }))
       assert(p1:exists())
       assert(p2:exists())
+      assert(d1:exists())
 
       Path:new({ "nested" }):rm({ recursive = true })
       assert(not p1:exists())
       assert(not p2:exists())
+      assert(not d1:exists())
       assert(not Path:new({ "nested" }):exists())
     end)
   end)

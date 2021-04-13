@@ -1,7 +1,7 @@
 local shebang_prefixes = { '/usr/bin/', '/bin/', '/usr/bin/env ', '/bin/env ' }
 local shebang_fts = {
   ['sh'] = 'sh',
-  ['bash'] = 'bash',
+  ['bash'] = 'sh',
   ['zsh'] = 'zsh',
   ['python'] = 'python',
   ['python2'] = 'python',
