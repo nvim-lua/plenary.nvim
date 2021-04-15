@@ -4,9 +4,19 @@ setmetatable(Enum, Enum)
 
 function Enum:__call(tbl)
   local result = {}
-  -- Filter out everything that isn't a string, since we only care about
-  -- those for enum names
-  for k, v in ipairs(tbl) do if type(v) == 'string' then result[k] = v end end
+  local i = 1
+  -- Filter out everything that isn't a string, or a table since we only care
+  -- about those for enum names/values
+  for _, v in ipairs(tbl) do
+    if type(v) == 'string' then
+      result[v] = i
+      i = i + 1
+    elseif type(v) == 'table' then
+      local name, value = v[1], v[2]
+      result[name] = value
+      i = value + 1
+    end
+  end
   return vim.tbl_add_reverse_lookup(result)
 end
 
