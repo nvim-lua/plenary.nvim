@@ -36,5 +36,8 @@ local function is_enum(tbl)
   return getmetatable(tbl) == Enum
 end
 
-return setmetatable({is_enum = is_enum, make_enum = make_enum},
-                    {__call = make_enum})
+return setmetatable({is_enum = is_enum, make_enum = make_enum}, {
+  __call = function(_, tbl)
+    return make_enum(tbl)
+  end
+})
