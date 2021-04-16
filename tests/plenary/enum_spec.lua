@@ -5,14 +5,14 @@ describe('Enum', function()
     local names = {'Foo','Bar','Qux'}
     local E = Enum(names)
     for i, v in ipairs(names) do
-      assert(i == E[v])
+      assert(E[v]:id() == i)
     end
   end)
   it('should define members both by name and value', function()
     local names = {'Foo','Bar','Qux'}
     local E = Enum(names)
     for i, v in ipairs(names) do
-      assert(i == E[v])
+      assert(i == E[v]:id())
       assert(v == E[i])
     end
   end)
@@ -22,8 +22,8 @@ describe('Enum', function()
       'Bar',
       'Qux'
     }
-    assert(E.Foo == 10)
-    assert(E.Bar == 11)
-    assert(E.Qux == 12)
+    assert(E.Foo:id() == 10)
+    assert(E.Bar:id() == 11)
+    assert(E.Qux:id() == 12)
   end)
 end)
