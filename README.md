@@ -96,7 +96,7 @@ nmap <leader>t <Plug>PlenaryTestFile
 To run a whole directory from the command line, you could do something like:
 
 ```
-nvim --headless -c 'PlenaryBustedDirectory tests/plenary/ {minimal_init = "tests/minimal_init.vim"}'
+nvim --headless -c "PlenaryBustedDirectory tests/plenary/ {minimal_init = 'tests/minimal_init.vim'}"
 ```
 
 Where the first argument is the directory you'd like to test. It will search for files with
