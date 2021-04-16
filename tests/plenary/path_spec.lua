@@ -24,6 +24,11 @@ describe('Path', function()
       local p = Path:new { "./home/tj/" , sep = '/'}
       assert(not p:is_absolute(), "Is absolute")
     end)
+
+    it('will normalize the path', function()
+      local p = Path:new { "lua", "..", "README.md" , sep = '/'}
+      assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
+    end)
   end)
 
   it('can join paths by constructor or join path', function()
@@ -161,6 +166,12 @@ describe('Path', function()
     it('can take absolute paths with double seps'
       .. 'and make them relative with single seps', function()
       local orig = vim.loop.cwd() .. '/lua//plenary/path.lua'
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, 'lua/plenary/path.lua')
+    end)
+
+    it('can remove the .. in paths', function()
+      local orig = 'lua//plenary/path.lua/foo/bar/../..'
       local final = Path:new(orig):normalize()
       assert.are.same(final, 'lua/plenary/path.lua')
     end)

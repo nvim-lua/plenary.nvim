@@ -59,6 +59,42 @@ local function is_root(pathname)
   return pathname == '/'
 end
 
+local _split_by_separator = (function()
+    local formatted =  string.format("([^%s]+)", path.sep)
+    return function(filepath)
+        local t = {}
+        for str in string.gmatch(filepath, formatted) do
+            table.insert(t, str)
+        end
+        return t
+    end
+end)()
+
+local function _normalize_path(filename)
+  local out_file = filename
+
+  local has = string.find(filename, "..", 1, true)
+
+  if has then
+      local parts = _split_by_separator(filename)
+
+      local idx = 1
+      repeat
+          if parts[idx] == ".." then
+              table.remove(parts, idx)
+              table.remove(parts, idx - 1)
+              idx = idx - 2
+          end
+          idx = idx + 1
+      until idx > #parts
+
+      out_file = table.concat(parts, path.sep)
+  end
+
+  return out_file
+end
+
+
 local clean = function(pathname)
   -- Remove double path seps, it's annoying
   pathname = pathname:gsub(path.sep .. path.sep, path.sep)
@@ -206,9 +242,9 @@ end
 
 function Path:absolute()
   if self:is_absolute() then
-    return self.filename
+    return _normalize_path(self.filename)
   else
-    return self._absolute or table.concat({self._cwd, self.filename}, self._sep)
+    return _normalize_path(self._absolute or table.concat({self._cwd, self.filename}, self._sep))
   end
 end
 
@@ -266,7 +302,7 @@ function Path:normalize(cwd)
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
 
-  return self.filename
+  return _normalize_path(self.filename)
 end
 
 local shorten = (function()
