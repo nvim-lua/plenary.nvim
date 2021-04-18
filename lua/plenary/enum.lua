@@ -1,8 +1,6 @@
 local Enum = {}
 
 local function make_enum(tbl)
-  -- we put indices in a private table so that we cannot mutate them easily
-  -- this also allows us to error if the index wasn't right
   local enum = {}
 
   local Variant = {}
