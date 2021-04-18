@@ -30,9 +30,7 @@ local function make_enum(tbl)
 
   local function find_next_idx(enum, i)
     while true do
-      if not enum[i] then
-        return i
-      end
+      if not enum[i] then return i end
       i = i + 1
     end
   end
@@ -44,21 +42,16 @@ local function make_enum(tbl)
       local name = v
       local idx = find_next_idx(enum, i)
       enum[idx] = name
-      if enum[name] then
-        error('Duplicate enum name')
-      end
+      if enum[name] then error('Duplicate enum name') end
       enum[name] = newVariant(idx)
       i = idx
-    elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2]) == 'number' then
+    elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2])
+        == 'number' then
       local name = v[1]
       local idx = v[2]
-      if enum[idx] then
-        error('Overlapping indices')
-      end
+      if enum[idx] then error('Overlapping indices') end
       enum[idx] = name
-      if enum[name] then
-        error('Duplicate name')
-      end
+      if enum[name] then error('Duplicate name') end
       enum[name] = newVariant(idx)
       i = idx
     else
@@ -70,7 +63,13 @@ local function make_enum(tbl)
 end
 
 Enum.__index = function(table, key)
+  if Enum[key] then return Enum[key] end
   error('Invalid enum key ' .. tostring(key))
+end
+
+function Enum:has_key(key)
+  if rawget(self, key) then return true end
+  return false
 end
 
 local function is_enum(tbl)
@@ -80,5 +79,5 @@ end
 return setmetatable({is_enum = is_enum, make_enum = make_enum}, {
   __call = function(_, tbl)
     return make_enum(tbl)
-  end
+  end,
 })
