@@ -1,85 +1,82 @@
 local Enum = {}
 
-local function values(tbl)
-  local result = {}
-  for k, v in pairs(tbl) do
-    if type(v) == 'string' then
-      result[k] = true
-    elseif type(v) == 'table' then
-      local value = v[2]
-      if result[value] then return nil, false end
-      result[value] = true
-    end
-  end
-  return result, true
-end
-
 local function make_enum(tbl)
-  local result = {}
+  -- we put indices in a private table so that we cannot mutate them easily
+  -- this also allows us to error if the index wasn't right
+  local enum = {}
 
-  local vals, ok = values(tbl)
-  if not ok then error 'Enum specification is malformed' end
-
-  local Variant = {vals = vals}
+  local Variant = {}
+  Variant.__index = Variant
 
   local function newVariant(i)
-    return setmetatable({__id = i}, Variant)
+    return setmetatable({_id = i}, Variant)
   end
 
-  function Variant:__index(name)
-    return rawget(Variant, name)
+  -- we don't need __eq because the __eq metamethod will only ever be invoked when they both have the same metatable
+
+  function Variant:__lt(o)
+    return self._id < o._id
   end
 
-  function Variant:__eq(o)
-    if self.vals[o] then return self.__id == o end
-    if getmetatable(o) == Variant then return self.__id == o.__id end
-  end
-
-  function Variant:__add(o)
-    return newVariant(self.__id + o)
+  function Variant:__gt(o)
+    return self._id > o._id
   end
 
   function Variant:__tostring()
-    return tostring(self.__id)
+    return tostring(self._id)
   end
 
   function Variant:id()
-    return self.__id
+    return self._id
   end
 
-  local i = newVariant(1)
-
-  result.__vals = {}
-
-  for _, v in ipairs(tbl) do
-    if type(v) == 'string' then
-      result[i] = v
-      result.__vals[i.__id] = v
-      i = i + 1
-    elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2])
-        == 'number' then
-      i.__id = v[2]
-      result[i] = v[1]
-      result.__vals[i.__id] = v[1]
+  local function find_next_idx(enum, i)
+    while true do
+      if not enum[i] then
+        return i
+      end
       i = i + 1
     end
   end
 
-  vim.tbl_add_reverse_lookup(result)
+  local i = 1
 
-  return setmetatable(result, Enum)
+  for _, v in ipairs(tbl) do
+    if type(v) == 'string' then
+      local name = v
+      local idx = find_next_idx(enum, i)
+      enum[idx] = name
+      if enum[name] then
+        error('Duplicate enum name')
+      end
+      enum[name] = newVariant(idx)
+      i = idx
+    elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2]) == 'number' then
+      local name = v[1]
+      local idx = v[2]
+      if enum[idx] then
+        error('Overlapping indices')
+      end
+      enum[idx] = name
+      if enum[name] then
+        error('Duplicate name')
+      end
+      enum[name] = newVariant(idx)
+      i = idx
+    else
+      error('Invalid way to specify an enum variant')
+    end
+  end
+
+  return setmetatable(enum, Enum)
+end
+
+Enum.__index = function(table, key)
+  error('Invalid enum key ' .. tostring(key))
 end
 
 local function is_enum(tbl)
   return getmetatable(tbl) == Enum
-end
-
-function Enum:__index(o)
-  if type(o) == 'number' then
-    local v = self.__vals[o]
-    if v then return v end
-    error(("No element with value %s in Enum"):format(o))
-  end
 end
 
 return setmetatable({is_enum = is_enum, make_enum = make_enum}, {
