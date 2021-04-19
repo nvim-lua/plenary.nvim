@@ -88,7 +88,7 @@ local function _normalize_path(filename)
           idx = idx + 1
       until idx > #parts
 
-      out_file = table.concat(parts, path.sep)
+      out_file = path.sep .. table.concat(parts, path.sep)
   end
 
   return out_file
