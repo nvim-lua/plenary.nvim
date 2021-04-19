@@ -34,6 +34,11 @@ local function make_enum(tbl)
     return self._id
   end
 
+  function Variant:is(other)
+    if getmetatable(other) == Variant then return self._id == other._id end
+    error('is() method must be used with elements from the same enum')
+  end
+
   local function find_next_idx(enum, i)
     if not enum[i + 1] then return i + 1 end
     error('Overlapping indices')
