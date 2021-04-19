@@ -82,7 +82,7 @@ local map_gen = function(map, key)
   return key, key, value
 end
 
-local string_gen = function(param, state)
+local bytes_gen = function(param, state)
   state = state + 1
   if state > #param then
     return nil
@@ -116,7 +116,9 @@ local rawiter = function(obj, param, state)
       return nil_gen, nil, nil
     end
 
-    return string_gen, obj, 0
+    ---TODO: handle multibyte characters, maybe in mbyte.c
+    -- return utf8.chars_gen, obj, 1
+    return bytes_gen, obj, 0
   end
 
   error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))
@@ -198,6 +200,16 @@ end
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
+---An iterator that iterates over the bytes of a string
+---Please use iter if you want to iterate over the code points
+---Which is normally what is wanted
+---@param s string
+---@return Iterator
+local bytes = function(s)
+  return wrap(bytes_gen, s, 0)
+end
+exports.bytes = bytes
+
 local range_gen = function(param, state)
   local stop, step = param[1], param[2]
   state = state + step
