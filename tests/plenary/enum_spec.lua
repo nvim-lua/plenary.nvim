@@ -8,23 +8,23 @@ end
 describe('Enum', function()
   it('should be able to define specific values for members', function()
     local E = Enum{
-      {'Foo', 3},
-      {'Bar', 2},
+      {'Foo', 2},
+      {'Bar', 4},
       'Qux',
       'Baz',
       {'Another', 11}
     }
 
-    assert(E.Foo:id() == 3)
-    assert(E.Bar:id() == 2)
-    assert(E.Qux:id() == 4)
-    assert(E.Baz:id() == 5)
+    assert(E.Foo:id() == 2)
+    assert(E.Bar:id() == 4)
+    assert(E.Qux:id() == 5)
+    assert(E.Baz:id() == 6)
     assert(E.Another:id() == 11)
 
-    assert(E[3] == 'Foo')
-    assert(E[2] == 'Bar')
-    assert(E[4] == 'Qux')
-    assert(E[5] == 'Baz')
+    assert(E[2] == 'Foo')
+    assert(E[4] == 'Bar')
+    assert(E[5] == 'Qux')
+    assert(E[6] == 'Baz')
     assert(E[11] == 'Another')
   end)
 

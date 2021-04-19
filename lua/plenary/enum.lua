@@ -1,5 +1,10 @@
 local Enum = {}
 
+local function validate_member_name(name)
+  if #name > 0 and name:sub(1, 1):match('%u') then return name end
+  error(name .. ' should start with a capital letter')
+end
+
 local function make_enum(tbl)
   local enum = {}
 
@@ -10,7 +15,8 @@ local function make_enum(tbl)
     return setmetatable({_id = i}, Variant)
   end
 
-  -- we don't need __eq because the __eq metamethod will only ever be invoked when they both have the same metatable
+  -- we don't need __eq because the __eq metamethod will only ever be
+  -- invoked when they both have the same metatable
 
   function Variant:__lt(o)
     return self._id < o._id
@@ -29,17 +35,15 @@ local function make_enum(tbl)
   end
 
   local function find_next_idx(enum, i)
-    while true do
-      if not enum[i] then return i end
-      i = i + 1
-    end
+    if not enum[i + 1] then return i + 1 end
+    error('Overlapping indices')
   end
 
-  local i = 1
+  local i = 0
 
   for _, v in ipairs(tbl) do
     if type(v) == 'string' then
-      local name = v
+      local name = validate_member_name(v)
       local idx = find_next_idx(enum, i)
       enum[idx] = name
       if enum[name] then error('Duplicate enum name') end
@@ -47,7 +51,7 @@ local function make_enum(tbl)
       i = idx
     elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2])
         == 'number' then
-      local name = v[1]
+      local name = validate_member_name(v[1])
       local idx = v[2]
       if enum[idx] then error('Overlapping indices') end
       enum[idx] = name
@@ -62,7 +66,7 @@ local function make_enum(tbl)
   return setmetatable(enum, Enum)
 end
 
-Enum.__index = function(table, key)
+Enum.__index = function(_, key)
   if Enum[key] then return Enum[key] end
   error('Invalid enum key ' .. tostring(key))
 end
