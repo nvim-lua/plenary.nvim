@@ -35,7 +35,7 @@ describe('List', function()
   end)
   it('can append elements to itself', function()
     local l = List {1, 2, 3}
-    l:append(4)
+    l:push(4)
     assert.are.equal(l, List {1, 2, 3, 4})
   end)
   it('can pop the n-th element from itself (last one by default)', function()

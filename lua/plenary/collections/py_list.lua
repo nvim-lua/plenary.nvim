@@ -54,7 +54,7 @@ function List:__len()
 end
 
 function List:__concat(other)
-  local result = List {}
+  local result = List:new{}
   for _, v in ipairs(self) do result:push(v) end
   for _, v in ipairs(other) do result:push(v) end
   return result
@@ -95,7 +95,7 @@ function List:deep_equal(other)
 end
 
 function List:slice(a, b)
-  return List(vim.list_slice(self, a, b))
+  return List:new(vim.list_slice(self, a, b))
 end
 
 function List:copy()
