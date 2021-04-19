@@ -2,10 +2,10 @@
 local List = {}
 
 -- List constructor. Can be used in higher order functions
-function List:new(tbl)
+function List.new(tbl)
   if type(tbl) == 'table' then
     local len = #tbl
-    local obj = setmetatable(tbl, self)
+    local obj = setmetatable(tbl, List)
     obj._len = len
     return obj
   end
@@ -57,7 +57,7 @@ function List:__len()
 end
 
 function List:__concat(other)
-  local result = List:new{}
+  local result = List.new {}
   for _, v in ipairs(self) do result:push(v) end
   for _, v in ipairs(other) do result:push(v) end
   return result
@@ -101,7 +101,7 @@ end
 
 -- Returns a copy of the list with elements between a and b, inclusive
 function List:slice(a, b)
-  return List:new(vim.list_slice(self, a, b))
+  return List.new(vim.list_slice(self, a, b))
 end
 
 -- Similar to slice, but with every element. It only makes a shallow copy
@@ -179,7 +179,7 @@ end
 
 return setmetatable({}, {
   __call = function(_, tbl)
-    return List:new(tbl)
+    return List.new(tbl)
   end,
   __index = List,
 })
