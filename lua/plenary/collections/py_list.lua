@@ -135,6 +135,12 @@ local function backward_list_gen(param, state)
   if v then return state, v end
 end
 
+function List:count(e)
+  local count = 0
+  for _, v in self:iter() do if e == v then count = count + 1 end end
+  return count
+end
+
 function List:extend(other)
   if type(other) == 'table' and getmetatable(other) == itermetatable then
     for _, v in other do self:push(v) end
