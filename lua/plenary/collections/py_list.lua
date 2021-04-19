@@ -71,7 +71,7 @@ end
 
 -- Pops the last element off the list and returns it
 function List:pop()
-  local result = table.remove(self, #self)
+  local result = table.remove(self)
   self._len = self._len - 1
   return result
 end
