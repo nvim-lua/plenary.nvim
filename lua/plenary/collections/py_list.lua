@@ -61,10 +61,7 @@ function List:__len()
 end
 
 function List:__concat(other)
-  local result = List.new {}
-  for _, v in ipairs(self) do result:push(v) end
-  for _, v in ipairs(other) do result:push(v) end
-  return result
+  return self:concat(other)
 end
 
 --- Appends the element to the end of the list
@@ -173,7 +170,7 @@ end
 ---     local list = List{1, 2, 3, 4}
 ---     print(list:join('-'))  -- 1-2-3-4
 --- </pre>
---- @param sep string: The separator to place between the elements
+--- @param sep string: The separator to place between the elements. Default ''
 --- @return string: The elements in the list separated by sep
 function List:join(sep)
   sep = sep or ''
@@ -182,6 +179,45 @@ function List:join(sep)
     result = result .. tostring(v)
     if i ~= #self then result = result .. sep end
   end
+  return result
+end
+
+--- Returns a list with the elements of self concatenated with those in the
+--- given arguments
+--- @vararg table|List: The sequences to concatenate to this one
+--- @return List
+function List:concat(...)
+  local result = List.new {}
+  local others = {...}
+  for _, v in self:iter() do result:push(v) end
+  for _, other in ipairs(others) do
+    for _, v in ipairs(other) do result:push(v) end
+  end
+  return result
+end
+
+--- Moves the elements between from and from+len in self, to positions between
+--- to and to+len in other, like so
+--- <pre>
+---     other[to], other[to+1]... other[to+len] = self[from], self[from+1]... self[from+len]
+--- </pre>
+--- @param from number: The first index of the origin slice
+--- @param len number: The length of the slices
+--- @param to number: The first index of the destination slice
+--- @param other table|List: The destination list. Defaults to self
+--- @see table.move
+function List:move(from, len, to, other)
+  return table.move(self, from, len, to, other)
+end
+
+--- Packs the elements in this list into a simple table, with an `n` member
+--- indicating it's length. Similar to lua 5.3's table.pack
+--- @return table: A simple list-like table with an `n` member
+--- @see table.pack
+function List:pack()
+  local result = {}
+  for i, v in self:iter() do result[i] = v end
+  result.n = #self
   return result
 end
 
