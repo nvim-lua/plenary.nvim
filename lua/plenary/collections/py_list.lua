@@ -221,6 +221,12 @@ function List:pack()
   return result
 end
 
+--- Unpacks the elements from this list and returns them
+--- @return ...any: All the elements from self[1] to self[#self[]]
+function List:unpack()
+  return unpack(self)
+end
+
 -- Iterator stuff
 
 local Iterator = require 'plenary.iterators'
