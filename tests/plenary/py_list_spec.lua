@@ -33,7 +33,7 @@ describe('List', function()
     l:reverse()
     assert.are.equal(l, List {4, 3, 2, 1})
   end)
-  it('can append elements to itself', function()
+  it('can push elements to itself', function()
     local l = List {1, 2, 3}
     l:push(4)
     assert.are.equal(l, List {1, 2, 3, 4})

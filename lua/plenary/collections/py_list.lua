@@ -64,7 +64,7 @@ function List:__concat(other)
   return self:concat(other)
 end
 
---- Appends the element to the end of the list
+--- Pushes the element to the end of the list
 --- @param other any: The object to append
 --- @see List.pop
 function List:push(other)
@@ -187,9 +187,8 @@ end
 --- @vararg table|List: The sequences to concatenate to this one
 --- @return List
 function List:concat(...)
-  local result = List.new {}
+  local result = self:copy()
   local others = {...}
-  for _, v in self:iter() do result:push(v) end
   for _, other in ipairs(others) do
     for _, v in ipairs(other) do result:push(v) end
   end
@@ -210,21 +209,17 @@ function List:move(from, len, to, other)
   return table.move(self, from, len, to, other)
 end
 
---- Packs the elements in this list into a simple table, with an `n` member
---- indicating it's length. Similar to lua 5.3's table.pack
+--- Packs the given elements into this list. Similar to lua 5.3's table.pack
+--- @vararg any: The elements to pack
 --- @return table: A simple list-like table with an `n` member
 --- @see table.pack
-function List:pack()
-  local result = {}
-  for i, v in self:iter() do result[i] = v end
-  result.n = #self
-  return result
+function List:pack(...)
 end
 
 --- Unpacks the elements from this list and returns them
---- @return ...any: All the elements from self[1] to self[#self[]]
+--- @return ...any: All the elements from self[1] to self[#self]
 function List:unpack()
-  return unpack(self)
+  return unpack(self, 1, #self)
 end
 
 -- Iterator stuff
