@@ -40,17 +40,8 @@ end
 
 -- TODO: Similar to python, use [...] if the table references itself --
 function List:__tostring()
-  if rawequal(self, List) then return '<List class>' end
-  if #self == 0 then return '[]' end
-  local result = {'['}
-  for _, v in ipairs(self) do
-    local repr = tostring(v)
-    if type(v) == 'string' then repr = '"' .. repr .. '"' end
-    result[#result + 1] = repr
-    result[#result + 1] = ', '
-  end
-  result[#result] = ']'
-  return table.concat(result)
+  local elements = self:join ', '
+  return '[' .. elements .. ']'
 end
 
 function List:__eq(other)
@@ -175,6 +166,23 @@ function List:reverse()
     n = n - 1
   end
   return self
+end
+
+--- Concatenates the elements whithin the list separated by the given string
+--- <pre>
+---     local list = List{1, 2, 3, 4}
+---     print(list:join('-'))  -- 1-2-3-4
+--- </pre>
+--- @param sep string: The separator to place between the elements
+--- @return string: The elements in the list separated by sep
+function List:join(sep)
+  sep = sep or ''
+  local result = ''
+  for i, v in self:iter() do
+    result = result .. tostring(v)
+    if i ~= #self then result = result .. sep end
+  end
+  return result
 end
 
 -- Iterator stuff
