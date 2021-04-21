@@ -15,8 +15,6 @@ local ACTION_SCOPE_LEAVE = 4
 local callback_or_next
 do
   local function push_defer(defered, future, scope)
-    scope = scope:id()
-
     if defered[scope] == nil then
       defered[scope] = {}
     end
@@ -36,7 +34,7 @@ do
       -- this is called at the end of the root scope
       (callback or function() end)(select(2, ...))
     else
-      assert(select('#', select(2, ...)) == 2, "expected a two return values")
+      -- assert(select('#', select(2, ...)) == 2, "expected a two return values")
       local action = f.second(...)
       local returned_future = f.third(...)
       -- assert(type(returned_future) == "function", "type error :: expected func")
@@ -51,7 +49,8 @@ do
           step(...)
         end)
       elseif action == ACTION_DEFER then
-        push_defer(defered, returned_future, scope)
+        local level = f.fourth(...)
+        push_defer(defered, returned_future, scope:id() - level)
         callback_or_next(step, thread, callback, scope, defered, co.resume(thread, ...))
       elseif action == ACTION_SCOPE_ENTER then
         scope:inc()
@@ -115,8 +114,8 @@ end
 ---Defers a function to be called at the end of the scope
 ---Like zig
 ---@param future Future
-M.defer = function(future)
-  co.yield(ACTION_DEFER, future)
+M.defer = function(future, level)
+  co.yield(ACTION_DEFER, future, level or 0)
 end
 
 ---Creates an async function with a callback style function.
