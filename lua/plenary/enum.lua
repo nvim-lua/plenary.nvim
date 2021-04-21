@@ -1,10 +1,48 @@
+---@brief [[
+--- This module defines an idiomatic way to create enum classes, similar to
+--- those in java or kotlin. There are two ways to create an enum, one is with
+--- the exported `make_enum` function, or calling the module directly with the
+--- enum spec.
+---
+--- The enum spec consists of a list-like table whose members can be either a
+--- string or a tuple of the form {string, number}. In the former case, the enum
+--- member will take the next available value, while in the latter, the member
+--- will take the string as it's name and the number as it's value. In both
+--- cases, the name must start with a capital letter.
+---
+--- Here is an example:
+---
+--- <pre>
+--- local Enum = require 'plenary.enum'
+--- local myEnum = Enum {
+---     'Foo',          -- Takes value 1
+---     'Bar',          -- Takes value 2
+---     {'Qux', 10},    -- Takes value 10
+---     'Baz',          -- Takes value 11
+--- }
+--- </pre>
+---
+--- In case of name or value clashing, the call will fail. For this reason, it's
+--- best if you define the members in ascending order.
+---@brief ]]
 local Enum = {}
+
+---@class Enum
 
 local function validate_member_name(name)
   if #name > 0 and name:sub(1, 1):match('%u') then return name end
   error(name .. ' should start with a capital letter')
 end
 
+--- Creates an enum from the given list-like table, like so:
+--- <pre>
+--- local enum = Enum.make_enum{
+---     'Foo',
+---     'Bar',
+---     {'Qux', 10}
+--- }
+--- </pre>
+--- @return Enum: A new enum
 local function make_enum(tbl)
   local enum = {}
 
@@ -40,8 +78,9 @@ local function make_enum(tbl)
   end
 
   local function find_next_idx(enum, i)
-    if not enum[i + 1] then return i + 1 end
-    error('Overlapping indices')
+    local newI = i + 1
+    if not enum[newI] then return newI end
+    error('Overlapping index: ' .. tostring(newI))
   end
 
   local i = 0
@@ -51,16 +90,16 @@ local function make_enum(tbl)
       local name = validate_member_name(v)
       local idx = find_next_idx(enum, i)
       enum[idx] = name
-      if enum[name] then error('Duplicate enum name') end
+      if enum[name] then error('Duplicate enum member name: ' .. name) end
       enum[name] = newVariant(idx)
       i = idx
     elseif type(v) == 'table' and type(v[1]) == 'string' and type(v[2])
         == 'number' then
       local name = validate_member_name(v[1])
       local idx = v[2]
-      if enum[idx] then error('Overlapping indices') end
+      if enum[idx] then error('Overlapping index: ' .. tostring(idx)) end
       enum[idx] = name
-      if enum[name] then error('Duplicate name') end
+      if enum[name] then error('Duplicate name: ' .. name) end
       enum[name] = newVariant(idx)
       i = idx
     else
@@ -73,14 +112,20 @@ end
 
 Enum.__index = function(_, key)
   if Enum[key] then return Enum[key] end
-  error('Invalid enum key ' .. tostring(key))
+  error('Invalid enum key: ' .. tostring(key))
 end
 
+--- Checks whether the enum has a member with the given name
+--- @param key string: The element to check for
+--- @return boolean: True if key is present
 function Enum:has_key(key)
   if rawget(self, key) then return true end
   return false
 end
 
+--- Checks whether the given object corresponds to an instance of Enum
+--- @param tbl table: The object to be checked
+--- @return boolean: True if tbl is an Enum
 local function is_enum(tbl)
   return getmetatable(tbl) == Enum
 end
