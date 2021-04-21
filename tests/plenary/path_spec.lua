@@ -177,6 +177,32 @@ describe('Path', function()
     end)
   end)
 
+  describe(':shorten', function()
+    it('can shorten a path', function()
+      local long_path = '/this/is/a/long/path'
+      local short_path = Path:new(long_path):shorten()
+      assert.are.same(short_path, '/t/i/a/l/path')
+    end)
+  end)
+
+  describe(':shorten', function()
+    it('can shorten a path components to a given length', function()
+      local long_path = '/this/is/a/long/path'
+      local short_path = Path:new(long_path):shorten(2)
+      assert.are.same(short_path, '/th/is/a/lo/path')
+
+      -- without the leading /
+      long_path = 'this/is/a/long/path'
+      short_path = Path:new(long_path):shorten(3)
+      assert.are.same(short_path, 'thi/is/a/lon/path')
+
+      -- where len is greater than the length of the final component
+      long_path = 'this/is/an/extremely/long/path'
+      short_path = Path:new(long_path):shorten(5)
+      assert.are.same(short_path, 'this/is/an/extre/long/path')
+    end)
+  end)
+
   describe('mkdir / rmdir', function()
     it('can create and delete directories', function()
       local p = Path:new("_dir_not_exist")
