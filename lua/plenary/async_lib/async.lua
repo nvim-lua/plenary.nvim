@@ -78,9 +78,37 @@ M.wrap = function(func, argc)
 end
 
 ---Return a new future that when run will run all futures concurrently.
+---Only keeps the first value that the future returns
 ---@param futures table: the futures that you want to join
 ---@return Future: returns a future
 M.join = M.wrap(function(futures, step)
+  local len = #futures
+  local results = {}
+  local done = 0
+
+  if len == 0 then
+    return step(results)
+  end
+
+  for i, future in ipairs(futures) do
+    assert(type(future) == "function", "type error :: future must be function")
+
+    local callback = function(...)
+      results[i] = ...
+      done = done + 1
+      if done == len then
+        step(results)
+      end
+    end
+
+    future(callback)
+  end
+end, 2)
+
+---Same as join but will pack all the values that the futures returned
+---@param futures table: the futures that you want to join
+---@return Future: returns a future
+M.join_pack = M.wrap(function(futures, step)
   local len = #futures
   local results = {}
   local done = 0
@@ -97,6 +125,32 @@ M.join = M.wrap(function(futures, step)
       done = done + 1
       if done == len then
         step(results)
+      end
+    end
+
+    future(callback)
+  end
+end, 2)
+
+---Same as join but will not keep any values
+---@param futures table: the futures that you want to join
+---@return Future: returns a future
+M.join_ = M.wrap(function(futures, step)
+  local len = #futures
+  local results = {}
+  local done = 0
+
+  if len == 0 then
+    return step(results)
+  end
+
+  for _, future in ipairs(futures) do
+    assert(type(future) == "function", "type error :: future must be function")
+
+    local callback = function()
+      done = done + 1
+      if done == len then
+        step()
       end
     end
 
@@ -154,6 +208,24 @@ end
 M.await_all = function(futures)
   assert(type(futures) == "table", "type error :: expected table")
   return M.await(M.join(futures))
+end
+
+---Same as await_all but will pack the values
+---If the futures have libuv leaf futures they will be run concurrently
+---@param futures table
+---@return table: returns a table of results that each future returned. Note that if the future returns multiple values they will be packed into a table.
+M.await_all_pack = function(futures)
+  assert(type(futures) == "table", "type error :: expected table")
+  return M.await(M.join_pack(futures))
+end
+
+---Same as await_all but will throw away values
+---If the futures have libuv leaf futures they will be run concurrently
+---@param futures table
+---@return table: returns a table of results that each future returned. Note that if the future returns multiple values they will be packed into a table.
+M.await_all_ = function(futures)
+  assert(type(futures) == "table", "type error :: expected table")
+  return M.await(M.join_pack(futures))
 end
 
 ---suspend a coroutine
