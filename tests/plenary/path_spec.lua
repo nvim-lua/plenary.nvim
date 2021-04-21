@@ -158,22 +158,22 @@ describe('Path', function()
 
   describe(':normalize', function()
     it('can take paths with double separators change them to single separators', function()
-      local orig = 'lua//plenary/path.lua'
+      local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, '/lua/plenary/path.lua')
     end)
     -- this may be redundant since normalize just calls make_relative which is tested above
     it('can take absolute paths with double seps'
       .. 'and make them relative with single seps', function()
-      local orig = vim.loop.cwd() .. '/lua//plenary/path.lua'
+      local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, '/lua/plenary/path.lua')
     end)
 
     it('can remove the .. in paths', function()
-      local orig = 'lua//plenary/path.lua/foo/bar/../..'
+      local orig = '/lua//plenary/path.lua/foo/bar/../..'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, '/lua/plenary/path.lua')
     end)
   end)
 
