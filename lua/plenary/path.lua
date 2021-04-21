@@ -7,8 +7,6 @@ local uv = vim.loop
 
 local F = require('plenary.functional')
 
-
-
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -305,8 +303,29 @@ function Path:normalize(cwd)
   return _normalize_path(self.filename)
 end
 
+local function shorten_len(filename, len)
+  local final_match
+  local final_path_components = {}
+  for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
+    if #match > len then
+      table.insert(final_path_components, string.sub(match, 1, len))
+    else
+      table.insert(final_path_components, match)
+    end
+    table.insert(final_path_components, path.sep)
+    final_match = match
+  end
+
+  local l = #final_path_components -- so that we don't need to keep calculating length
+  table.remove(final_path_components, l) -- remove final slash
+  table.remove(final_path_components, l-1) -- remvove shortened final component
+  table.insert(final_path_components, final_match) -- insert full final component
+
+  return table.concat(final_path_components)
+end
+
 local shorten = (function()
-  if jit then
+  if jit and path.sep ~= '\\' then
     local ffi = require('ffi') ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
@@ -322,11 +341,15 @@ local shorten = (function()
     end
   end
   return function(filename)
-    return filename
+    shorten_len(filename, 1)
   end
 end)()
 
-function Path:shorten()
+function Path:shorten(len)
+  assert(len ~= 0, 'len must be at least 1')
+  if len and len > 1 then
+    return shorten_len(self.filename, len)
+  end
   return shorten(self.filename)
 end
 
