@@ -18,12 +18,13 @@ end)
 
 local another_async_func = async(function()
   await(final())
+  a.defer(final())
 end)
 
 local async_func = async(function()
   await(another_async_func())
   a.defer(another_async_func())
-  a.defer(another_async_func())
+  a.defer(final())
 end)
 
 a.run(async_func())

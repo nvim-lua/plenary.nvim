@@ -6,7 +6,7 @@ local tbl = require('plenary.tbl')
 
 local M = {}
 
--- TODO: use enums
+-- TODO: use enums once they are merged
 local ACTION_AWAIT = 1
 local ACTION_DEFER = 2
 local ACTION_SCOPE_ENTER = 3
@@ -14,14 +14,18 @@ local ACTION_SCOPE_LEAVE = 4
 
 local callback_or_next
 do
-  -- the current scope that we are in
-  local scope = 0
+  local function push_defer(defered, future, scope)
+    scope = scope:id()
 
-  -- a map of scope to defered stuff
-  local defered = {}
+    if defered[scope] == nil then
+      defered[scope] = {}
+    end
+
+    table.insert(defered[scope], future)
+  end
 
   ---because we can't store varargs
-  callback_or_next = function(step, thread, callback, ...)
+  callback_or_next = function(step, thread, callback, scope, defered, ...)
     local stat = f.first(...)
 
     if not stat then
@@ -38,31 +42,54 @@ do
       -- assert(type(returned_future) == "function", "type error :: expected func")
 
       if action == ACTION_AWAIT then
-        scope = scope + 1
+        scope:inc()
         print('we entered a leaf future scope', scope)
         returned_future(function(...)
           print('we left a leaf future scope', scope)
-          scope = scope - 1
+          dump('defered is now', defered)
+          scope:dec()
           step(...)
         end)
       elseif action == ACTION_DEFER then
-        defered[scope] = returned_future
-        callback_or_next(step, thread, callback, co.resume(thread, ...))
+        push_defer(defered, returned_future, scope)
+        callback_or_next(step, thread, callback, scope, defered, co.resume(thread, ...))
       elseif action == ACTION_SCOPE_ENTER then
-        -- table.insert(defered, returned_future)
-        -- resume the coroutine
-        scope = scope + 1
+        scope:inc()
         print('we entered a non-leaf future scope', scope)
-        callback_or_next(step, thread, callback, co.resume(thread, ...))
+        callback_or_next(step, thread, callback, scope, defered, co.resume(thread, ...))
       elseif action == ACTION_SCOPE_LEAVE then
         print('we left a non-leaf future scope', scope)
-        scope = scope - 1
-        callback_or_next(step, thread, callback, co.resume(thread, ...))
+        dump('defered is now', defered)
+        scope:dec()
+        callback_or_next(step, thread, callback, scope, defered, co.resume(thread, ...))
       else
         error("Invalid action")
       end
     end
   end
+end
+
+local Scope = {}
+Scope.__index = Scope
+
+function Scope.new()
+  return setmetatable({0}, Scope)
+end
+
+function Scope:inc()
+  self[1] = self[1] + 1
+end
+
+function Scope:dec()
+  self[1] = self[1] - 1
+end
+
+function Scope:id()
+  return self[1]
+end
+
+function Scope:__tostring()
+  return tostring(self[1])
 end
 
 ---@class Future
@@ -74,10 +101,12 @@ end
 local execute = function(future, callback)
   assert(type(future) == "function", "type error :: expected func")
   local thread = co.create(future)
+  local scope = Scope.new()
+  local defered = {}
 
   local step
   step = function(...)
-    callback_or_next(step, thread, callback, co.resume(thread, ...))
+    callback_or_next(step, thread, callback, scope, defered, co.resume(thread, ...))
   end
 
   step()
