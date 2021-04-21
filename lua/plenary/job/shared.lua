@@ -46,7 +46,7 @@ function shared.create_uv_options(job)
   return options
 end
 
-function shared.get_stdin(writer, is_job, interactive)
+function shared.get_stdin(writer, is_job, open_stdin)
   if writer then
     if is_job then
       writer:_prepare_pipes()
@@ -56,7 +56,7 @@ function shared.get_stdin(writer, is_job, interactive)
     end
   end
 
-  if not interactive then
+  if not open_stdin then
     return nil
   end
 

@@ -19,7 +19,7 @@ function Job.new(opts)
   local command, args = shared.get_command_and_args(opts)
 
   local interactive = opts.interactive
-  if interactive == nil then interactive = true end
+  if interactive == nil then interactive = false end
 
   return setmetatable({
     command = command,
@@ -35,7 +35,7 @@ end
 -- TODO: add support for piping jobs to each other
 ---Thin wrapper around Job:spawn
 Job.output = async(function(self)
-  assert(not self.interactive == true, "Cannot get the output of an interactive job")
+  -- assert(not self.interactive, "Cannot get the output of an interactive job")
 
   local handle = self:spawn()
 
@@ -57,7 +57,7 @@ Job.spawn = function(self, spawn_opts)
   assert(not (self.writer and spawn_opts.stdin), "Cannot pass both writer and stdin")
 
   spawn_opts = tbl.copy_one_level(spawn_opts or {})
-  spawn_opts.stdin = spawn_opts.stdin or shared.get_stdin(self.writer, false, self.interactive)
+  spawn_opts.stdin = spawn_opts.stdin or shared.get_stdin(self.writer, false, true)
   spawn_opts.stdout = spawn_opts.stdout or uv.new_pipe(false)
   spawn_opts.stderr = spawn_opts.stderr or uv.new_pipe(false)
 
