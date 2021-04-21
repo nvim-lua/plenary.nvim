@@ -27,7 +27,6 @@ describe('Enum', function()
     assert(E[6] == 'Baz')
     assert(E[11] == 'Another')
   end)
-
   it('should compare with itself', function()
     local E1 = Enum {
       'Foo',
@@ -55,7 +54,6 @@ describe('Enum', function()
       return E2.Bar >= E1.Foo
     end)
   end)
-
   it('should error when accessing invalid field', function()
     local E = Enum {
       'Foo',
@@ -69,6 +67,27 @@ describe('Enum', function()
 
     should_fail(function()
       return E.bar
+    end)
+  end)
+  it('should fail if there is name or index clashing', function()
+    should_fail(function()
+      return Enum{
+        'Foo',
+        'Foo'
+      }
+    end)
+    should_fail(function()
+      return Enum{
+        'Foo',
+        {'Bar', 1}
+      }
+    end)
+  end)
+  it('should fail if there is a key that starts with lowercase', function()
+    should_fail(function()
+      return Enum{
+        'foo'
+      }
     end)
   end)
 end)
