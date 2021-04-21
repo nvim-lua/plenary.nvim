@@ -267,8 +267,6 @@ describe('Path', function()
       local lines = p:readlines()
 
       assert(pcall(p.touch, p))
-      print(p:_stat().atime.sec > last_atime)
-      print(p:_stat().mtime.sec > last_mtime)
       assert(p:exists())
 
       eq(lines, p:readlines())

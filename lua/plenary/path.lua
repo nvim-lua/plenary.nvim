@@ -112,6 +112,9 @@ end
 
 
 ---@class Path
+---
+--- These are passed and accessible
+---@field filename string: The passed filename
 --
 --- These are set at start time
 ---@field _absolute string: The cached absolute value of the string
@@ -185,7 +188,7 @@ function Path:new(...)
 
     -- Cached values
     _absolute = uv.fs_realpath(path_string),
-    _cwd = uv.fs_realpath('.'),
+    _cwd = uv.cwd(),
     _props = {},
   }
 
@@ -254,14 +257,6 @@ end
 
 function Path:_stat()
   return uv.fs_stat(self:_fs_filename()) or {}
-  -- local stat = uv.fs_stat(self:absolute())
-  -- if not self._absolute then return {} end
-
-  -- if not self._stat_result then
-  --   self._stat_result =
-  -- end
-
-  -- return self._stat_result
 end
 
 function Path:_st_mode()
@@ -585,7 +580,7 @@ end
 -- end
 
 PathProperties["name"] = function(self)
-  return self:absolute():match(string.format('%s([^%s]+)$', path.sep, path.sep)) or ''
+  return self.filename:match(string.format('%s?([^%s]+)$', path.sep, path.sep)) or ''
 end
 
 PathProperties["suffix"] = function(self)
