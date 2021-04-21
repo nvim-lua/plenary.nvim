@@ -24,7 +24,6 @@ Plug 'nvim-lua/plenary.nvim'
 - `plenary.context_manager`
 - `plenary.test_harness`
 - `plenary.filetype`
-- `plenary.neorocks` (This may move to packer.nvim, but I have added some improvements to use it more as a library.)
 
 ### plenary.job
 
@@ -205,40 +204,5 @@ This will enable debuggin for the plugin.
 
 ### plenary.neorocks
 
-Install lua packages with `luarocks`!
+DELETED: Please use packer.nvim or other lua-rocks wrapper instead. This no longer exists.
 
-Include the following somewhere in your configuration (either heredoc or sourced lua file):
-
-```lua
-local neorocks = require("plenary.neorocks")
-
--- Installs neorocks if necessary and then installs the package you need.
---  Is not synchronous, so should be called from Neovim's command line most likely.
-neorocks.install('penlight', 'pl')
-
--- ensure_installed(package_name, lua_name, headless)
--- Only installs if currently not installed.
---
---   package_name : str             - Name of the package for luarocks
---   lua_name     : (optional) str  - Name of the package that you can require. Used to determine if we have it installed already (not from luarocks)
-neorocks.ensure_installed('penlight', 'pl')
-neorocks.ensure_installed('lua-cjson', 'cjson')
-```
-
-Inspiration: https://github.com/theHamsta/nvim_rocks . However, I've used quite a different end goal (following XDG_CONFIG standards, using `package.path` and `package.cpath` to load the packages and a different strategy of loading).
-
-
-### And more to come :)
-
-- [ ] Floating window wrappers
-- [ ] Easy border windows to any floating window
-
-
-
-### Used by:
-
-- [express_line.nvim](https://github.com/tjdevries/express_line.nvim)
-- [apyrori.nvim](https://github.com/tjdevries/apyrori.nvim)
-- [nlua.nvim](https://github.com/tjdevries/nlua.nvim)
-- (TODO) [popup.nvim](https://github.com/nvim-lua/popup.nvim)
-- (TODO) [telescope.nvim](https://github.com/nvim-lua/telescope.nvim)
