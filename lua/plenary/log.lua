@@ -131,7 +131,7 @@ log.new = function(config, standalone)
           vim.cmd "echohl NONE"
         end
       end
-      if config.use_console == 'sync' then
+      if config.use_console == 'sync' and not vim.in_fast_event() then
         log_to_console()
       else
         vim.schedule(log_to_console)
