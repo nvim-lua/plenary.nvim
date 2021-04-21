@@ -6,21 +6,62 @@ local tbl = require('plenary.tbl')
 
 local M = {}
 
----because we can't store varargs
-local function callback_or_next(step, thread, callback, ...)
-  local stat = f.first(...)
+-- TODO: use enums
+local ACTION_AWAIT = 1
+local ACTION_DEFER = 2
+local ACTION_SCOPE_ENTER = 3
+local ACTION_SCOPE_LEAVE = 4
 
-  if not stat then
-    error(string.format("The coroutine failed with this message: %s", f.second(...)))
-  end
+local callback_or_next
+do
+  -- the current scope that we are in
+  local scope = 0
 
-  if co.status(thread) == "dead" then
-    (callback or function() end)(select(2, ...))
-  else
-    assert(select('#', select(2, ...)) == 1, "expected a single return value")
-    local returned_future = f.second(...)
-    assert(type(returned_future) == "function", "type error :: expected func")
-    returned_future(step)
+  -- a map of scope to defered stuff
+  local defered = {}
+
+  ---because we can't store varargs
+  callback_or_next = function(step, thread, callback, ...)
+    local stat = f.first(...)
+
+    if not stat then
+      error(string.format("The coroutine failed with this message: %s", f.second(...)))
+    end
+
+    if co.status(thread) == "dead" then
+      -- this is called at the end of the root scope
+      (callback or function() end)(select(2, ...))
+    else
+      assert(select('#', select(2, ...)) == 2, "expected a two return values")
+      local action = f.second(...)
+      local returned_future = f.third(...)
+      -- assert(type(returned_future) == "function", "type error :: expected func")
+
+      if action == ACTION_AWAIT then
+        scope = scope + 1
+        print('we entered a leaf future scope', scope)
+        returned_future(function(...)
+          print('we left a leaf future scope', scope)
+          scope = scope - 1
+          step(...)
+        end)
+      elseif action == ACTION_DEFER then
+        defered[scope] = returned_future
+        callback_or_next(step, thread, callback, co.resume(thread, ...))
+      elseif action == ACTION_SCOPE_ENTER then
+        -- table.insert(defered, returned_future)
+        -- resume the coroutine
+        scope = scope + 1
+        print('we entered a non-leaf future scope', scope)
+        callback_or_next(step, thread, callback, co.resume(thread, ...))
+      elseif action == ACTION_SCOPE_LEAVE then
+        print('we left a non-leaf future scope', scope)
+        scope = scope - 1
+        callback_or_next(step, thread, callback, co.resume(thread, ...))
+      else
+        error("Invalid action")
+      end
+    end
   end
 end
 
@@ -40,6 +81,13 @@ local execute = function(future, callback)
   end
 
   step()
+end
+
+---Defers a function to be called at the end of the scope
+---Like zig
+---@param future Future
+M.defer = function(future)
+  co.yield(ACTION_DEFER, future)
 end
 
 ---Creates an async function with a callback style function.
@@ -70,7 +118,7 @@ M.wrap = function(func, argc)
 
         return func(tbl.unpack(params))
       else
-        return co.yield(future)
+        return co.yield(ACTION_AWAIT, future)
       end
     end
     return future
@@ -191,7 +239,10 @@ M.async = function(func)
     local args = tbl.pack(...)
     local function future(step)
       if step == nil then
-        return func(tbl.unpack(args))
+        co.yield(ACTION_SCOPE_ENTER, true)
+        local res = {func(tbl.unpack(args))}
+        co.yield(ACTION_SCOPE_LEAVE, true)
+        return unpack(res)
       else
         execute(future, step)
       end
