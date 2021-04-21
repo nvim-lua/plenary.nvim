@@ -186,8 +186,10 @@ function Path:new(...)
 
     _sep = sep,
 
-    -- Cached values
+    -- TODO: Should remove this, because as ober says, this probably doesn't make sense
     _absolute = uv.fs_realpath(path_string),
+
+    -- Cached values
     _cwd = uv.cwd(),
     _props = {},
   }
