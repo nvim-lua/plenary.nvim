@@ -1,5 +1,6 @@
 local i = require('plenary.iterators')
 local f = require('plenary.functional')
+local a = require('plenary.async_lib')
 local eq = assert.are.same
 
 local function check_keys(tbl, keys)
@@ -22,6 +23,15 @@ describe('iterators', function()
       {'third', 3},
       {'fourth', 4}
     }
+  end)
+
+  it('should be able to await for each', function()
+    local res = i.iter { 1, 2, 3 }
+      :map(function(n)
+        return a.util.id(n)
+      end)
+      :await_tolist()
+    assert(res, {1, 2, 3})
   end)
 
   it('should be able to create iterator from array', function()

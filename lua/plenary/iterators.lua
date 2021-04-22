@@ -7,6 +7,8 @@
 
 local co = coroutine
 local f = require('plenary.functional')
+local a = require('plenary.async_lib')
+local await = a.await
 
 --------------------------------------------------------------------------------
 -- Tools
@@ -166,6 +168,12 @@ function Iterator:for_each(fn)
   until state == nil
 end
 
+function Iterator:await_for_each(fn)
+  self:for_each(function(future)
+    fn(await(future))
+  end)
+end
+
 function Iterator:stateful()
   return wrap(co.wrap(function()
     self:for_each(function(...)
@@ -250,8 +258,19 @@ local duplicate_table_gen = function(param_x, state_x)
   return state_x + 1, unpack(param_x)
 end
 
-local duplicate_fun_gen = function(param_x, state_x)
-  return state_x + 1, param_x(state_x)
+local fun_gen
+do
+  local function it(state_x, ...)
+    if ... == nil then
+      return nil
+    end
+
+    return state_x, ...
+  end
+
+  fun_gen = function(param_x, state_x)
+    return it(state_x + 1, param_x(state_x))
+  end
 end
 
 local duplicate_gen = function(param_x, state_x)
@@ -277,7 +296,7 @@ exports.duplicate = duplicate
 ---@return Iterator
 local from_fun = function(fun)
   assert(type(fun) == "function")
-  return wrap(duplicate_fun_gen, fun, 0)
+  return wrap(fun_gen, fun, 0)
 end
 exports.from_fun = from_fun
 
@@ -523,6 +542,14 @@ end
 function Iterator:tolist()
   local list = {}
   self:for_each(function(a)
+    table.insert(list, a)
+  end)
+  return list
+end
+
+function Iterator:await_tolist()
+  local list = {}
+  self:await_for_each(function(a)
     table.insert(list, a)
   end)
   return list
