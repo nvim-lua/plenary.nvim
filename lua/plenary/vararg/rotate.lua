@@ -91,4 +91,4 @@ local function rotate(...)
     return rotate_n(...)
 end
 
-return {rotate = rotate}
+return rotate

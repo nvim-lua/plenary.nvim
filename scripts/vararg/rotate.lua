@@ -1,6 +1,6 @@
 -- dont edit this file, it was generated
 
-local tbl = require('plenary/tbl')
+local tbl = require('plenary.tbl')
 
 {% for n in range(2, amount) %}
   local function rotate{{n}}({% for n in range(n) %} A{{n}} {{ ", " if not loop.last else "" }} {% endfor %})
