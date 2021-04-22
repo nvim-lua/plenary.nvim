@@ -31,6 +31,7 @@ return {
     ['jl'] = 'julia',
     ['coffee'] = 'coffee',
     ['_coffee'] = 'coffee',
+    ['nix'] = 'nix',
   },
   file_name = {
     ['cakefile'] = 'coffee',
