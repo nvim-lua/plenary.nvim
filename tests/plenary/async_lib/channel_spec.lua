@@ -8,12 +8,14 @@ a.describe('channel', function()
     a.it('should work when rx is used first', function()
       local tx, rx = channel.oneshot()
 
-      a.run(a.future(function()
-        local got = await(rx())
+      a.run(function()
+        local got = rx()
+
         eq("sent value", got)
-      end))
+      end)
 
       tx("sent value")
+
     end)
 
     a.it('should work when tx is used first', function()
@@ -21,20 +23,19 @@ a.describe('channel', function()
 
       tx("sent value")
 
-      a.run(a.future(function()
-        local got = await(rx())
-        eq("sent value", got)
-      end))
+      local got = rx()
+
+      eq("sent value", got)
     end)
 
     a.it('should work with multiple returns', function()
       local tx, rx = channel.oneshot()
 
-      a.run(a.future(function()
+      a.run(function()
         local got, got2 = await(rx())
         eq("sent value", got)
         eq("another sent value", got2)
-      end))
+      end)
 
       tx("sent value", "another sent value")
     end)
@@ -47,9 +48,9 @@ a.describe('channel', function()
       local res = await(rx())
       eq(res, nil)
 
-      local stat, ret = await(protected(rx()))
+      local stat, ret = protected(rx)()
       eq(stat, false)
-      local stat, ret = await(protected(rx()))
+      local stat, ret = protected(rx)()
       eq(stat, false)
     end)
 
@@ -61,11 +62,11 @@ a.describe('channel', function()
       eq(stat, false)
     end)
 
-    a.it('should block receiving multiple times', function ()
+    a.it('should block receiving multiple times', function()
       local tx, rx = channel.oneshot()
       tx()
-      await(rx())
-      local stat = await(protected(rx()))
+      rx()
+      local stat = protected(rx)()
       eq(stat, false)
     end)
   end)
@@ -80,14 +81,12 @@ a.describe('channel', function()
 
       local counter = 0
 
-      local recv_stuff = async(function()
+      a.run(function()
         for i = 1, 3 do
-          await(rx.recv())
+          rx.recv()
           counter = counter + 1
         end
       end)
-
-      a.run(recv_stuff())
 
       eq(counter, 3)
     end)
@@ -101,14 +100,10 @@ a.describe('channel', function()
 
       local counter = 0
 
-      local recv_stuff = async(function()
-        for i = 1, 3 do
-          await(rx.last())
-          counter = counter + 1
-        end
+      a.run(function()
+        await(rx.last())
+        counter = counter + 1
       end)
-
-      a.run(recv_stuff())
 
       eq(counter, 1)
     end)

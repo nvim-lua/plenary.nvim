@@ -283,28 +283,30 @@ end)
 ---Makes a future protected. It is like pcall but for futures.
 ---@param future Future
 ---@return Future
-M.protected = async(function(future)
-  local tx, rx = M.channel.oneshot()
+M.protected = function(async_func)
+  return function()
+    local tx, rx = M.channel.oneshot()
 
-  stat, ret = pcall(future, tx)
+    stat, ret = pcall(a.run, async_func, tx)
 
-  if stat == true then
-    return stat, await(rx())
-  else
-    return stat, ret
+    if stat == true then
+      return stat, rx()
+    else
+      return stat, ret
+    end
   end
-end)
+end
 
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
 ---for example, in plenary test_harness you must use this
----@param future Future
+---@param async_function Future
 ---@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
-M.block_on = function(future, timeout)
-  future = M.protected(future)
+M.block_on = function(async_function, timeout)
+  async_function = M.protected(async_function)
 
   local stat, ret
-  a.run(future, function(_stat, ...)
+  a.run(async_function, function(_stat, ...)
     stat = _stat
     ret = {...}
   end)
@@ -323,11 +325,10 @@ M.block_on = function(future, timeout)
   return unpack(ret)
 end
 
----Returns a new future that WILL BLOCK
----@param future Future
----@return Future
-M.will_block = async(function(future)
-  return M.block_on(future)
-end)
+M.will_block = function(async_func)
+  return function()
+    M.block_on(async_func)
+  end
+end
 
 return M
