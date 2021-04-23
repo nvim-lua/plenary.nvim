@@ -74,29 +74,25 @@ end
 -----Return a new future that when run will run all futures concurrently.
 -----@param futures table: the futures that you want to join
 -----@return Future: returns a future
---M.join = M.wrap(function(futures, step)
---  local len = #futures
---  local results = {}
---  local done = 0
+M.join = M.wrap(function(async_fns, callback)
+  local len = #async_fns
+  local results = {}
+  local done = 0
 
---  if len == 0 then
---    return step(results)
---  end
+  for i, async_fn in ipairs(async_fns) do
+    assert(type(async_fn) == "function", "type error :: future must be function")
 
---  for i, future in ipairs(futures) do
---    assert(type(future) == "function", "type error :: future must be function")
+    local cb = function(...)
+      results[i] = {...}
+      done = done + 1
+      if done == len then
+        callback(results)
+      end
+    end
 
---    local callback = function(...)
---      results[i] = {...}
---      done = done + 1
---      if done == len then
---        step(results)
---      end
---    end
-
---    future(callback)
---  end
---end, 2)
+    M.run(async_fn, cb)
+  end
+end)
 
 -----Returns a future that when run will select the first future that finishes
 -----@param futures table: The future that you want to select
