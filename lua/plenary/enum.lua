@@ -31,7 +31,7 @@ local Enum = {}
 
 local function validate_member_name(name)
   if #name > 0 and name:sub(1, 1):match('%u') then return name end
-  error(name .. ' should start with a capital letter')
+  error('"' .. name .. '" should start with a capital letter')
 end
 
 --- Creates an enum from the given list-like table, like so:
@@ -107,7 +107,7 @@ local function make_enum(tbl)
     end
   end
 
-  return setmetatable(enum, Enum)
+  return require'plenary.tbl'.freeze(setmetatable(enum, Enum))
 end
 
 Enum.__index = function(_, key)
@@ -119,15 +119,24 @@ end
 --- @param key string: The element to check for
 --- @return boolean: True if key is present
 function Enum:has_key(key)
-  if rawget(self, key) then return true end
+  if rawget(getmetatable(self).__index, key) then return true end
   return false
+end
+
+function Enum:from_str(key)
+  if self:has_key(key) then return self[key] end
+end
+
+function Enum:from_num(num)
+  local key = self[num]
+  if key then return self[key] end
 end
 
 --- Checks whether the given object corresponds to an instance of Enum
 --- @param tbl table: The object to be checked
 --- @return boolean: True if tbl is an Enum
 local function is_enum(tbl)
-  return getmetatable(tbl) == Enum
+  return getmetatable(getmetatable(tbl).__index) == Enum
 end
 
 return setmetatable({is_enum = is_enum, make_enum = make_enum}, {
