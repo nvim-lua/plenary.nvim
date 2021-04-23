@@ -67,7 +67,7 @@ function harness.test_directory(directory, opts)
 
   local path_len = #paths
 
-  local jobs = f.map(
+  local jobs = vim.tbl_map(
     function(p)
       local args = {
         '--headless',
@@ -83,7 +83,7 @@ function harness.test_directory(directory, opts)
       end
 
       return Job:new {
-        command = 'nvim',
+        command = vim.v.progpath,
         args = args,
 
         -- Can be turned on to debug
@@ -145,7 +145,7 @@ function harness._find_files_to_run(directory)
     args = {directory, '-type', 'f', '-name', '*_spec.lua'},
   }
 
-  return f.map(Path.new, finder:sync())
+  return vim.tbl_map(Path.new, finder:sync())
 end
 
 function harness._run_path(test_type, directory)

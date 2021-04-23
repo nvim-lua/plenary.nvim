@@ -1,7 +1,4 @@
 
-" Set up neorocks if it is installed.
-lua pcall(function() require('plenary.neorocks').setup_paths() end)
-
 " Create command for running busted
 command! -nargs=1 -complete=file PlenaryBustedFile
       \ lua require('plenary.busted').run(vim.fn.expand("<args>"))
