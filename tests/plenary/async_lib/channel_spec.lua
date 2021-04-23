@@ -1,5 +1,5 @@
 require('plenary.async_lib').tests.add_to_env()
-local channel = a.util.channel
+local channel = a.control.channel
 local eq = assert.are.same
 local protected = a.util.protected
 

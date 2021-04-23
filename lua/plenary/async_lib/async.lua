@@ -20,7 +20,10 @@ local function callback_or_next(step, thread, callback, ...)
   else
     local returned_function = f.second(...)
     assert(type(returned_function) == "function", "type error :: expected func")
-    returned_function(vararg.rotate(step, select(3, ...)))
+    local stat, msg = pcall(returned_function, vararg.rotate(step, select(3, ...)))
+    if not stat then
+      error(('Failed to call leaf async function: %s'):format(msg))
+    end
   end
 end
 
@@ -70,29 +73,6 @@ M.wrap = function(func, argc)
     end
   end
 end
-
------Return a new future that when run will run all futures concurrently.
------@param futures table: the futures that you want to join
------@return Future: returns a future
-M.join = M.wrap(function(async_fns, callback)
-  local len = #async_fns
-  local results = {}
-  local done = 0
-
-  for i, async_fn in ipairs(async_fns) do
-    assert(type(async_fn) == "function", "type error :: future must be function")
-
-    local cb = function(...)
-      results[i] = {...}
-      done = done + 1
-      if done == len then
-        callback(results)
-      end
-    end
-
-    M.run(async_fn, cb)
-  end
-end)
 
 -----Returns a future that when run will select the first future that finishes
 -----@param futures table: The future that you want to select
@@ -183,5 +163,10 @@ end
 
 ---An async function that when awaited will await the scheduler to be able to call the api.
 M.scheduler = M.wrap(vim.schedule, 1)
+
+M.lpcall = function()
+  M.run(function()
+  end)
+end
 
 return M
