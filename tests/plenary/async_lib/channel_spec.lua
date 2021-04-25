@@ -3,8 +3,8 @@ local channel = a.control.channel
 local eq = assert.are.same
 local apcall = a.util.apcall
 
-a.describe('channel', function()
-  a.describe('oneshot', function()
+describe('channel', function()
+  describe('oneshot', function()
     a.it('should work when rx is used first', function()
       local tx, rx = channel.oneshot()
 
@@ -71,7 +71,7 @@ a.describe('channel', function()
     end)
   end)
 
-  a.describe('counter', function()
+  describe('counter', function()
     a.it('should work', function()
       local tx, rx = channel.counter()
 
