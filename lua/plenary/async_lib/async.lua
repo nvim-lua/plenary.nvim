@@ -3,7 +3,6 @@ local vararg = require('plenary.vararg')
 local errors = require('plenary.errors')
 local traceback_error = errors.traceback_error
 local f = require('plenary.functional')
-local tbl = require('plenary.tbl')
 
 local M = {}
 
