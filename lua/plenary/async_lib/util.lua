@@ -9,51 +9,13 @@ local channel = control.channel
 
 local M = {}
 
+local defer_swapped = function(timeout, callback)
+  vim.defer_fn(callback, timeout)
+end
+
 ---Sleep for milliseconds
 ---@param ms number
-M.sleep = a.wrap(function(ms, callback)
-  local timer = uv.new_timer()
-  uv.timer_start(timer, ms, 0, function()
-    uv.timer_stop(timer)
-    uv.close(timer)
-    callback()
-  end)
-end, 2)
-
----Takes a future and a millisecond as the timeout.
----If the time is reached and the future hasn't completed yet, it will short circuit the future
----NOTE: the future will still be running in libuv, we are just not waiting for it to complete
----thats why you should call this on a leaf future only to avoid unexpected results
----@param future Future
----@param ms number
-M.timeout = a.wrap(function(future, ms, callback)
-  -- make sure that the callback isn't called twice, or else the coroutine can be dead
-  local done = false
-
-  local timeout_callback = function(...)
-    if not done then
-      done = true
-      callback(false, ...) -- false because it has run normally
-    end
-  end
-
-  vim.defer_fn(function()
-    if not done then
-      done = true
-      callback(true) -- true because it has timed out
-    end
-  end, ms)
-
-  a.run(future, timeout_callback)
-end, 3)
-
----create an async function timer
----@param ms number
-M.timer = function(ms)
-  return async(function()
-    await(M.sleep(ms))
-  end)
-end
+M.sleep = a.wrap(defer_swapped, 2)
 
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
@@ -115,6 +77,26 @@ M.join = function(async_fns)
 
   return results
 end
+
+---Returns a future that when run will select the first future that finishes
+---@param futures table: The future that you want to select
+---@return Future
+M.select = a.wrap(function(futures, step)
+  local selected = false
+
+  for _, future in ipairs(futures) do
+    assert(type(future) == "function", "type error :: future must be function")
+
+    local callback = function(...)
+      if not selected then
+        selected = true
+        step(...)
+      end
+    end
+
+    future(callback)
+  end
+end, 2)
 
 M.run_all = function(async_fns, callback)
   a.run(function()

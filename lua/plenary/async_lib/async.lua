@@ -93,39 +93,16 @@ M.wrap = function(func, argc)
   return leaf
 end
 
------Returns a future that when run will select the first future that finishes
------@param futures table: The future that you want to select
------@return Future
---M.select = M.wrap(function(futures, step)
---  local selected = false
-
---  for _, future in ipairs(futures) do
---    assert(type(future) == "function", "type error :: future must be function")
-
---    local callback = function(...)
---      if not selected then
---        selected = true
---        step(...)
---      end
---    end
-
---    future(callback)
---  end
---end, 2)
-
 ---Use this to either run a future concurrently and then do something else
 ---or use it to run a future with a callback in a non async context
 ---@param future Future
 ---@param callback function
 M.run = function(async_function, callback)
+  if M.is_leaf_function(async_function) then
+    async_function(callback)
+  else
     execute(async_function, callback)
-end
-
----Same as run but runs multiple futures
----@param futures table
----@param callback function
-M.run_all = function(futures, callback)
-  M.run(M.join(futures), callback)
+  end
 end
 
 ---Doenst do anything, just for compat
@@ -142,28 +119,10 @@ M.await_all = function(futures)
   return M.await(M.join(futures))
 end
 
----suspend a coroutine
-M.suspend = co.yield
-
----create a async scope
--- M.scope = function(func)
---   M.run(function()
---   end)
--- end
-
---- Future a :: a -> (a -> ())
---- turns this signature
---- ... -> Future a
---- into this signature
---- ... -> ()
 M.void = function(async_func)
-  return function(...)
-    async_func(...)(function() end)
-  end
-end
-
-M.async_void = function(func)
-  return M.void(M.async(func))
+  return co.wrap(function(...)
+    return async_func(...)
+  end)
 end
 
 ---creates an async function
@@ -173,19 +132,7 @@ M.async = function(func)
   return func
 end
 
----creates a future
----@param func function
----@return Future
-M.future = function(func)
-  return M.async(func)()
-end
-
 ---An async function that when awaited will await the scheduler to be able to call the api.
 M.scheduler = M.wrap(vim.schedule, 1)
-
-M.lpcall = function()
-  M.run(function()
-  end)
-end
 
 return M
