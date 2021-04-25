@@ -3,7 +3,7 @@ local Semaphore = a.control.Semaphore
 
 local eq = assert.are.same
 
-a.describe('semaphore', function()
+describe('semaphore', function()
   a.it('should validate arguments', function()
     local status = pcall(Semaphore.new, -1)
     eq(status, false)
