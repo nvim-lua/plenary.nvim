@@ -1,7 +1,9 @@
 local a = require('plenary.async_lib.async')
 local await = a.await
 local async = a.async
+local vararg = require('plenary.vararg')
 local uv = vim.loop
+-- local control = a.control
 local control = require('plenary.async_lib.control')
 local channel = control.channel
 
@@ -53,21 +55,17 @@ M.timer = function(ms)
   end)
 end
 
-local function pcall_wrap(fn)
-  return function()
-    return pcall(fn)
-  end
-end
-
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
 ---for example, in plenary test_harness you must use this
 ---@param async_function Future
 ---@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
 M.block_on = function(async_function, timeout)
+  async_function = M.protected(async_function)
+
   local stat, ret
 
-  a.run(pcall_wrap(async_function), function(_stat, ...)
+  a.run(async_function, function(_stat, ...)
     stat = _stat
     ret = {...}
   end)
@@ -124,7 +122,24 @@ M.run_all = function(async_fns, callback)
   end, callback)
 end
 
-M.lpcall = function(leaf_function)
+function M.apcall(async_fn, ...)
+  if a.is_leaf_function(async_fn) then
+    local tx, rx = channel.oneshot()
+    local stat, ret = pcall(async_fn, vararg.rotate(tx, ...))
+    if not stat then
+      return stat, ret
+    else
+      return stat, rx()
+    end
+  else
+    return pcall(async_fn, ...)
+  end
+end
+
+function M.protected(async_fn)
+  return function()
+    return M.apcall(async_fn)
+  end
 end
 
 return M

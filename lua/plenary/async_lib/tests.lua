@@ -4,7 +4,7 @@ local util = require('plenary.async_lib.util')
 local M = {}
 
 M.describe = function(s, async_func)
-  describe(s, util.will_block(async_func))
+  describe(s, async_func)
 end
 
 M.it = function(s, async_func)

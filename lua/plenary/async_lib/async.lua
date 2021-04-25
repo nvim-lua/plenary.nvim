@@ -46,6 +46,21 @@ local execute = function(async_function, callback)
   step()
 end
 
+local add_leaf_function
+do
+  ---A table to store all leaf async functions
+  local leaf_table = {}
+
+  add_leaf_function = function(async_func)
+    assert(leaf_table[async_func] == nil, "Async function should not already be in the table")
+    leaf_table[async_func] = true
+  end
+
+  function M.is_leaf_function(async_func)
+    return leaf_table[async_func] ~= nil
+  end
+end
+
 ---Creates an async function with a callback style function.
 ---@param func function: A callback style function to be converted. The last argument must be the callback.
 ---@param argc number: The number of arguments of func. Must be included.
@@ -59,7 +74,7 @@ M.wrap = function(func, argc)
     traceback_error("type error :: expected number, got " .. type(argc))
   end
 
-  return function(...)
+  local function leaf(...)
     local nargs = select('#', ...)
 
     if not (nargs == argc - 1 or nargs == argc) then
@@ -72,6 +87,10 @@ M.wrap = function(func, argc)
       return co.yield(func, ...)
     end
   end
+
+  add_leaf_function(leaf)
+
+  return leaf
 end
 
 -----Returns a future that when run will select the first future that finishes
@@ -99,7 +118,7 @@ end
 ---@param future Future
 ---@param callback function
 M.run = function(async_function, callback)
-  execute(async_function, callback)
+    execute(async_function, callback)
 end
 
 ---Same as run but runs multiple futures

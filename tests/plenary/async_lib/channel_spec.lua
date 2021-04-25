@@ -1,7 +1,7 @@
 require('plenary.async_lib').tests.add_to_env()
 local channel = a.control.channel
 local eq = assert.are.same
-local protected = a.util.protected
+local apcall = a.util.apcall
 
 a.describe('channel', function()
   a.describe('oneshot', function()
@@ -32,7 +32,7 @@ a.describe('channel', function()
       local tx, rx = channel.oneshot()
 
       a.run(function()
-        local got, got2 = await(rx())
+        local got, got2 = rx()
         eq("sent value", got)
         eq("another sent value", got2)
       end)
@@ -45,16 +45,16 @@ a.describe('channel', function()
 
       tx(nil)
 
-      local res = await(rx())
+      local res = rx()
       eq(res, nil)
 
-      local stat, ret = protected(rx)()
+      local stat, ret = apcall(rx)
       eq(stat, false)
-      local stat, ret = protected(rx)()
+      local stat, ret = apcall(rx)
       eq(stat, false)
     end)
 
-    a.it('should block sending mulitple times', function()
+    a.it('should error when sending mulitple times', function()
       local tx, rx = channel.oneshot()
 
       tx()
@@ -64,9 +64,9 @@ a.describe('channel', function()
 
     a.it('should block receiving multiple times', function()
       local tx, rx = channel.oneshot()
-      tx()
+      tx(true)
       rx()
-      local stat = protected(rx)()
+      local stat = apcall(rx)
       eq(stat, false)
     end)
   end)
