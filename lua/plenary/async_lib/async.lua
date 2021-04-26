@@ -48,7 +48,9 @@ end
 local add_leaf_function
 do
   ---A table to store all leaf async functions
-  local leaf_table = {}
+  local leaf_table = setmetatable({}, {
+    __mode = "k",
+  })
 
   add_leaf_function = function(async_func)
     assert(leaf_table[async_func] == nil, "Async function should not already be in the table")
