@@ -1,4 +1,4 @@
-local a = require('plenary.async_lib2.async')
+local a = require('plenary.async_lib.async')
 local uv = vim.loop
 
 local M = {}

@@ -1,7 +1,69 @@
-local a = require('plenary.async_lib2.async')
-local Deque = require('plenary.async_lib2.structs').Deque
+local a = require('plenary.async_lib.async')
+local await = a.await
+local async = a.async
+local co = coroutine
+local Deque = require('plenary.async_lib.structs').Deque
+local uv = vim.loop
 
 local M = {}
+
+---Sleep for milliseconds
+---@param ms number
+M.sleep = a.wrap(function(ms, callback)
+  local timer = uv.new_timer()
+  uv.timer_start(timer, ms, 0, function()
+    uv.timer_stop(timer)
+    uv.close(timer)
+    callback()
+  end)
+end, 2)
+
+---Takes a future and a millisecond as the timeout.
+---If the time is reached and the future hasn't completed yet, it will short circuit the future
+---NOTE: the future will still be running in libuv, we are just not waiting for it to complete
+---thats why you should call this on a leaf future only to avoid unexpected results
+---@param future Future
+---@param ms number
+M.timeout = a.wrap(function(future, ms, callback)
+  -- make sure that the callback isn't called twice, or else the coroutine can be dead
+  local done = false
+
+  local timeout_callback = function(...)
+    if not done then
+      done = true
+      callback(false, ...) -- false because it has run normally
+    end
+  end
+
+  vim.defer_fn(function()
+    if not done then
+      done = true
+      callback(true) -- true because it has timed out
+    end
+  end, ms)
+
+  a.run(future, timeout_callback)
+end, 3)
+
+---create an async function timer
+---@param ms number
+M.timer = function(ms)
+  return async(function()
+    await(M.sleep(ms))
+  end)
+end
+
+---id function that can be awaited
+---@param nil ...
+---@return ...
+M.id = async(function(...)
+  return ...
+end)
+
+---Running this function will yield now and do nothing else
+M.yield_now = async(function()
+  await(M.id())
+end)
 
 local Condvar = {}
 Condvar.__index = Condvar
@@ -205,5 +267,67 @@ M.channel.mpsc = function()
 
   return Sender, Receiver
 end
+
+local pcall_wrap = function(func)
+  return function(...)
+    return pcall(func, ...)
+  end
+end
+
+---Makes a future protected. It is like pcall but for futures.
+---Only works for non-leaf futures
+M.protected_non_leaf = async(function(future)
+  return await(pcall_wrap(future))
+end)
+
+---Makes a future protected. It is like pcall but for futures.
+---@param future Future
+---@return Future
+M.protected = async(function(future)
+  local tx, rx = M.channel.oneshot()
+
+  stat, ret = pcall(future, tx)
+
+  if stat == true then
+    return stat, await(rx())
+  else
+    return stat, ret
+  end
+end)
+
+---This will COMPLETELY block neovim
+---please just use a.run unless you have a very special usecase
+---for example, in plenary test_harness you must use this
+---@param future Future
+---@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
+M.block_on = function(future, timeout)
+  future = M.protected(future)
+
+  local stat, ret
+  a.run(future, function(_stat, ...)
+    stat = _stat
+    ret = {...}
+  end)
+
+  local function check()
+    if stat == false then
+      error("Blocking on future failed " .. unpack(ret))
+    end
+    return stat == true
+  end
+
+  if not vim.wait(timeout or 2000, check, 20, false) then
+    error("Blocking on future timed out or was interrupted")
+  end
+
+  return unpack(ret)
+end
+
+---Returns a new future that WILL BLOCK
+---@param future Future
+---@return Future
+M.will_block = async(function(future)
+  return M.block_on(future)
+end)
 
 return M

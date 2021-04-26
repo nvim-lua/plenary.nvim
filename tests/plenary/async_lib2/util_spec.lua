@@ -1,4 +1,4 @@
-require('plenary.async_lib').tests.add_to_env()
+require('plenary.async_lib2').tests.add_to_env()
 local block_on = a.util.block_on
 local eq = assert.are.same
 local id = a.util.id
