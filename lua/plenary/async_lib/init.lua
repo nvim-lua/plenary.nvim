@@ -9,6 +9,7 @@ exports.util = require('plenary.async_lib.util')
 exports.lsp = require('plenary.async_lib.lsp')
 exports.api = require('plenary.async_lib.api')
 exports.tests = require('plenary.async_lib.tests')
+exports.control = require('plenary.async_lib.control')
 
 exports.tests.add_globals = function()
   a = exports
