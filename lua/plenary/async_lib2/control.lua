@@ -1,5 +1,5 @@
-local a = require('plenary.async_lib.async')
-local Deque = require('plenary.async_lib.structs').Deque
+local a = require('plenary.async_lib2.async')
+local Deque = require('plenary.async_lib2.structs').Deque
 
 local M = {}
 

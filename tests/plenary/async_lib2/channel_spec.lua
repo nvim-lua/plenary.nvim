@@ -1,4 +1,4 @@
-require('plenary.async_lib').tests.add_to_env()
+require('plenary.async_lib2').tests.add_to_env()
 local channel = a.control.channel
 local eq = assert.are.same
 local apcall = a.util.apcall
