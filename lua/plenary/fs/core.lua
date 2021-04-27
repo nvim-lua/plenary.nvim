@@ -1,8 +1,6 @@
 local a = require('plenary/async_lib2')
 local i = require('plenary.iterators')
 local Path = require('plenary.path')
-local uv = vim.loop
-local async, await = a.async, a.await
 
 local fs = {}
 
@@ -44,7 +42,7 @@ fs.read_dir = function(opts)
       return run
     elseif filter:find(path) then
       return run()
-    elseif opts.hidden == false and res.name:sub(1, 1) == '.' then
+    elseif opts.hidden ~= true and res.name:sub(1, 1) == '.' then
       return run()
     end
 
