@@ -15,11 +15,11 @@ describe('Enum', function()
       {'Another', 11}
     }
 
-    assert(E.Foo:id() == 2)
-    assert(E.Bar:id() == 4)
-    assert(E.Qux:id() == 5)
-    assert(E.Baz:id() == 6)
-    assert(E.Another:id() == 11)
+    assert(E.Foo.value == 2)
+    assert(E.Bar.value == 4)
+    assert(E.Qux.value == 5)
+    assert(E.Baz.value == 6)
+    assert(E.Another.value == 11)
 
     assert(E[2] == 'Foo')
     assert(E[4] == 'Bar')

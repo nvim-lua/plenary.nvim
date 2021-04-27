@@ -29,6 +29,8 @@ local Enum = {}
 
 ---@class Enum
 
+---@class Variant
+
 local function validate_member_name(name)
   if #name > 0 and name:sub(1, 1):match('%u') then return name end
   error('"' .. name .. '" should start with a capital letter')
@@ -50,36 +52,27 @@ local function make_enum(tbl)
   Variant.__index = Variant
 
   local function newVariant(i)
-    return setmetatable({_id = i}, Variant)
+    return setmetatable({value = i}, Variant)
   end
 
   -- we don't need __eq because the __eq metamethod will only ever be
   -- invoked when they both have the same metatable
 
   function Variant:__lt(o)
-    return self._id < o._id
+    return self.value < o.value
   end
 
   function Variant:__gt(o)
-    return self._id > o._id
+    return self.value > o.value
   end
 
   function Variant:__tostring()
-    return tostring(self._id)
+    return tostring(self.value)
   end
 
-  function Variant:id()
-    return self._id
-  end
-
-  function Variant:is(other)
-    if getmetatable(other) == Variant then return self._id == other._id end
-    error('is() method must be used with elements from the same enum')
-  end
-
-  local function find_next_idx(enum, i)
+  local function find_next_idx(e, i)
     local newI = i + 1
-    if not enum[newI] then return newI end
+    if not e[newI] then return newI end
     error('Overlapping index: ' .. tostring(newI))
   end
 
@@ -123,10 +116,16 @@ function Enum:has_key(key)
   return false
 end
 
+--- If there is a member named 'key', return it, otherwise return nil
+--- @param key string: The element to check for
+--- @return Variant: The element named by key, or nil if not present
 function Enum:from_str(key)
   if self:has_key(key) then return self[key] end
 end
 
+--- If there is a member of value 'num', return it, otherwise return nil
+--- @param num number: The value of the element to check for
+--- @return Variant: The element whose value is num
 function Enum:from_num(num)
   local key = self[num]
   if key then return self[key] end
