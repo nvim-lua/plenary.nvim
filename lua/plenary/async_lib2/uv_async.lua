@@ -72,11 +72,14 @@ add('pipe_connect', 3)
 add('udp_send', 5)
 add('udp_recv_start', 2)
 
--- fs event (wip make into async await event)
--- fs poll event (wip make into async await event)
-
 -- dns
 add('getaddrinfo', 4)
 add('getnameinfo', 2)
+
+local function fs_opendir(path, callback)
+  uv.fs_opendir(path, callback, 1)
+end
+
+M.fs_opendir = a.wrap(fs_opendir, 2)
 
 return M

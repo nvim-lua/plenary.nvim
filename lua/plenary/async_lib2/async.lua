@@ -76,17 +76,7 @@ M.wrap = function(func, argc)
   end
 
   local function leaf(...)
-    local nargs = select('#', ...)
-
-    if not (nargs == argc - 1 or nargs == argc) then
-      print(('Expected %s or %s number of arguments, got %s'):format(argc - 1, argc, nargs))
-    end
-
-    if nargs == argc then
-      return func(...)
-    else
-      return co.yield(func, ...)
-    end
+    return co.yield(func, ...)
   end
 
   add_leaf_function(leaf)

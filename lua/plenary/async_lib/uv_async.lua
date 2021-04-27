@@ -78,13 +78,6 @@ add('udp_recv_start', 2)
 add('getaddrinfo', 4)
 add('getnameinfo', 2)
 
--- we have to do this because callback is not the last parameter
-local function fs_opendir(path, entries, callback)
-  return uv.fs_opendir(path, callback, entries)
-end
-
-M.fs_opendir = a.wrap(fs_opendir, 3)
-
 -- add('fs_opendir', 2)
 
 return M

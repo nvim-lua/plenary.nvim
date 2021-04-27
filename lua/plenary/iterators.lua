@@ -547,12 +547,16 @@ function Iterator:tolist()
   return list
 end
 
-function Iterator:await_tolist()
-  local list = {}
-  self:await_for_each(function(a)
-    table.insert(list, a)
+function Iterator:join(sep)
+  local str_buf = {}
+  self:for_each(function(a)
+    str_buf[#str_buf+1] = a
+    str_buf[#str_buf+1] = sep
   end)
-  return list
+
+  str_buf[#str_buf] = nil
+
+  return table.concat(str_buf)
 end
 
 ---Turns an iterator into a list.
