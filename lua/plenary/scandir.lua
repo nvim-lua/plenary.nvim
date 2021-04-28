@@ -134,11 +134,12 @@ m.scan_dir = function(path, opts)
   repeat
     local current_dir = table.remove(next_dir, 1)
     local fd = uv.fs_scandir(current_dir)
-    if fd == nil then break end
-    while true do
-      local name, typ = uv.fs_scandir_next(fd)
-      if name == nil then break end
-      process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat)
+    if fd then
+      while true do
+        local name, typ = uv.fs_scandir_next(fd)
+        if name == nil then break end
+        process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_seach_pat)
+      end
     end
   until table.getn(next_dir) == 0
   return data
