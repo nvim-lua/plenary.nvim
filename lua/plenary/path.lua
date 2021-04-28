@@ -613,7 +613,10 @@ function Path:head(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = 0, 0
@@ -647,7 +650,10 @@ function Path:tail(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = stat.size - 1, 0
