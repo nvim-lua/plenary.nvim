@@ -137,11 +137,13 @@ end
 --@param row_range number | Table:
 --                  If number, then center the window taking up this percentage of the screen.
 --                  If table, first index should be start, second_index should be end
-function win_float.percentage_range_window(col_range, row_range, options)
-  options = tbl.apply_defaults(options, win_float.default_options)
+--@param win_opts Table
+--@param border_opts Table
+function win_float.percentage_range_window(col_range, row_range, win_opts, border_opts)
+  win_opts = tbl.apply_defaults(win_opts, win_float.default_options)
 
-  local win_opts = win_float.default_opts(options)
-  win_opts.relative = "editor"
+  local default_win_opts = win_float.default_opts(win_opts)
+  default_win_opts.relative = "editor"
 
   local height_percentage, row_start_percentage
   if type(row_range) == 'number' then
@@ -156,8 +158,8 @@ function win_float.percentage_range_window(col_range, row_range, options)
     error(string.format("Invalid type for 'row_range': %p", row_range))
   end
 
-  win_opts.height = math.ceil(vim.o.lines * height_percentage)
-  win_opts.row = math.ceil(vim.o.lines *  row_start_percentage)
+  default_win_opts.height = math.ceil(vim.o.lines * height_percentage)
+  default_win_opts.row = math.ceil(vim.o.lines *  row_start_percentage)
 
   local width_percentage, col_start_percentage
   if type(col_range) == 'number' then
@@ -172,17 +174,17 @@ function win_float.percentage_range_window(col_range, row_range, options)
     error(string.format("Invalid type for 'col_range': %p", col_range))
   end
 
-  win_opts.col = math.floor(vim.o.columns * col_start_percentage)
-  win_opts.width = math.floor(vim.o.columns * width_percentage)
+  default_win_opts.col = math.floor(vim.o.columns * col_start_percentage)
+  default_win_opts.width = math.floor(vim.o.columns * width_percentage)
 
-  local bufnr = options.bufnr or vim.api.nvim_create_buf(false, true)
-  local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
+  local bufnr = win_opts.bufnr or vim.api.nvim_create_buf(false, true)
+  local win_id = vim.api.nvim_open_win(bufnr, true, default_win_opts)
   vim.api.nvim_win_set_buf(win_id, bufnr)
 
   vim.cmd('setlocal nocursorcolumn')
-  vim.api.nvim_win_set_option(win_id, 'winblend', options.winblend)
+  vim.api.nvim_win_set_option(win_id, 'winblend', win_opts.winblend)
 
-  local border = Border:new(bufnr, win_id, win_opts, {})
+  local border = Border:new(bufnr, win_id, default_win_opts, border_opts or {})
 
   _AssociatedBufs[bufnr] = { win_id, border.win_id, }
 
