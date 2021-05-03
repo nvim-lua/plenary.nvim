@@ -9,9 +9,11 @@ describe('strings', function()
       {str = 'abc	de', expected = {single = 10, double = 10}},
       {str = 'アイウエオ', expected = {single = 10, double = 10}},
       {str = '├─┤', expected = {single = 3, double = 6}},
+      {str = 123, expected = {single = 3, double = 3}},
     } do
       for _, ambiwidth in ipairs{'single', 'double'} do
-        local msg = ('ambiwidth = %s, "%s" -> %d'):format(ambiwidth, case.str, case.expected[ambiwidth])
+        local item = type(case.str) == 'string' and '"%s"' or '%s'
+        local msg = ('ambiwidth = %s, '..item..' -> %d'):format(ambiwidth, case.str, case.expected[ambiwidth])
         local original = vim.o.ambiwidth
         vim.o.ambiwidth = ambiwidth
         it('lua: '..msg, function()

@@ -11,6 +11,7 @@ M.strdisplaywidth = (function()
     ]]
 
     return function(str, col)
+      str = tostring(str)
       local startcol = col or 0
       local s = ffi.new('char[?]', #str + 1)
       ffi.copy(s, str)
@@ -18,6 +19,7 @@ M.strdisplaywidth = (function()
     end
   else
     return function(str, col)
+      str = tostring(str)
       if vim.in_fast_loop() then
         return #str - (col or 0)
       end
