@@ -69,18 +69,4 @@ fs.read_dir = function(opts)
   return i.from_fun(run)
 end
 
-local do_it = function()
-  local res = fs.read_dir { dir = "/home/brian/code", hidden = false }:tolist()
-  dump(res)
-  dump(#res)
-  -- dump(res())
-  -- dump(res())
-  -- dump(res())
-  -- dump(res())
-  -- dump(res())
-  -- dump(res())
-end
-
-a.run(do_it, function() print('done') end)
-
 return fs
