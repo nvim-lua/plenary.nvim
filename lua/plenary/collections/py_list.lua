@@ -209,11 +209,12 @@ function List:move(from, len, to, other)
   return table.move(self, from, len, to, other)
 end
 
---- Packs the given elements into this list. Similar to lua 5.3's table.pack
+--- Packs the given elements into a list. Similar to lua 5.3's table.pack
 --- @vararg any: The elements to pack
---- @return table: A simple list-like table with an `n` member
+--- @return List: a list containing all the given elements
 --- @see table.pack
-function List:pack(...)
+function List.pack(...)
+  return List.new {...}
 end
 
 --- Unpacks the elements from this list and returns them
