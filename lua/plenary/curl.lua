@@ -3,14 +3,18 @@ Curl Wrapper
 
 all curl methods accepts
 
-  url     = "The url to make the request to.", (string)
-  query   = "url query, append after the url", (table)
-  body    = "The request body" (string/filepath/table)
-  auth    = "Basic request auth, 'user:pass', or {"user", "pass"}" (string/array)
-  form    = "request form" (table)
-  raw     = "any additonal curl args, it must be an array/list." (array)
-  dry_run = "whether to return the args to be ran through curl." (boolean)
-  output  = "where to download something." (filepath)
+  url        = "The url to make the request to.", (string)
+  headers    = "The request headers", (table)
+  accept     = "request accept header", (string)
+  query      = "url query, append after the url", (table)
+  body       = "The request body" (string/filepath/table)
+  auth       = "Basic request auth, 'user:pass', or {"user", "pass"}" (string/array)
+  form       = "request form" (table)
+  raw        = "any additonal curl args, it must be an array/list." (array)
+  data       = "Send data with the content-type application/x-www-form-urlencoded" (table)
+  dry_run    = "whether to return the args to be ran through curl." (boolean)
+  output     = "where to download something." (filepath)
+  compressed = "Request compressed response (using deflate or gzip)" (boolean)
 
 and returns table:
 
