@@ -306,6 +306,89 @@ function List:riter()
   return Iterator.wrap(backward_list_gen, self, #self + 1)
 end
 
+-- Higher order functions
+
+--- Runs the given predicate through each element in this list and returns a new
+--- one containing the items that the predicate returned true for. For example:
+---
+--- <pre>
+--- local list1 = List{'Hello', true, 3, 'World'}
+--- local list2 = list1:filter(function(e)
+---   return type(e) == 'string'
+--- end)
+--- print(list2)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+--- [Hello, World]
+--- </pre>
+---
+---@param f function: The predicate to filter in the elements.
+---@return List
+function List:filter(f)
+  local result = List.new {}
+  for _, v in self:iter() do if f(v) then result:push(v) end end
+  return result
+end
+
+--- Run the given predicate through all the elements in this list and returns a
+--- new List with the results. For example:
+---
+--- <pre>
+--- local list1 = List{'Hello', true, 3, 'World'}
+--- local list2 = list1:map(function(e)
+---   return type(e) == 'string'
+--- end)
+--- print(list2)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+--- [true, false, false, true]
+--- </pre>
+---
+---@param f function: The predicate to map in the elements.
+---@return List
+function List:map(f)
+  local result = List.new {}
+  for _, v in self:iter() do result:push(f(v)) end
+  return result
+end
+
+--- Partition this list into 2 based on the given predicate.
+---
+--- <pre>
+--- local list1 = List{'Hello', true, 3, 'World'}
+--- local list3, list4 = list1:map(function(e)
+---   return type(e) == 'string'
+--- end)
+--- print(list3, list4)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+--- [Hello, World] [true, 3]
+--- </pre>
+---
+---@param f function: The predicate to filter in the elements.
+---@return List, List: The first one is the elements for which f returns true,
+--- and the second one is the elements for which it returns false
+function List:partition(f)
+  local a, b = List.new {}, List.new {}
+  for _, v in self:iter() do
+    if f(v) then
+      a:push(v)
+    else
+      b:push(v)
+    end
+  end
+  return a, b
+end
+
 return setmetatable({}, {
   __call = function(_, tbl)
     return List.new(tbl)
