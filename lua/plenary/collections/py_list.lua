@@ -232,13 +232,13 @@ local itermetatable = getmetatable(Iterator:wrap())
 local function forward_list_gen(param, state)
   state = state + 1
   local v = param[state]
-  if v then return state, v end
+  if v ~= nil then return state, v end
 end
 
 local function backward_list_gen(param, state)
   state = state - 1
   local v = param[state]
-  if v then return state, v end
+  if v ~= nil then return state, v end
 end
 
 --- Counts the occurrences of e inside the list
