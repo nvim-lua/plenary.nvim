@@ -128,23 +128,21 @@ M.dedent = function(str, leave_indent)
   local info = {}
   for line in str:gmatch('[^\n]*\n?') do
     -- It matches '' for the last line.
-    if line == '' then
-      goto CONTINUE
-    end
-    local chars, width
-    local line_indent = line:match('^[ \t]+')
-    if line_indent then
-      chars = #line_indent
-      width = M.strdisplaywidth(line_indent)
-      if not indent or width < indent then
-        indent = width
+    if line ~= '' then
+      local chars, width
+      local line_indent = line:match('^[ \t]+')
+      if line_indent then
+        chars = #line_indent
+        width = M.strdisplaywidth(line_indent)
+        if not indent or width < indent then
+          indent = width
+        end
+      -- Ignore empty lines
+      elseif line ~= '\n' then
+        indent = 0
       end
-    -- Ignore empty lines
-    elseif line ~= '\n' then
-      indent = 0
+      table.insert(info, {line = line, chars = chars, width = width})
     end
-    table.insert(info, {line = line, chars = chars, width = width})
-    ::CONTINUE::
   end
 
   -- Build up the result
