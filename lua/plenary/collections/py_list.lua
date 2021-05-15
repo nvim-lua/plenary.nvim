@@ -327,13 +327,42 @@ end
 ---
 ---@param f function: The predicate to filter in the elements.
 ---@return List
+---@see List.filter_indexed
 function List:filter(f)
   local result = List.new {}
   for _, v in self:iter() do if f(v) then result:push(v) end end
   return result
 end
 
---- Run the given predicate through all the elements in this list and returns a
+--- Runs the given predicate through each element in this list and returns a new
+--- one containing the items that the predicate returned true for. The
+--- difference with filter is that for this one, the predicate also accepts the
+--- index of the element as it's first parameter. For example:
+---
+--- <pre>
+--- local list1 = List{'Hello', true, 3, 'World'}
+--- local list2 = list1:filter(function(i, e)
+---   return type(e) == 'string' or i % 3 == 0
+--- end)
+--- print(list2)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+--- [Hello, World]
+--- </pre>
+---
+---@param f function: The predicate to filter in the elements.
+---@return List
+---@see List.filter
+function List:filter_indexed(f)
+  local result = List.new {}
+  for i, v in self:iter() do if f(i, v) then result:push(v) end end
+  return result
+end
+
+--- Run the given predicate through all the elements in this list and return a
 --- new List with the results. For example:
 ---
 --- <pre>
@@ -352,10 +381,78 @@ end
 ---
 ---@param f function: The predicate to map in the elements.
 ---@return List
+---@see List.map_indexed
 function List:map(f)
   local result = List.new {}
   for _, v in self:iter() do result:push(f(v)) end
   return result
+end
+
+--- Run the given predicate through all the elements in this list and return a
+--- new List with the results. The difference with map is that for this one, the
+--- predicate also accepts the index of the element as it's first parameter. For
+--- example:
+---
+--- <pre>
+--- local list1 = List{'Hello', true, 3, 'World'}
+--- local list2 = list1:map_indexed(function(i, e)
+---   return type(e) == 'string' or i % 3 == 0
+--- end)
+--- print(list2)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+--- [true, false, true, true]
+--- </pre>
+---
+---@param f function: The predicate to map in the elements.
+---@return List
+---@see List.map
+function List:map_indexed(f)
+  local result = List.new {}
+  for i, v in self:iter() do result:push(f(i, v)) end
+  return result
+end
+
+--- Iterate over the elements of this list and run the given function on them.
+--- For example:
+---
+--- <pre>
+--- local list1 = List{true, 'Hello world', 231}
+--- list1:for_each(print)
+--- </pre>
+---
+--- <pre>
+--- true
+--- Hello world
+--- 231
+--- </pre>
+---@param f function: The predicate to apply to the elements
+---@see List.for_each_indexed
+function List:for_each(f)
+  for _, v in self:iter() do f(v) end
+end
+
+--- Iterate over the elements of this list and run the given function on them.
+--- The difference with for_each is that, for this one, the predicate also
+--- accepts the element's index as it's first parameter. For example:
+---
+--- <pre>
+--- local list1 = List{true, 'Hello world', 231}
+--- list1:for_each(print)
+--- </pre>
+---
+--- <pre>
+--- 1 true
+--- 2 Hello world
+--- 3 231
+--- </pre>
+---@param f function: The predicate to apply to the elements
+---@see List.for_each
+function List:for_each_indexed(f)
+  for i, v in self:iter() do f(i, v) end
 end
 
 --- Partition this list into 2 based on the given predicate.
