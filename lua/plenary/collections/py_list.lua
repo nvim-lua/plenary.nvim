@@ -344,6 +344,17 @@ function List:riter()
   return wrap_iter(backward_list_gen, self, #self + 1)
 end
 
+-- Miscellaneous
+
+--- Create a list from the elements pointed at by the given iterator.
+--- @param iter table: An iterator object
+--- @return List
+function List.from_iter(iter)
+  local result = List.new {}
+  for _, v in iter do result:push(v) end
+  return result
+end
+
 return setmetatable({}, {
   __call = function(_, tbl)
     return List.new(tbl)
