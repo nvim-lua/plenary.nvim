@@ -51,7 +51,7 @@ function List:__eq(other)
 end
 
 function List:__mul(other)
-  local result = List {}
+  local result = List.new {}
   for i = 1, other do result[i] = self end
   return result
 end
@@ -225,9 +225,9 @@ end
 
 -- Iterator stuff
 
-local Iterator = require 'plenary.iterators'
+local Iter = require 'plenary.iterators'
 
-local itermetatable = getmetatable(Iterator:wrap())
+local itermetatable = getmetatable(Iter:wrap())
 
 local function forward_list_gen(param, state)
   state = state + 1
@@ -239,6 +239,44 @@ local function backward_list_gen(param, state)
   state = state - 1
   local v = param[state]
   if v ~= nil then return state, v end
+end
+
+--- Run the given predicate through all the elements pointed by this iterator,
+--- and classify them into two lists. The first one holds the elements for which
+--- predicate returned a truthy value, and the second holds the rest. For
+--- example:
+---
+--- <pre>
+---     local list = List{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+---     local evens, odds = list:iter():partition(function(e)
+---         return e % 2 == 0
+---     end)
+---     print(evens, odds)
+--- </pre>
+---
+--- Would print
+---
+--- <pre>
+---     [0, 2, 4, 6, 8] [1, 3, 5, 7, 9]
+--- </pre>
+---@param predicate function: The predicate to classify the elements
+---@return List,List
+local function partition(self, predicate)
+  local list1, list2 = List.new {}, List.new {}
+  for _, v in self do
+    if predicate(v) then
+      list1:push(v)
+    else
+      list2:push(2)
+    end
+  end
+  return list1, list2
+end
+
+local function wrap_iter(f, l, n)
+  local iter = Iter.wrap(f, l, n)
+  iter.partition = partition
+  return iter
 end
 
 --- Counts the occurrences of e inside the list
@@ -284,7 +322,7 @@ end
 --- </pre>
 --- @return table: An iterator object
 function List:iter()
-  return Iterator.wrap(forward_list_gen, self, 0)
+  return wrap_iter(forward_list_gen, self, 0)
 end
 
 --- Creates a reverse iterator for the list. For example:
@@ -303,7 +341,7 @@ end
 --- </pre>
 --- @return table: An iterator object
 function List:riter()
-  return Iterator.wrap(backward_list_gen, self, #self + 1)
+  return wrap_iter(backward_list_gen, self, #self + 1)
 end
 
 return setmetatable({}, {
