@@ -32,6 +32,7 @@ return {
     ['coffee'] = 'coffee',
     ['_coffee'] = 'coffee',
     ['nix'] = 'nix',
+    ['erb'] = 'eruby',
   },
   file_name = {
     ['cakefile'] = 'coffee',
