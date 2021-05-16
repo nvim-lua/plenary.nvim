@@ -7,8 +7,6 @@ local uv = vim.loop
 
 local F = require('plenary.functional')
 
-
-
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -58,6 +56,42 @@ local function is_root(pathname)
   end
   return pathname == '/'
 end
+
+local _split_by_separator = (function()
+    local formatted =  string.format("([^%s]+)", path.sep)
+    return function(filepath)
+        local t = {}
+        for str in string.gmatch(filepath, formatted) do
+            table.insert(t, str)
+        end
+        return t
+    end
+end)()
+
+local function _normalize_path(filename)
+  local out_file = filename
+
+  local has = string.find(filename, "..", 1, true)
+
+  if has then
+      local parts = _split_by_separator(filename)
+
+      local idx = 1
+      repeat
+          if parts[idx] == ".." then
+              table.remove(parts, idx)
+              table.remove(parts, idx - 1)
+              idx = idx - 2
+          end
+          idx = idx + 1
+      until idx > #parts
+
+      out_file = path.root(filename) .. table.concat(parts, path.sep)
+  end
+
+  return out_file
+end
+
 
 local clean = function(pathname)
   -- Remove double path seps, it's annoying
@@ -206,9 +240,9 @@ end
 
 function Path:absolute()
   if self:is_absolute() then
-    return self.filename
+    return _normalize_path(self.filename)
   else
-    return self._absolute or table.concat({self._cwd, self.filename}, self._sep)
+    return _normalize_path(self._absolute or table.concat({self._cwd, self.filename}, self._sep))
   end
 end
 
@@ -266,11 +300,32 @@ function Path:normalize(cwd)
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
 
-  return self.filename
+  return _normalize_path(self.filename)
+end
+
+local function shorten_len(filename, len)
+  local final_match
+  local final_path_components = {}
+  for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
+    if #match > len then
+      table.insert(final_path_components, string.sub(match, 1, len))
+    else
+      table.insert(final_path_components, match)
+    end
+    table.insert(final_path_components, path.sep)
+    final_match = match
+  end
+
+  local l = #final_path_components -- so that we don't need to keep calculating length
+  table.remove(final_path_components, l) -- remove final slash
+  table.remove(final_path_components, l-1) -- remvove shortened final component
+  table.insert(final_path_components, final_match) -- insert full final component
+
+  return table.concat(final_path_components)
 end
 
 local shorten = (function()
-  if jit then
+  if jit and path.sep ~= '\\' then
     local ffi = require('ffi') ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
@@ -286,11 +341,15 @@ local shorten = (function()
     end
   end
   return function(filename)
-    return filename
+    shorten_len(filename, 1)
   end
 end)()
 
-function Path:shorten()
+function Path:shorten(len)
+  assert(len ~= 0, 'len must be at least 1')
+  if len and len > 1 then
+    return shorten_len(self.filename, len)
+  end
   return shorten(self.filename)
 end
 
@@ -422,7 +481,7 @@ function Path:rm(opts)
     -- first unlink all files
     scan.scan_dir(abs, { hidden = true, on_insert = function(file) uv.fs_unlink(file) end})
 
-    local dirs = scan.scan_dir(abs, { add_dirs = true })
+    local dirs = scan.scan_dir(abs, { add_dirs = true, hidden = true })
     -- iterate backwards to clean up remaining dirs
     for i = #dirs, 1, -1 do
       uv.fs_rmdir(dirs[i])
@@ -554,7 +613,10 @@ function Path:head(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = 0, 0
@@ -588,7 +650,10 @@ function Path:tail(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = stat.size - 1, 0

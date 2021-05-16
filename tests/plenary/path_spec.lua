@@ -24,6 +24,11 @@ describe('Path', function()
       local p = Path:new { "./home/tj/" , sep = '/'}
       assert(not p:is_absolute(), "Is absolute")
     end)
+
+    it('will normalize the path', function()
+      local p = Path:new { "lua", "..", "README.md" , sep = '/'}
+      assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
+    end)
   end)
 
   it('can join paths by constructor or join path', function()
@@ -153,16 +158,48 @@ describe('Path', function()
 
   describe(':normalize', function()
     it('can take paths with double separators change them to single separators', function()
-      local orig = 'lua//plenary/path.lua'
+      local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, '/lua/plenary/path.lua')
     end)
     -- this may be redundant since normalize just calls make_relative which is tested above
     it('can take absolute paths with double seps'
       .. 'and make them relative with single seps', function()
-      local orig = vim.loop.cwd() .. '/lua//plenary/path.lua'
+      local orig = '/lua//plenary/path.lua'
       local final = Path:new(orig):normalize()
-      assert.are.same(final, 'lua/plenary/path.lua')
+      assert.are.same(final, '/lua/plenary/path.lua')
+    end)
+
+    it('can remove the .. in paths', function()
+      local orig = '/lua//plenary/path.lua/foo/bar/../..'
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, '/lua/plenary/path.lua')
+    end)
+  end)
+
+  describe(':shorten', function()
+    it('can shorten a path', function()
+      local long_path = '/this/is/a/long/path'
+      local short_path = Path:new(long_path):shorten()
+      assert.are.same(short_path, '/t/i/a/l/path')
+    end)
+  end)
+
+  describe(':shorten', function()
+    it('can shorten a path components to a given length', function()
+      local long_path = '/this/is/a/long/path'
+      local short_path = Path:new(long_path):shorten(2)
+      assert.are.same(short_path, '/th/is/a/lo/path')
+
+      -- without the leading /
+      long_path = 'this/is/a/long/path'
+      short_path = Path:new(long_path):shorten(3)
+      assert.are.same(short_path, 'thi/is/a/lon/path')
+
+      -- where len is greater than the length of the final component
+      long_path = 'this/is/an/extremely/long/path'
+      short_path = Path:new(long_path):shorten(5)
+      assert.are.same(short_path, 'this/is/an/extre/long/path')
     end)
   end)
 
@@ -237,14 +274,18 @@ describe('Path', function()
     it('does create dirs if nested in none existing dirs', function()
       local p1 = Path:new({ "nested", "nested2", "test_file.lua" })
       local p2 = Path:new({ "nested", "asdf", ".hidden" })
+      local d1 = Path:new({ "nested", "dir", ".hidden" })
       assert(pcall(p1.touch, p1, { parents = true }))
       assert(pcall(p2.touch, p2, { parents = true }))
+      assert(pcall(d1.mkdir, d1, { parents = true }))
       assert(p1:exists())
       assert(p2:exists())
+      assert(d1:exists())
 
       Path:new({ "nested" }):rm({ recursive = true })
       assert(not p1:exists())
       assert(not p2:exists())
+      assert(not d1:exists())
       assert(not Path:new({ "nested" }):exists())
     end)
   end)

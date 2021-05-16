@@ -84,10 +84,10 @@ end, 2)
 function Condvar:notify_all()
   if #self.handles == 0 then return end
 
-  for _, callback in ipairs(self.handles) do
+  for i, callback in ipairs(self.handles) do
     callback()
+    self.handles[i] = nil
   end
-  self.handles = {} -- reset all handles as they have been used up
 end
 
 ---notify randomly one person that is waiting on this Condvar
@@ -127,9 +127,9 @@ end
 ---when a permit can be acquired returns it
 ---call permit:forget() to forget the permit
 Semaphore.acquire = a.wrap(function(self, callback)
-  self.permits = self.permits - 1
-
-  if self.permits <= 0 then
+  if self.permits > 0 then
+    self.permits = self.permits - 1
+  else
     table.insert(self.handles, callback)
     return
   end
@@ -140,9 +140,9 @@ Semaphore.acquire = a.wrap(function(self, callback)
     self.permits = self.permits + 1
 
     if self.permits > 0 and #self.handles > 0 then
+      self.permits = self.permits - 1
       local callback = table.remove(self.handles)
       callback(self_permit)
-      self.permits = self.permits - 1
     end
   end
 

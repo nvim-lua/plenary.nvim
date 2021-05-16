@@ -48,8 +48,9 @@ end
 
 local function expand(path)
   if vim.in_fast_event() then
-    return uv.fs_realpath(path)
+    return assert(uv.fs_realpath(path), string.format("Path must be valid: %s", path))
   else
+    -- TODO: Probably want to check that this is valid here... otherwise that's weird.
     return vim.fn.expand(path, true)
   end
 end
@@ -108,7 +109,7 @@ function Job:new(o)
 
   obj.command = command
   obj.args = args
-  obj.cwd = o.cwd and expand(o.cwd)
+  obj._raw_cwd = o.cwd
   if o.env then
     if type(o.env) ~= "table" then error('[plenary.job] env has to be a table') end
 
@@ -264,7 +265,7 @@ function Job:_create_uv_options()
   options.args = self.args
   options.stdio = { self.stdin, self.stdout, self.stderr }
 
-  if self.cwd then options.cwd = self.cwd end
+  if self._raw_cwd then options.cwd = expand(self._raw_cwd) end
   if self.env then options.env = self.env end
 
   return options
@@ -468,7 +469,11 @@ function Job:wait(timeout, wait_interval, should_redraw)
   wait_interval = wait_interval or 10
 
   if self.handle == nil then
-    vim.api.nvim_err_writeln(vim.inspect(self))
+    local msg = vim.inspect(self)
+    vim.schedule(function()
+      vim.api.nvim_err_writeln(msg)
+    end)
+
     return
   end
 
@@ -555,6 +560,7 @@ end
 
 function Job:after(fn)
   self:add_on_exit_callback(fn)
+  return self
 end
 
 function Job:and_then_on_success(next_job)
