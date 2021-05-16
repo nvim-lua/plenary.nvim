@@ -267,7 +267,7 @@ local function partition(self, predicate)
     if predicate(v) then
       list1:push(v)
     else
-      list2:push(2)
+      list2:push(v)
     end
   end
   return list1, list2
