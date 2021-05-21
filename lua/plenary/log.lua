@@ -18,7 +18,8 @@ local default_config = {
   plugin = 'plenary',
 
   -- Should print the output to neovim while running
-  use_console = true,
+  -- values: 'sync','async',false
+  use_console = 'async',
 
   -- Should highlighting be used in console (using echohl)
   highlights = true,
@@ -51,7 +52,7 @@ local unpack = unpack or table.unpack
 log.new = function(config, standalone)
   config = vim.tbl_deep_extend("force", default_config, config)
 
-  local outfile = string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', {'data'}), config.plugin)
+  local outfile = string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', {'cache'}), config.plugin)
 
   local obj
   if standalone then
@@ -103,7 +104,7 @@ log.new = function(config, standalone)
 
     -- Output to console
     if config.use_console then
-      vim.schedule(function()
+      local log_to_console = function()
         local console_string = string.format(
           "[%-6s%s] %s: %s",
           nameupper,
@@ -129,7 +130,12 @@ log.new = function(config, standalone)
         if config.highlights and level_config.hl then
           vim.cmd "echohl NONE"
         end
-      end)
+      end
+      if config.use_console == 'sync' and not vim.in_fast_event() then
+        log_to_console()
+      else
+        vim.schedule(log_to_console)
+      end
     end
 
     -- Output to log file
@@ -151,7 +157,7 @@ log.new = function(config, standalone)
     end
 
     -- log.fmt_info("These are %s strings", "formatted")
-    obj[("fmt_%s" ):format(x.name)] = function()
+    obj[("fmt_%s" ):format(x.name)] = function(...)
       return log_at_level(i, x, function(...)
         local passed = {...}
         local fmt = table.remove(passed, 1)
@@ -160,7 +166,7 @@ log.new = function(config, standalone)
           table.insert(inspected, vim.inspect(v))
         end
         return string.format(fmt, unpack(inspected))
-      end)
+      end, ...)
     end
 
     -- log.lazy_info(expensive_to_calculate)

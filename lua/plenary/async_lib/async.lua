@@ -175,6 +175,10 @@ M.void = function(async_func)
   end
 end
 
+M.async_void = function(func)
+  return M.void(M.async(func))
+end
+
 ---creates an async function
 ---@param func function
 ---@return function: returns an async function
