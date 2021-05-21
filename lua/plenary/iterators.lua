@@ -18,6 +18,7 @@ local exports = {}
 ---@field gen function
 ---@field param any
 ---@field state any
+---@field transformer function
 local Iterator = {}
 Iterator.__index = Iterator
 
@@ -128,13 +129,17 @@ end
 ---@param gen any
 ---@param param any
 ---@param state any
+---@param transformer function
 ---@return Iterator
-local function wrap(gen, param, state)
-  return setmetatable({
+local function wrap(gen, param, state, transformer)
+  local iter setmetatable({
     gen = gen,
     param = param,
-    state = state
+    state = state,
+    transformer = transformer
   }, Iterator)
+  if transformer then transformer(iter) end
+  return iter
 end
 
 ---Unwrap an iterator metatable into the iterator triplet
@@ -380,7 +385,7 @@ end
 ---@param fun function: The function to map with. Will be called on each element
 ---@return Iterator
 function Iterator:map(fun)
-  return wrap(map_gen, {self.gen, self.param, fun}, self.state)
+  return wrap(map_gen, {self.gen, self.param, fun}, self.state, self.transformer)
 end
 
 local flatten_gen1
@@ -469,7 +474,7 @@ end
 ---@param fun function: The function to filter values with. If the function returns true, the value will be kept.
 ---@return Iterator
 function Iterator:filter(fun)
-  return wrap(filter_gen, {self.gen, self.param, fun}, self.state)
+  return wrap(filter_gen, {self.gen, self.param, fun}, self.state, self.transform)
 end
 
 --------------------------------------------------------------------------------
