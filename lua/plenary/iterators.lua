@@ -132,7 +132,7 @@ end
 ---@param transformer function
 ---@return Iterator
 local function wrap(gen, param, state, transformer)
-  local iter setmetatable({
+  local iter = setmetatable({
     gen = gen,
     param = param,
     state = state,
