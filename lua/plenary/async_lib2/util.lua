@@ -78,18 +78,18 @@ M.join = function(async_fns)
   return results
 end
 
----Returns a future that when run will select the first future that finishes
----@param futures table: The future that you want to select
----@return Future
-M.select = a.wrap(function(futures, step)
-  local selected = false
+---Returns a future that when run will select the first async_function that finishes
+---@param async_funs table: The async_function that you want to select
+---@return ...
+M.run_first = a.wrap(function(async_funs, step)
+  local ran = false
 
-  for _, future in ipairs(futures) do
+  for _, future in ipairs(async_funs) do
     assert(type(future) == "function", "type error :: future must be function")
 
     local callback = function(...)
-      if not selected then
-        selected = true
+      if not ran then
+        ran = true
         step(...)
       end
     end
