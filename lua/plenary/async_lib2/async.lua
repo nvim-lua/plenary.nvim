@@ -103,10 +103,8 @@ M.run = function(async_function, callback)
   end
 end
 
-M.void = function(async_func)
-  return co.wrap(function(...)
-    return async_func(...)
-  end)
+M.void = function(async_fun)
+  return co.wrap(async_fun)
 end
 
 return M
