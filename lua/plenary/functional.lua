@@ -1,14 +1,5 @@
 local f = {}
 
-function f.map(fun, iter)
-  local results = {}
-  for _, v in pairs(iter) do
-    table.insert(results, fun(v))
-  end
-
-  return results
-end
-
 function f.kv_pairs(t)
   local results = {}
   for k, v in pairs(t) do
@@ -32,9 +23,9 @@ function f.partial(fun, ...)
   end
 end
 
-function f.any(f, iterable)
+function f.any(fun, iterable)
   for k, v in pairs(iterable) do
-    if f(k, v) then
+    if fun(k, v) then
       return true
     end
   end
@@ -42,9 +33,9 @@ function f.any(f, iterable)
   return false
 end
 
-function f.all(f, iterable)
+function f.all(fun, iterable)
   for k, v in pairs(iterable) do
-    if not f(k, v) then
+    if not fun(k, v) then
       return false
     end
   end

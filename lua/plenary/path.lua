@@ -7,8 +7,6 @@ local uv = vim.loop
 
 local F = require('plenary.functional')
 
-
-
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -88,7 +86,7 @@ local function _normalize_path(filename)
           idx = idx + 1
       until idx > #parts
 
-      out_file = table.concat(parts, path.sep)
+      out_file = path.root(filename) .. table.concat(parts, path.sep)
   end
 
   return out_file
@@ -305,8 +303,29 @@ function Path:normalize(cwd)
   return _normalize_path(self.filename)
 end
 
+local function shorten_len(filename, len)
+  local final_match
+  local final_path_components = {}
+  for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
+    if #match > len then
+      table.insert(final_path_components, string.sub(match, 1, len))
+    else
+      table.insert(final_path_components, match)
+    end
+    table.insert(final_path_components, path.sep)
+    final_match = match
+  end
+
+  local l = #final_path_components -- so that we don't need to keep calculating length
+  table.remove(final_path_components, l) -- remove final slash
+  table.remove(final_path_components, l-1) -- remvove shortened final component
+  table.insert(final_path_components, final_match) -- insert full final component
+
+  return table.concat(final_path_components)
+end
+
 local shorten = (function()
-  if jit then
+  if jit and path.sep ~= '\\' then
     local ffi = require('ffi') ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
@@ -322,11 +341,15 @@ local shorten = (function()
     end
   end
   return function(filename)
-    return filename
+    shorten_len(filename, 1)
   end
 end)()
 
-function Path:shorten()
+function Path:shorten(len)
+  assert(len ~= 0, 'len must be at least 1')
+  if len and len > 1 then
+    return shorten_len(self.filename, len)
+  end
   return shorten(self.filename)
 end
 
@@ -590,7 +613,10 @@ function Path:head(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = 0, 0
@@ -624,7 +650,10 @@ function Path:tail(lines)
   local fd = uv.fs_open(self:expand(), "r", 438)
   if not fd then return end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then return nil end
+  if stat.type ~= 'file' then
+    uv.fs_close(fd)
+    return nil
+  end
 
   local data = ''
   local index, count = stat.size - 1, 0
