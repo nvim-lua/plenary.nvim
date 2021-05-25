@@ -124,4 +124,7 @@ function M.protected(async_fn)
   end
 end
 
+---An async function that when called will yield to the neovim scheduler to be able to call the api.
+M.scheduler = a.wrap(vim.schedule, 1)
+
 return M

@@ -1,10 +1,11 @@
 local a = require('plenary.async_lib2.async')
+local util = require('plenary.async_lib2.util')
 
 return setmetatable({}, {__index = function(t, k)
   return function(...)
     -- if we are in a fast event await the scheduler
     if vim.in_fast_event() then
-      a.scheduler()
+      util.scheduler()
     end
 
     vim.api[k](...)

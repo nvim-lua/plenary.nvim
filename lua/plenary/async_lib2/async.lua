@@ -109,7 +109,4 @@ M.void = function(async_func)
   end)
 end
 
----An async function that when awaited will await the scheduler to be able to call the api.
-M.scheduler = M.wrap(vim.schedule, 1)
-
 return M
