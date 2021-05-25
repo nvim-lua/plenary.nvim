@@ -154,19 +154,19 @@ M.channel.counter = function()
 
   local Receiver = {}
 
-  Receiver.recv = async(function()
+  Receiver.recv = function()
     if counter == 0 then
       await(condvar:wait())
     end
     counter = counter - 1
-  end)
+  end
 
-  Receiver.last = async(function()
+  Receiver.last = function()
     if counter == 0 then
       await(condvar:wait())
     end
     counter = 0
-  end)
+  end
 
   return Sender, Receiver
 end
@@ -187,21 +187,21 @@ M.channel.mpsc = function()
 
   local Receiver = {}
 
-  Receiver.recv = async(function()
+  Receiver.recv = function()
     if deque:is_empty() then
-      await(condvar:wait())
+      condvar:wait()
     end
     return unpack(deque:popright())
-  end)
+  end
 
-  Receiver.last = async(function()
+  Receiver.last = function()
     if deque:is_empty() then
-      await(condvar:wait())
+      condvar:wait()
     end
     local val = deque:popright()
     deque:clear()
     return unpack(val)
-  end)
+  end
 
   return Sender, Receiver
 end

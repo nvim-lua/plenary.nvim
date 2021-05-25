@@ -23,10 +23,10 @@ describe('semaphore', function()
     sem:acquire()
 
     local completed = false
-    local blocking = async(function ()
+    local blocking = function ()
       sem:acquire()
       completed = true
-    end)
+    end
     a.run(blocking)
 
     eq(completed, false)
@@ -45,10 +45,10 @@ describe('semaphore', function()
     local permit = sem:acquire()
 
     local completed = false
-    local blocking = async(function ()
+    local blocking = function ()
       sem:acquire()
       completed = true
-    end)
+    end
 
     a.run(blocking)
     permit:forget()

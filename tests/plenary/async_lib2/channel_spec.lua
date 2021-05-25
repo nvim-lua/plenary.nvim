@@ -101,7 +101,7 @@ describe('channel', function()
       local counter = 0
 
       a.run(function()
-        await(rx.last())
+        rx.last()
         counter = counter + 1
       end)
 
