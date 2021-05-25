@@ -1,6 +1,8 @@
 local tbl = require('plenary/tbl')
 
-local rotate = require('plenary/vararg').rotate
+local vararg = require('plenary/vararg')
+local rotate = vararg.rotate
+local bench = require('plenary.profile').benchmark
 
 local function rotate_n(first, ...)
   local args = tbl.pack(...)
@@ -10,17 +12,10 @@ end
 
 local num = 2e7 -- 2e4
 
-local t1 = os.clock()
-for i = 1, num do
+print('rotate: ', bench(num, function()
   local a, b, c, d, e, f, g = rotate(1, 2, 3, 4, 5, 6)
-end
-local t2 = os.clock()
-print('rotate:  ', t2 - t1)
+end))
 
-local t1 = os.clock()
-for i = 1, num do
+print('rotate_n: ', bench(num, function()
   local a, b, c, d, e, f, g = rotate_n(1, 2, 3, 4, 5, 6)
-end
-local t2 = os.clock()
-
-print('rotate_n: ', t2 - t1)
+end))
