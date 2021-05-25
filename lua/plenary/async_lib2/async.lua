@@ -26,9 +26,6 @@ local function callback_or_next(step, thread, callback, ...)
   end
 end
 
----@class Future
----Something that will give a value when run
-
 ---Executes a future with a callback when it is done
 ---@param async_function Future: the future to execute
 ---@param callback function: the callback to call when done
@@ -106,31 +103,10 @@ M.run = function(async_function, callback)
   end
 end
 
----Doenst do anything, just for compat
-M.await = function(...)
-  return ...
-end
-
----Same as await but can await multiple futures.
----If the futures have libuv leaf futures they will be run concurrently
----@param futures table
----@return table: returns a table of results that each future returned. Note that if the future returns multiple values they will be packed into a table.
-M.await_all = function(futures)
-  assert(type(futures) == "table", "type error :: expected table")
-  return M.await(M.join(futures))
-end
-
 M.void = function(async_func)
   return co.wrap(function(...)
     return async_func(...)
   end)
-end
-
----creates an async function
----@param func function
----@return function: returns an async function
-M.async = function(func)
-  return func
 end
 
 ---An async function that when awaited will await the scheduler to be able to call the api.

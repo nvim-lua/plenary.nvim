@@ -7,9 +7,6 @@ local M = {}
 ---Please use buf_request_all instead.
 M.buf_request = a.wrap(vim.lsp.buf_request, 4)
 
---This was recently merged into master so we just check if it is there
-if vim.lsp.buf_request_all ~= nil then
-  M.buf_request_all = a.wrap(vim.lsp.buf_request_all, 4)
-end
+M.buf_request_all = a.wrap(vim.lsp.buf_request_all, 4)
 
 return M
