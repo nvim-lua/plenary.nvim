@@ -1,4 +1,5 @@
 local tbl = require('plenary.tbl')
+local strings = require('plenary.strings')
 
 local Border = {}
 
@@ -29,14 +30,23 @@ function Border._create_lines(content_win_options, border_win_options)
 
   if content_win_options.row > 0 then
     if border_win_options.title then
+      local title_len
       local title = border_win_options.title
-      if title ~= '' then
+      if title == '' then
+        title_len = 0
+      else
+        local len = strings.strdisplaywidth(title)
+        local max_title_width = content_win_options.width - 2
+        if len > max_title_width then
+          title = strings.truncate(title, max_title_width)
+          len = strings.strdisplaywidth(title)
+        end
         title = string.format(" %s ", title)
+        title_len = len + 2
       end
-      local title_len = string.len(title)
 
       local midpoint = math.floor(content_win_options.width / 2)
-      local left_start = midpoint - math.floor(title_len / 2)
+      local left_start = midpoint - math.ceil(title_len / 2)
 
       topline = string.format("%s%s%s%s%s",
         topleft,
