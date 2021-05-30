@@ -20,7 +20,7 @@ M.strdisplaywidth = (function()
   else
     return function(str, col)
       str = tostring(str)
-      if vim.in_fast_loop() then
+      if vim.in_fast_event() then
         return #str - (col or 0)
       end
       return vim.fn.strdisplaywidth(str, col)
@@ -84,7 +84,7 @@ M.strcharpart = (function()
     end
   else
     return function(str, nchar, charlen)
-      if vim.in_fast_loop() then
+      if vim.in_fast_event() then
         return str:sub(nchar + 1, charlen)
       end
       return vim.fn.strcharpart(str, nchar, charlen)
