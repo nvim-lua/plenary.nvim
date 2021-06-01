@@ -341,7 +341,7 @@ local shorten = (function()
     end
   end
   return function(filename)
-    shorten_len(filename, 1)
+    return shorten_len(filename, 1)
   end
 end)()
 
