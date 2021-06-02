@@ -80,9 +80,11 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
         table.insert(next_dir, entry)
       end
       if opts.add_dirs then
-        if not msp or msp(entry) then
-          table.insert(data, entry)
-          if opts.on_insert then opts.on_insert(entry, typ) end
+        if not giti or interpret_gitignore(giti, bp, entry .. "/") then
+          if not msp or msp(entry) then
+            table.insert(data, entry)
+            if opts.on_insert then opts.on_insert(entry, typ) end
+          end
         end
       end
     else
