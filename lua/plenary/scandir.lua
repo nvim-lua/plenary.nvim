@@ -295,7 +295,13 @@ local get_username = (function()
 
     return function(tbl, id)
       if tbl[id] then return tbl[id] end
-      local name = ffi.string(ffi.C.getpwuid(id).pw_name)
+      local struct = ffi.C.getpwuid(id)
+      local name
+      if struct == nil then
+        name = tostring(id)
+      else
+        name = ffi.string(struct.pw_name)
+      end
       tbl[id] = name
       return name
     end
@@ -327,7 +333,13 @@ local get_groupname = (function()
 
     return function(tbl, id)
       if tbl[id] then return tbl[id] end
-      local name = ffi.string(ffi.C.getgrgid(id).gr_name)
+      local struct = ffi.C.getgrgid(id)
+      local name
+      if struct == nil then
+        name = tostring(id)
+      else
+        name = ffi.string(struct.gr_name)
+      end
       tbl[id] = name
       return name
     end
