@@ -206,6 +206,23 @@ Window helper functions to wrap some of the more difficult cases. Particularly f
 
 Status: WIP
 
+### plenary.collections
+
+Contains pure lua implementations for various standard collections.
+
+```lua
+local List = require 'plenary.collections.py_list'
+
+local myList = List { 9, 14, 32, 5 }
+
+for i, v in myList:iter() do
+    print(i, v)
+end
+
+```
+
+Status: WIP
+
 ### Troubleshooting
 
 If you're having trouble / things are hanging / other problems:
