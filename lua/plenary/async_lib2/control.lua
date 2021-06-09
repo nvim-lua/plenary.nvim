@@ -1,5 +1,6 @@
 local a = require('plenary.async_lib2.async')
 local Deque = require('plenary.async_lib2.structs').Deque
+local tbl = require('plenary.tbl')
 
 local M = {}
 
@@ -98,35 +99,37 @@ M.channel.oneshot = function()
   local saved_callback = nil
   local sent = false
   local received = false
+  local is_single = false
 
   --- sender is not async
-  --- sends a value
+  --- sends a value which can be nil
   local sender = function(...)
-    if sent then
-      error("Oneshot channel can only send once")
-    end
-
+    assert(not sent, 'Oneshot channel can only send once')
     sent = true
 
-    local args = {...}
+    if saved_callback ~= nil then
+      saved_callback(...)
+      return
+    end
 
-    if saved_callback then
-      saved_callback(unpack(val or args))
+    -- optimise for when there is only one argument, no need to pack
+    local nargs = select('#', ...)
+    if nargs == 1 or nargs == 0 then
+      val = ...
+      is_single = true
     else
-      val = args
+      val = tbl.pack(...)
     end
   end
 
   --- receiver is async
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
-    if received then
-      error('Oneshot channel can only send one value!')
-    end
+    assert(not received, 'Oneshot channel can only receive one value!')
 
     if val then
       received = true
-      callback(unpack(val))
+      callback(is_single and val or tbl.unpack(val))
     else
       saved_callback = callback
     end

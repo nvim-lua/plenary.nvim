@@ -15,7 +15,8 @@ local function callback_or_next(step, thread, callback, ...)
   end
 
   if co.status(thread) == "dead" then
-    (callback or function() end)(select(2, ...))
+    if callback == nil then return end
+    callback(select(2, ...))
   else
     local returned_function = f.second(...)
     assert(type(returned_function) == "function", "type error :: expected func")
