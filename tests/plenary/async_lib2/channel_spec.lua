@@ -1,19 +1,21 @@
-require('plenary.async_lib').tests.add_to_env()
-local channel = a.util.channel
+require('plenary.async_lib2').tests.add_to_env()
+local channel = a.control.channel
 local eq = assert.are.same
-local protected = a.util.protected
+local apcall = a.util.apcall
 
-a.describe('channel', function()
-  a.describe('oneshot', function()
+describe('channel', function()
+  describe('oneshot', function()
     a.it('should work when rx is used first', function()
       local tx, rx = channel.oneshot()
 
-      a.run(a.future(function()
-        local got = await(rx())
+      a.run(function()
+        local got = rx()
+
         eq("sent value", got)
-      end))
+      end)
 
       tx("sent value")
+
     end)
 
     a.it('should work when tx is used first', function()
@@ -21,20 +23,19 @@ a.describe('channel', function()
 
       tx("sent value")
 
-      a.run(a.future(function()
-        local got = await(rx())
-        eq("sent value", got)
-      end))
+      local got = rx()
+
+      eq("sent value", got)
     end)
 
     a.it('should work with multiple returns', function()
       local tx, rx = channel.oneshot()
 
-      a.run(a.future(function()
-        local got, got2 = await(rx())
+      a.run(function()
+        local got, got2 = rx()
         eq("sent value", got)
         eq("another sent value", got2)
-      end))
+      end)
 
       tx("sent value", "another sent value")
     end)
@@ -44,16 +45,16 @@ a.describe('channel', function()
 
       tx(nil)
 
-      local res = await(rx())
+      local res = rx()
       eq(res, nil)
 
-      local stat, ret = await(protected(rx()))
+      local stat, ret = apcall(rx)
       eq(stat, false)
-      local stat, ret = await(protected(rx()))
+      local stat, ret = apcall(rx)
       eq(stat, false)
     end)
 
-    a.it('should block sending mulitple times', function()
+    a.it('should error when sending mulitple times', function()
       local tx, rx = channel.oneshot()
 
       tx()
@@ -61,16 +62,16 @@ a.describe('channel', function()
       eq(stat, false)
     end)
 
-    a.it('should block receiving multiple times', function ()
+    a.it('should block receiving multiple times', function()
       local tx, rx = channel.oneshot()
-      tx()
-      await(rx())
-      local stat = await(protected(rx()))
+      tx(true)
+      rx()
+      local stat = apcall(rx)
       eq(stat, false)
     end)
   end)
 
-  a.describe('counter', function()
+  describe('counter', function()
     a.it('should work', function()
       local tx, rx = channel.counter()
 
@@ -80,14 +81,12 @@ a.describe('channel', function()
 
       local counter = 0
 
-      local recv_stuff = async(function()
+      a.run(function()
         for i = 1, 3 do
-          await(rx.recv())
+          rx.recv()
           counter = counter + 1
         end
       end)
-
-      a.run(recv_stuff())
 
       eq(counter, 3)
     end)
@@ -101,14 +100,10 @@ a.describe('channel', function()
 
       local counter = 0
 
-      local recv_stuff = async(function()
-        for i = 1, 3 do
-          await(rx.last())
-          counter = counter + 1
-        end
+      a.run(function()
+        await(rx.last())
+        counter = counter + 1
       end)
-
-      a.run(recv_stuff())
 
       eq(counter, 1)
     end)

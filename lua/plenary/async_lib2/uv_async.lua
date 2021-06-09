@@ -1,4 +1,4 @@
-local a = require('plenary.async_lib.async')
+local a = require('plenary.async_lib2.async')
 local uv = vim.loop
 
 local M = {}
@@ -48,6 +48,7 @@ add('fs_chown', 4)
 add('fs_fchown', 4)
 -- 'fs_lchown',
 add('fs_copyfile', 4)
+-- add('fs_opendir', 3) -- TODO: fix this one
 add('fs_readdir', 2)
 add('fs_closedir', 2)
 -- 'fs_statfs',
@@ -71,13 +72,14 @@ add('pipe_connect', 3)
 add('udp_send', 5)
 add('udp_recv_start', 2)
 
--- fs event (wip make into async await event)
--- fs poll event (wip make into async await event)
-
 -- dns
 add('getaddrinfo', 4)
 add('getnameinfo', 2)
 
--- add('fs_opendir', 2)
+local function fs_opendir(path, callback)
+  uv.fs_opendir(path, callback, 1)
+end
+
+M.fs_opendir = a.wrap(fs_opendir, 2)
 
 return M
