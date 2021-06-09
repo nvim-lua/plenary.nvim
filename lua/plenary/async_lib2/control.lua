@@ -112,7 +112,7 @@ M.channel.oneshot = function()
       return
     end
 
-    -- optimise for when there is only one argument, no need to pack
+    -- optimise for when there is only one or zero argument, no need to pack
     local nargs = select('#', ...)
     if nargs == 1 or nargs == 0 then
       val = ...
