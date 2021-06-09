@@ -3,6 +3,7 @@ local shebang_fts = {
   ['sh'] = 'sh',
   ['bash'] = 'sh',
   ['zsh'] = 'zsh',
+  ['fish'] = 'fish',
   ['python'] = 'python',
   ['python2'] = 'python',
   ['python3'] = 'python',
