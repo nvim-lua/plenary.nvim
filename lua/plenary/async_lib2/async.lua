@@ -45,17 +45,17 @@ end
 local add_leaf_function
 do
   ---A table to store all leaf async functions
-  local leaf_table = setmetatable({}, {
+  _PlenaryLeafTable = setmetatable({}, {
     __mode = "k",
   })
 
   add_leaf_function = function(async_func)
-    assert(leaf_table[async_func] == nil, "Async function should not already be in the table")
-    leaf_table[async_func] = true
+    assert(_PlenaryLeafTable[async_func] == nil, "Async function should not already be in the table")
+    _PlenaryLeafTable[async_func] = true
   end
 
   function M.is_leaf_function(async_func)
-    return leaf_table[async_func] ~= nil
+    return _PlenaryLeafTable[async_func] ~= nil
   end
 end
 
@@ -93,7 +93,7 @@ end
 
 ---Use this to either run a future concurrently and then do something else
 ---or use it to run a future with a callback in a non async context
----@param future Future
+---@param async_function function
 ---@param callback function
 M.run = function(async_function, callback)
   if M.is_leaf_function(async_function) then
@@ -103,6 +103,7 @@ M.run = function(async_function, callback)
   end
 end
 
+---this needs to be fixed
 M.void = function(async_fun)
   return co.wrap(async_fun)
 end

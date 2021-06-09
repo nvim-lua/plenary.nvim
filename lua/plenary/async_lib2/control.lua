@@ -20,8 +20,6 @@ end, 2)
 
 ---notify everyone that is waiting on this Condvar
 function Condvar:notify_all()
-  if #self.handles == 0 then return end
-
   for i, callback in ipairs(self.handles) do
     callback()
     self.handles[i] = nil
