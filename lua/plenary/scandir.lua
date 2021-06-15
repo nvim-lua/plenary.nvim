@@ -170,7 +170,7 @@ m.scan_dir_async = function(path, opts)
   local current_dir = table.remove(next_dir, 1)
 
   -- TODO(conni2461): get gitignore is not async
-  local gitignore = opts.respect_gitignore and get_gitignore() or nil
+  local gitignore = opts.respect_gitignore and get_gitignore(base_paths) or nil
   local match_seach_pat = opts.search_pattern and gen_search_pat(opts.search_pattern) or nil
 
   -- TODO(conni2461): is not async. Shouldn't be that big of a problem but still
