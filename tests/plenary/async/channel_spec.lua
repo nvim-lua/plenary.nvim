@@ -1,4 +1,4 @@
-require('plenary.async_lib2').tests.add_to_env()
+require('plenary.async').tests.add_to_env()
 local channel = a.control.channel
 local eq = assert.are.same
 local apcall = a.util.apcall
@@ -38,6 +38,20 @@ describe('channel', function()
       end)
 
       tx("sent value", "another sent value")
+    end)
+
+    a.it('should work when sending a falsey value', function ()
+      local tx, rx = channel.oneshot()
+
+      tx(false)
+
+      local res = rx()
+      eq(res, false)
+
+      local stat, ret = apcall(rx)
+      eq(stat, false)
+      local stat, ret = apcall(rx)
+      eq(stat, false)
     end)
 
     a.it('should work when sending a nil value', function ()

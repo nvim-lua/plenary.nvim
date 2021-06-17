@@ -3,13 +3,13 @@
 ---         It may change in the future :)
 ---@brief ]]
 
-local exports = require('plenary.async_lib2.async')
-exports.uv = require('plenary.async_lib2.uv_async')
-exports.util = require('plenary.async_lib2.util')
-exports.lsp = require('plenary.async_lib2.lsp')
-exports.api = require('plenary.async_lib2.api')
-exports.tests = require('plenary.async_lib2.tests')
-exports.control = require('plenary.async_lib2.control')
+local exports = require('plenary.async.async')
+exports.uv = require('plenary.async.uv_async')
+exports.util = require('plenary.async.util')
+exports.lsp = require('plenary.async.lsp')
+exports.api = require('plenary.async.api')
+exports.tests = require('plenary.async.tests')
+exports.control = require('plenary.async.control')
 
 exports.tests.add_globals = function()
   a = exports

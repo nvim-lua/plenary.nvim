@@ -1,5 +1,5 @@
-local a = require('plenary.async_lib2.async')
-local util = require('plenary.async_lib2.util')
+local a = require('plenary.async.async')
+local util = require('plenary.async.util')
 
 return setmetatable({}, {__index = function(t, k)
   return function(...)

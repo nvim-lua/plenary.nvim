@@ -1,5 +1,5 @@
-local a = require('plenary.async_lib2.async')
-local Deque = require('plenary.async_lib2.structs').Deque
+local a = require('plenary.async.async')
+local Deque = require('plenary.async.structs').Deque
 local tbl = require('plenary.tbl')
 
 local M = {}
@@ -127,9 +127,13 @@ M.channel.oneshot = function()
   local receiver = a.wrap(function(callback)
     assert(not received, 'Oneshot channel can only receive one value!')
 
-    if val then
+    if sent then
       received = true
-      callback(is_single and val or tbl.unpack(val))
+      if is_single then
+        return callback(val)
+      else
+        return callback(tbl.unpack(val))
+      end
     else
       saved_callback = callback
     end

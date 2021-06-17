@@ -1,4 +1,4 @@
-require('plenary.async_lib2').tests.add_to_env()
+require('plenary.async').tests.add_to_env()
 local Condvar = a.control.Condvar
 local eq = assert.are.same
 local join, run_all = a.util.join, a.util.run_all

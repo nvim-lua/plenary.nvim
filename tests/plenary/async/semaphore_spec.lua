@@ -1,4 +1,4 @@
-require('plenary.async_lib2').tests.add_to_env()
+require('plenary.async').tests.add_to_env()
 local Semaphore = a.control.Semaphore
 
 local eq = assert.are.same
