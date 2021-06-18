@@ -107,7 +107,8 @@ end
 function M.apcall(async_fn, ...)
   if a.is_leaf_function(async_fn) then
     local tx, rx = channel.oneshot()
-    local stat, ret = pcall(async_fn, vararg.rotate(tx, ...))
+    local nargs = select('#', ...) + 1
+    local stat, ret = pcall(async_fn, vararg.rotate(nargs, tx, ...))
     if not stat then
       return stat, ret
     else

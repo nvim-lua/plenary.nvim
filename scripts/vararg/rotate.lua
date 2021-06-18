@@ -19,9 +19,7 @@ local function rotate_n(first, ...)
   return tbl.unpack(args)
 end
 
-local function rotate(...)
-  local nargs = select('#', ...)
-
+local function rotate(nargs, ...)
   return (rotate_lookup[nargs] or rotate_n)(...)
 end
 
