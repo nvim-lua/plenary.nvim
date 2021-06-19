@@ -19,9 +19,10 @@ local function callback_or_next(step, thread, callback, ...)
     callback(select(2, ...))
   else
     local returned_function = f.second(...)
+    local nargs = f.third(...)
     assert(type(returned_function) == "function", "type error :: expected func")
-    local stat, msg = pcall(returned_function, vararg.rotate(step, select(3, ...)))
-    if not stat then
+    local rstat, msg = pcall(returned_function, vararg.rotate(nargs, step, select(4, ...)))
+    if not rstat then
       error(('Failed to call leaf async function: %s'):format(msg))
     end
   end
@@ -30,7 +31,7 @@ end
 ---Executes a future with a callback when it is done
 ---@param async_function Future: the future to execute
 ---@param callback function: the callback to call when done
-local execute = function(async_function, callback)
+local execute = function(async_function, callback, ...)
   assert(type(async_function) == "function", "type error :: expected func")
 
   local thread = co.create(async_function)
@@ -40,7 +41,7 @@ local execute = function(async_function, callback)
     callback_or_next(step, thread, callback, co.resume(thread, ...))
   end
 
-  step()
+  step(...)
 end
 
 local add_leaf_function
@@ -50,13 +51,17 @@ do
     __mode = "k",
   })
 
-  add_leaf_function = function(async_func)
+  add_leaf_function = function(async_func, argc)
     assert(_PlenaryLeafTable[async_func] == nil, "Async function should not already be in the table")
-    _PlenaryLeafTable[async_func] = true
+    _PlenaryLeafTable[async_func] = argc
   end
 
   function M.is_leaf_function(async_func)
     return _PlenaryLeafTable[async_func] ~= nil
+  end
+
+  function M.get_leaf_function_argc(async_func)
+    return _PlenaryLeafTable[async_func]
   end
 end
 
@@ -76,18 +81,14 @@ M.wrap = function(func, argc)
   local function leaf(...)
     local nargs = select('#', ...)
 
-    if not (nargs == argc - 1 or nargs == argc) then
-      print(('Expected %s or %s number of arguments, got %s'):format(argc - 1, argc, nargs))
-    end
-
     if nargs == argc then
       return func(...)
     else
-      return co.yield(func, ...)
+      return co.yield(func, argc, ...)
     end
   end
 
-  add_leaf_function(leaf)
+  add_leaf_function(leaf, argc)
 
   return leaf
 end
@@ -104,9 +105,14 @@ M.run = function(async_function, callback)
   end
 end
 
----this needs to be fixed
-M.void = function(async_fun)
-  return co.wrap(async_fun)
+---Use this to create a function which executes in an async context but
+---called from a non-async context. Inherently this cannot return anything
+---since it is non-blocking
+---@param func function
+M.void = function(func)
+  return function(...)
+    execute(func, nil, ...)
+  end
 end
 
 return M
