@@ -51,13 +51,17 @@ do
     __mode = "k",
   })
 
-  add_leaf_function = function(async_func)
+  add_leaf_function = function(async_func, argc)
     assert(_PlenaryLeafTable[async_func] == nil, "Async function should not already be in the table")
-    _PlenaryLeafTable[async_func] = true
+    _PlenaryLeafTable[async_func] = argc
   end
 
   function M.is_leaf_function(async_func)
     return _PlenaryLeafTable[async_func] ~= nil
+  end
+
+  function M.get_leaf_function_argc(async_func)
+    return _PlenaryLeafTable[async_func]
   end
 end
 
@@ -84,7 +88,7 @@ M.wrap = function(func, argc)
     end
   end
 
-  add_leaf_function(leaf)
+  add_leaf_function(leaf, argc)
 
   return leaf
 end

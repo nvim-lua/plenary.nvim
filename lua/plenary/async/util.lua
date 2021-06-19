@@ -105,9 +105,9 @@ M.run_all = function(async_fns, callback)
 end
 
 function M.apcall(async_fn, ...)
-  if a.is_leaf_function(async_fn) then
+  local nargs = a.get_leaf_function_argc(async_fn)
+  if nargs then
     local tx, rx = channel.oneshot()
-    local nargs = select('#', ...) + 1
     local stat, ret = pcall(async_fn, vararg.rotate(nargs, tx, ...))
     if not stat then
       return stat, ret
