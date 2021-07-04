@@ -101,6 +101,38 @@ function Border:change_title(new_title)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 end
 
+function Border:resize(content_win_options, border_win_options)
+
+  border_win_options = tbl.apply_defaults(border_win_options, {
+    border_thickness = Border._default_thickness,
+
+    -- Border options, could be passed as a list?
+    topleft  = '╔',
+    topright = '╗',
+    top      = '═',
+    left     = '║',
+    right    = '║',
+    botleft  = '╚',
+    botright = '╝',
+    bot      = '═',
+  })
+
+  self.contents = Border._create_lines(content_win_options, border_win_options)
+  vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
+
+  local thickness = border_win_options.border_thickness
+
+  vim.api.nvim_win_set_config(self.win_id, {
+    anchor = content_win_options.anchor,
+    relative = content_win_options.relative,
+    style = "minimal",
+    row = content_win_options.row - thickness.top,
+    col = content_win_options.col - thickness.left,
+    width = content_win_options.width + thickness.left + thickness.right,
+    height = content_win_options.height + thickness.top + thickness.bot,
+  })
+end
+
 function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
   assert(type(content_win_id) == 'number', "Must supply a valid win_id. It's possible you forgot to call with ':'")
 
