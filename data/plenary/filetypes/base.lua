@@ -93,6 +93,7 @@ return {
     ['maxpat'] = [[json]],
     ['yy'] = [[yacc]],
     ['h++'] = [[cpp]],
+    ['hbs'] = [[handlebars]],
     ['asc'] = [[asciidoc]],
     ['phps'] = [[php]],
     ['cabal'] = [[cabal]],
