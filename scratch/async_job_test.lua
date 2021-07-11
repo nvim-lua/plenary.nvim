@@ -5,7 +5,8 @@ local async_job = R "plenary.async_job"
 local OneshotLines = R "plenary.async_job.oneshot_lines"
 
 local bufnr = 7
-local append = function(text)
+Append = function(...)
+  local text = table.concat({...}, "  ")
   if not text then return end
 
   async.api.nvim_buf_set_lines(bufnr, -1, -1, false, { text })
@@ -24,7 +25,7 @@ async.void(function()
   for val in pipe:iter() do
     count = count + 1
     -- if count % 1000 == 0 then
-      append(val)
+      Append(val)
     -- end
   end
 

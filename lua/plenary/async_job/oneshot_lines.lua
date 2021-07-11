@@ -34,6 +34,7 @@ function OneshotLines:close()
 
   async.util.scheduler()
   self._closed = true
+  Append("Closed!")
 end
 
 function OneshotLines:iter()
@@ -46,19 +47,22 @@ function OneshotLines:iter()
       return _value
     end
 
-
+    Append("== awaiting value")
     _await = false
     _index = nil
 
     _value = self._read_rx()
-    self:start()
+    if _value == nil then
+      return
+    end
 
+    self:start()
     return _value
   end
 
   local next_value = nil
   next_value = function(text)
-    print("======== next_value")
+    Append("======== next_value")
 
     if not text then
       return nil
@@ -67,10 +71,10 @@ function OneshotLines:iter()
     local start = _index
     _index = string.find(text, "\n", _index, true)
 
-    print(vim.inspect(text), start, _index, #text)
+    Append(vim.inspect(text), start, _index, #text)
 
     if _index == nil then
-      print("    Searching new text...", string.sub(text, start or 1))
+      Append("SEARCH:", string.sub(text, start or 1))
       _await = true
 
       local next_text = get_next_text() or ''
