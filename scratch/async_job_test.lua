@@ -21,13 +21,11 @@ async.void(function()
   async_job.AsyncJob.start { "rg", "--files", "/home/tjdevries/", stdout = pipe }
   -- async_job.AsyncJob.start { "./scratch/ajob/line_things.sh", stdout = pipe }
 
-  local count = 1
+  local text = 0
   for val in pipe:iter() do
-    count = count + 1
-    if count % 1000 == 0 then
-      Append(val)
-    end
+    text = text + #val
   end
 
-  print("Time Elapsed:", (uv.hrtime() - start) / 1e9, " // Total lines processed:", count)
+  async.util.scheduler()
+  print("Time Elapsed:", (uv.hrtime() - start) / 1e9, " // Total lines processed:", text)
 end)()

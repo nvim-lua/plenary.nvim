@@ -32,9 +32,8 @@ function OneshotLines:close()
   self.handle:read_stop()
   self.handle:close()
 
-  async.util.scheduler()
+  -- async.util.scheduler()
   self._closed = true
-  print("Closed!")
 end
 
 function OneshotLines:iter()
@@ -49,18 +48,21 @@ function OneshotLines:iter()
       return
     end
 
-    _text = (previous or '') .. (read or '')
-    if _text == nil then
-      return
-    end
-
+    local text = (previous or '') .. (read or '')
     self:start()
-    return _text
+
+    return text
   end
 
   local next_value = nil
   next_value = function()
-    if not _text then
+    async.util.scheduler()
+
+    if self._closed then
+      return nil
+    end
+
+    if _text == nil or (_text == "" and _index == nil) then
       return nil
     end
 
@@ -68,7 +70,7 @@ function OneshotLines:iter()
     _index = string.find(_text, "\n", _index, true)
 
     if _index == nil then
-      _text = get_next_text(string.sub(_text, start or 1)) or ''
+      _text = get_next_text(string.sub(_text, start or 1))
       return next_value()
     end
 
@@ -77,11 +79,9 @@ function OneshotLines:iter()
     return string.sub(_text, start or 1, _index - 2)
   end
 
-  get_next_text()
+  _text = get_next_text()
 
   return function()
-    async.util.scheduler()
-
     return next_value()
   end
 end

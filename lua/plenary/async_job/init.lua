@@ -75,7 +75,6 @@ function LinePipe:iter()
       return _value
     end
 
-
     needs_new_text = false
 
     _value = self._data:popleft()
