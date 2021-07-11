@@ -42,8 +42,7 @@ function LinePipe:start()
   self.handle:read_start(function(err, data)
     self.handle:read_stop()
 
-    print("Sending tx", self._read_tx)
-    self._read_tx()
+    self._read_tx(data)
 
     if err then return end
     if not data then return end

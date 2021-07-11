@@ -1,14 +1,14 @@
 #!/bin/bash
 
-echo "hello"
-echo "line"
-sleep 0.1
+# echo "hello END"
+# echo "line END"
+# sleep 0.1
 echo -n "another line"
 echo -n " that is split"
 sleep 0.1
-echo " and still that is split"
+echo " and finally END"
 echo -n "line split across"
 sleep 1
-echo " two messages"
+echo " two messages END"
 sleep 1
 echo "DONE"
