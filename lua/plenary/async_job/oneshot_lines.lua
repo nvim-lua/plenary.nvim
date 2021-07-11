@@ -41,10 +41,15 @@ function OneshotLines:iter()
   local _text = nil
   local _index = nil
 
-  local get_next_text = function()
+  local get_next_text = function(previous)
     _index = nil
 
-    _text = self._read_rx()
+    local read = self._read_rx()
+    if previous == nil and read == nil then
+      return
+    end
+
+    _text = (previous or '') .. (read or '')
     if _text == nil then
       return
     end
@@ -63,9 +68,8 @@ function OneshotLines:iter()
     _index = string.find(_text, "\n", _index, true)
 
     if _index == nil then
-      local old_text = _text
-      local next_text = get_next_text() or ''
-      return next_value(string.sub(old_text, start or 1) .. next_text)
+      _text = get_next_text(string.sub(_text, start or 1)) or ''
+      return next_value()
     end
 
     _index = _index + 1
@@ -78,9 +82,7 @@ function OneshotLines:iter()
   return function()
     async.util.scheduler()
 
-    local value = next_value()
-
-    return value
+    return next_value()
   end
 end
 
