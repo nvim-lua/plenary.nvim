@@ -17,13 +17,21 @@ vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 async.void(function()
   local start = uv.hrtime()
 
-  local pipe = OneshotLines:new()
-  async_job.AsyncJob.start { "rg", "--files", "/home/tjdevries/", stdout = pipe }
+  local stdout = OneshotLines:new()
+  -- local stderr = OneshotLines:new()
+
+  local job = async_job.spawn { "rg", "--files", vim.fn.expand "~", stdout = stdout }
   -- async_job.AsyncJob.start { "./scratch/ajob/line_things.sh", stdout = pipe }
 
   local text = 0
-  for val in pipe:iter() do
+  for val in stdout:iter_read() do
     text = text + #val
+
+    if text > 1000 then
+      print("CANCELLING...")
+      -- job:cancel()
+      stdout:close()
+    end
   end
 
   async.util.scheduler()

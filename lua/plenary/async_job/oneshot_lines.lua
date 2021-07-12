@@ -30,13 +30,16 @@ end
 
 function OneshotLines:close()
   self.handle:read_stop()
-  self.handle:close()
+
+  if not self.handle:is_closing() then
+    self.handle:close()
+  end
 
   -- async.util.scheduler()
   self._closed = true
 end
 
-function OneshotLines:iter()
+function OneshotLines:iter_read()
   local _text = nil
   local _index = nil
 

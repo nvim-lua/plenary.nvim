@@ -1,5 +1,6 @@
 local uv = vim.loop
 
+local log = require("plenary.log")
 local async = require("plenary.async")
 local channel = async.control.channel
 
@@ -190,28 +191,54 @@ AsyncJob.__index = AsyncJob
 --   return setmetatable({}, self)
 -- end
 
-function AsyncJob.start(opts)
+function AsyncJob.new(opts)
   local self = setmetatable({}, AsyncJob)
 
-  local command, uv_opts = j_utils.convert_opts(opts)
-  uv_opts.stdio = {}
+  self.command, self.uv_opts = j_utils.convert_opts(opts)
 
-  -- TODO: Other handles
-  -- TODO: NullPipe, just implements all the stuff, but doesn't do anything
-  local stdout = opts.stdout or NullPipe:new()
-  uv_opts.stdio[2] = stdout.handle
+  self.stdin = opts.stdin or NullPipe:new()
+  self.stdout = opts.stdout or NullPipe:new()
+  self.stderr = opts.stderr or NullPipe:new()
 
-  self.handle = uv.spawn(command, uv_opts, async.void(function()
-    stdout:close()
-    self.handle:close()
-  end))
+  self.uv_opts.stdio = {
+    self.stdin.handle,
+    self.stdout.handle,
+    self.stderr.handle,
+  }
 
-  stdout:start()
+  return self
 end
 
+function AsyncJob:_for_each_pipe(f, ...)
+  for _, pipe in ipairs({self.stdin, self.stdout, self.stderr}) do
+    f(pipe, ...)
+  end
+end
 
-M.AsyncJob = AsyncJob
+function AsyncJob:start()
+  self:_for_each_pipe(function(p) p:start() end)
+end
+
+function AsyncJob:close()
+  self:_for_each_pipe(function(p) p:close() end)
+  self.handle:close()
+
+  log.debug("[async_job] closed")
+end
+
 M.ChunkPipe = ChunkPipe
 M.LinePipe = LinePipe
+
+M.spawn = function(opts)
+  local self = AsyncJob.new(opts)
+
+  self.handle = uv.spawn(self.command, self.uv_opts, async.void(function()
+    self:close()
+  end))
+
+  self:start()
+
+  return self
+end
 
 return M
