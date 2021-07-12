@@ -17,6 +17,8 @@ local BasePipe = Object:extend()
 
 function BasePipe:new()
   self._closed = false
+
+  self.iter = function() return function() end end
 end
 
 function BasePipe:close()
@@ -141,9 +143,30 @@ function ChunkPipe:iter()
   end
 end
 
+---@class ErrorPipe : BasePipe
+local ErrorPipe = BasePipe:extend()
+
+function ErrorPipe:new()
+  ErrorPipe.super.new(self)
+  self.handle = uv.new_pipe(false)
+end
+
+function ErrorPipe:start()
+  self.handle:read_start(function(err, data)
+    if not err and not data then
+      return
+    end
+
+    self.handle:read_stop()
+    self.handle:close()
+
+    error(string.format("Err: %s, Data: '%s'", err, data))
+  end)
+end
 
 M.NullPipe = NullPipe
 M.LinesPipe = LinesPipe
 M.ChunkPipe = ChunkPipe
+M.ErrorPipe = ErrorPipe
 
 return M

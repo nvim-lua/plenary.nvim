@@ -53,9 +53,6 @@ function AsyncJob:close()
   log.debug("[async_job] closed")
 end
 
-M.ChunkPipe = ChunkPipe
-M.LinePipe = LinePipe
-
 M.spawn = function(opts)
   local self = AsyncJob.new(opts)
 

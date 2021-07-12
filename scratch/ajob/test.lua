@@ -6,38 +6,33 @@ local async_pipes = R "plenary.async_job.pipes"
 
 local LinesPipe = async_pipes.LinesPipe
 local ChunkPipe = async_pipes.ChunkPipe
+local ErrorPipe = async_pipes.ErrorPipe
 
-local bufnr = 7
-Append = function(...)
-  local text = table.concat({...}, "  ")
-  if not text then return end
+-- local bufnr = 7
+-- Append = function(...)
+--   local text = table.concat({...}, "  ")
+--   if not text then return end
 
-  async.api.nvim_buf_set_lines(bufnr, -1, -1, false, { text })
-end
+--   async.api.nvim_buf_set_lines(bufnr, -1, -1, false, { text })
+-- end
 -- vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
 
 async.void(function()
   local start = uv.hrtime()
 
-  local chunk = true
+  local stdout = LinesPipe()
+  local stderr = ErrorPipe()
 
-  local stdout 
-  if chunk then
-    stdout = ChunkPipe()
-  else
-    stdout = LinesPipe()
-  end
-
-  local _ = async_job.spawn { "rg", "--files", vim.fn.expand "~", stdout = stdout }
-  -- async_job.AsyncJob.start { "./scratch/ajob/line_things.sh", stdout = pipe }
+  -- local job = async_job.spawn { "rg", "--files", vim.fn.expand "~", stdout = stdout, stderr = stderr }
+  local job = async_job.spawn { "does_not_exist", stdout = stdout, stderr = stderr }
+  -- local job = async_job.AsyncJob.start { "./scratch/ajob/line_things.sh", stdout = pipe }
 
   local text = 0
   for val in stdout:iter() do
     text = text + #val
 
     if text > 1000 then
-      print("CANCELLING...")
-      stdout:close()
+      job:close()
     end
   end
 
