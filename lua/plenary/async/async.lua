@@ -3,11 +3,18 @@ local vararg = require('plenary.vararg')
 local errors = require('plenary.errors')
 local traceback_error = errors.traceback_error
 local f = require('plenary.functional')
+local Context = require('plenary.async.context')
 
 local M = {}
 
 ---because we can't store varargs
-local function callback_or_next(step, thread, callback, ...)
+local function callback_or_next(step, thread, callback, ctx, ...)
+  -- this means that we have canceled,
+  -- returning means that we will yield forever and never resume this coroutine
+  if ctx.canceled then return end
+
+  ctx:reset_cancel()
+
   local stat = f.first(...)
 
   if not stat then
@@ -20,10 +27,14 @@ local function callback_or_next(step, thread, callback, ...)
   else
     local returned_function = f.second(...)
     local nargs = f.third(...)
+    local canceller = select(4, ...)
+
     assert(type(returned_function) == "function", "type error :: expected func")
-    local rstat, msg = pcall(returned_function, vararg.rotate(nargs, step, select(4, ...)))
+    local rstat, res = pcall(returned_function, vararg.rotate(nargs, step, select(5, ...)))
     if not rstat then
-      error(('Failed to call leaf async function: %s'):format(msg))
+      error(('Failed to call leaf async function: %s'):format(res))
+    elseif canceller ~= nil then
+      ctx:set_cancel(canceller, res)
     end
   end
 end
@@ -34,14 +45,18 @@ end
 local execute = function(async_function, callback, ...)
   assert(type(async_function) == "function", "type error :: expected func")
 
+  local ctx = Context.new()
+
   local thread = co.create(async_function)
 
   local step
   step = function(...)
-    callback_or_next(step, thread, callback, co.resume(thread, ...))
+    callback_or_next(step, thread, callback, ctx, co.resume(thread, ...))
   end
 
   step(...)
+
+  return ctx
 end
 
 local add_leaf_function
@@ -69,7 +84,7 @@ end
 ---@param func function: A callback style function to be converted. The last argument must be the callback.
 ---@param argc number: The number of arguments of func. Must be included.
 ---@return function: Returns an async function
-M.wrap = function(func, argc)
+M.wrap = function(func, argc, canceller)
   if type(func) ~= "function" then
     traceback_error("type error :: expected func, got " .. type(func))
   end
@@ -84,7 +99,7 @@ M.wrap = function(func, argc)
     if nargs == argc then
       return func(...)
     else
-      return co.yield(func, argc, ...)
+      return co.yield(func, argc, canceller, ...)
     end
   end
 
