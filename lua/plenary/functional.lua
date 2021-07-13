@@ -61,6 +61,7 @@ end
 f.first = f.select_only(1)
 f.second = f.select_only(2)
 f.third = f.select_only(3)
+f.fourth = f.select_only(4)
 
 function f.last(...)
   local length = select('#', ...)
