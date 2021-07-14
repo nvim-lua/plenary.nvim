@@ -2,9 +2,7 @@ local uv = vim.loop
 
 local log = require("plenary.log")
 local async = require("plenary.async")
-local channel = async.control.channel
 
-local Deque = require('plenary.async.structs').Deque
 local NullPipe = require('plenary.async_job.pipes').NullPipe
 
 local j_utils = require('plenary.async_job.util')
@@ -27,6 +25,11 @@ function AsyncJob.new(opts)
   self.stdout = opts.stdout or NullPipe()
   self.stderr = opts.stderr or NullPipe()
 
+  if opts.cwd then
+    -- TODO: not vim.fn
+    self.uv_opts.cwd = vim.fn.expand(opts.cwd)
+  end
+
   self.uv_opts.stdio = {
     self.stdin.handle,
     self.stdout.handle,
@@ -42,13 +45,11 @@ function AsyncJob:_for_each_pipe(f, ...)
   end
 end
 
-function AsyncJob:start()
-  self:_for_each_pipe(function(p) p:start() end)
-end
-
 function AsyncJob:close()
   self:_for_each_pipe(function(p) p:close() end)
-  self.handle:close()
+  if not self.handle:is_closing() then
+    self.handle:close()
+  end
 
   log.debug("[async_job] closed")
 end
@@ -59,8 +60,6 @@ M.spawn = function(opts)
   self.handle = uv.spawn(self.command, self.uv_opts, async.void(function()
     self:close()
   end))
-
-  self:start()
 
   return self
 end

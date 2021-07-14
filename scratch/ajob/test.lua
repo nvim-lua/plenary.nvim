@@ -8,6 +8,8 @@ local LinesPipe = async_pipes.LinesPipe
 local ChunkPipe = async_pipes.ChunkPipe
 local ErrorPipe = async_pipes.ErrorPipe
 
+-- local Pipe = async_pipes.Pipe
+
 -- local bufnr = 7
 -- Append = function(...)
 --   local text = table.concat({...}, "  ")
@@ -20,21 +22,29 @@ local ErrorPipe = async_pipes.ErrorPipe
 async.void(function()
   local start = uv.hrtime()
 
+  -- local stdout = ChunkPipe()
   local stdout = LinesPipe()
-  local stderr = ErrorPipe()
+  -- local stdout = Pipe()
+  -- local stderr = ErrorPipe()
 
-  -- local job = async_job.spawn { "rg", "--files", vim.fn.expand "~", stdout = stdout, stderr = stderr }
-  local job = async_job.spawn { "does_not_exist", stdout = stdout, stderr = stderr }
-  -- local job = async_job.AsyncJob.start { "./scratch/ajob/line_things.sh", stdout = pipe }
+  -- local job = async_job.spawn { "rg", "--files", "/home/tjdevries/", stdout = stdout, }
+  -- local job = async_job.spawn { "does_not_exist", stdout = stdout, stderr = stderr }
+  local job = async_job.spawn { "./scratch/ajob/line_things.sh", stdout = stdout }
 
   local text = 0
   for val in stdout:iter() do
-    text = text + #val
-
-    if text > 1000 then
-      job:close()
-    end
+    text = text + 1
+    print(val)
   end
+
+  -- local text = 0
+  -- for val in stdout:iter() do
+  --   text = text + #val
+
+  --   if text > 1000 then
+  --     job:close()
+  --   end
+  -- end
 
   async.util.scheduler()
   print("Time Elapsed:", (uv.hrtime() - start) / 1e9, " // Total lines processed:", text)

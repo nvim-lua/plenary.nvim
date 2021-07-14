@@ -8,17 +8,20 @@ local M = {}
 
 ---@class uv_pipe_t
 --- A pipe handle from libuv
+---@field read_start function: Start reading
+---@field read_stop function: Stop reading
+---@field close function: Close the handle
+---@field is_closing function: Whether handle is currently closing and/or closed
 
 ---@class BasePipe
 ---@field super Object: Always available
 ---@field handle uv_pipe_t: A pipe handle
 ---@field _closed boolean: Whether the pipe is currently closed or not.
+---@field extend function: Extend
 local BasePipe = Object:extend()
 
 function BasePipe:new()
   self._closed = false
-
-  self.iter = function() return function() end end
 end
 
 function BasePipe:close()
@@ -43,61 +46,66 @@ function LinesPipe:new()
   self.handle = uv.new_pipe(false)
 end
 
-function LinesPipe:start()
-  self._read_tx, self._read_rx = channel.oneshot()
+function LinesPipe:read()
+  local read_tx, read_rx = channel.oneshot()
 
   self.handle:read_start(function(err, data)
     self.handle:read_stop()
 
     assert(not err, err)
-    self._read_tx(data)
+    read_tx(data)
   end)
+
+  return read_rx()
 end
 
-function LinesPipe:iter()
-  local _text = nil
-  local _index = nil
+function LinesPipe:iter(schedule)
+  if schedule == nil then
+    schedule = true
+  end
+
+  local text = nil
+  local index = nil
 
   local get_next_text = function(previous)
-    _index = nil
+    index = nil
 
-    local read = self._read_rx()
+    local read = self:read()
     if previous == nil and read == nil then
       return
     end
 
-    local text = (previous or '') .. (read or '')
-    self:start()
-
-    return text
+    return (previous or '') .. (read or '')
   end
 
   local next_value = nil
   next_value = function()
-    async.util.scheduler()
+    if schedule then
+      async.util.scheduler()
+    end
 
     if self._closed then
       return nil
     end
 
-    if _text == nil or (_text == "" and _index == nil) then
+    if text == nil or (text == "" and index == nil) then
       return nil
     end
 
-    local start = _index
-    _index = string.find(_text, "\n", _index, true)
+    local start = index
+    index = string.find(text, "\n", index, true)
 
-    if _index == nil then
-      _text = get_next_text(string.sub(_text, start or 1))
+    if index == nil then
+      text = get_next_text(string.sub(text, start or 1))
       return next_value()
     end
 
-    _index = _index + 1
+    index = index + 1
 
-    return string.sub(_text, start or 1, _index - 2)
+    return string.sub(text, start or 1, index - 2)
   end
 
-  _text = get_next_text()
+  text = get_next_text()
 
   return function()
     return next_value()
@@ -111,6 +119,7 @@ local NullPipe = BasePipe:extend()
 function NullPipe:new()
   NullPipe.super.new(self)
   self.start = function() end
+  self.read_start = function() end
   self.close = function() end
 end
 
@@ -122,15 +131,17 @@ function ChunkPipe:new()
   self.handle = uv.new_pipe(false)
 end
 
-function ChunkPipe:start()
-  self._read_tx, self._read_rx = channel.oneshot()
+function ChunkPipe:read()
+  local read_tx, read_rx = channel.oneshot()
 
   self.handle:read_start(function(err, data)
     self.handle:read_stop()
-
     assert(not err, err)
-    self._read_tx(data)
+
+    read_tx(data)
   end)
+
+  return read_rx()
 end
 
 function ChunkPipe:iter()
@@ -139,7 +150,7 @@ function ChunkPipe:iter()
       return nil
     end
 
-    return self._read_rx()
+    return self:read()
   end
 end
 
