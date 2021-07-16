@@ -11,23 +11,33 @@ local M = {}
 ---@field read_start function: Start reading
 ---@field read_stop function: Stop reading
 ---@field close function: Close the handle
----@field is_closing function: Whether handle is currently closing and/or closed
+---@field is_closing function: Whether handle is currently closing
+---@field is_active function: Whether the handle is currently reading
 
 ---@class BasePipe
 ---@field super Object: Always available
 ---@field handle uv_pipe_t: A pipe handle
----@field _closed boolean: Whether the pipe is currently closed or not.
 ---@field extend function: Extend
 local BasePipe = Object:extend()
 
 function BasePipe:new()
-  self._closed = false
+  self.eof_tx, self.eof_rx = channel.oneshot()
 end
 
-function BasePipe:close()
+function BasePipe:close(force)
+  if force == nil then force = true end
+
   assert(self.handle, "Must have a pipe to close. Otherwise it's weird!")
 
-  if self._closed then return end
+  if self.handle:is_closing() then
+    return
+  end
+
+  -- If we're not forcing the stop, allow waiting for eof
+  -- This ensures that we don't end up with weird race conditions
+  if not force then
+    self.eof_rx()
+  end
 
   self.handle:read_stop()
   if not self.handle:is_closing() then
@@ -50,10 +60,13 @@ function LinesPipe:read()
   local read_tx, read_rx = channel.oneshot()
 
   self.handle:read_start(function(err, data)
+    assert(not err, err)
     self.handle:read_stop()
 
-    assert(not err, err)
     read_tx(data)
+    if data == nil then
+      self.eof_tx()
+    end
   end)
 
   return read_rx()
@@ -82,10 +95,6 @@ function LinesPipe:iter(schedule)
   next_value = function()
     if schedule then
       async.util.scheduler()
-    end
-
-    if self._closed then
-      return nil
     end
 
     if text == nil or (text == "" and index == nil) then
@@ -121,6 +130,9 @@ function NullPipe:new()
   self.start = function() end
   self.read_start = function() end
   self.close = function() end
+
+  -- This always has eof tx done, so can just call it now
+  self.eof_tx()
 end
 
 ---@class ChunkPipe : BasePipe
@@ -135,10 +147,13 @@ function ChunkPipe:read()
   local read_tx, read_rx = channel.oneshot()
 
   self.handle:read_start(function(err, data)
-    self.handle:read_stop()
     assert(not err, err)
+    self.handle:read_stop()
 
     read_tx(data)
+    if data == nil then
+      self.eof_tx()
+    end
   end)
 
   return read_rx()

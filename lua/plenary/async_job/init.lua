@@ -45,8 +45,10 @@ function AsyncJob:_for_each_pipe(f, ...)
   end
 end
 
-function AsyncJob:close()
-  self:_for_each_pipe(function(p) p:close() end)
+function AsyncJob:close(force)
+  if force == nil then force = true end
+
+  self:_for_each_pipe(function(p) p:close(force) end)
   if not self.handle:is_closing() then
     self.handle:close()
   end
@@ -58,7 +60,7 @@ M.spawn = function(opts)
   local self = AsyncJob.new(opts)
 
   self.handle = uv.spawn(self.command, self.uv_opts, async.void(function()
-    self:close()
+    self:close(false)
   end))
 
   return self
