@@ -500,10 +500,6 @@ function Path:is_dir()
   return band(S_IF.DIR, self:_st_mode())
 end
 
-function Path:is_file()
-  return band(S_IF.REG, self:_st_mode())
-end
-
 function Path:is_absolute()
   if self._sep == '\\' then
     return string.match(self.filename, '^[A-Z]:\\.*$')
