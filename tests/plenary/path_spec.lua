@@ -191,6 +191,18 @@ describe('Path', function()
     end)
   end)
 
+  describe(':is_root', function()
+    it('can detect the root path on UNIX-like systems', function()
+      local p = Path:new{'/', sep = '/'}
+      assert.is_true(p:is_root())
+    end)
+
+    it('can detect the root path on Windows', function()
+      local p = Path:new{'C:\\', sep = '\\'}
+      assert.is_true(p:is_root())
+    end)
+  end)
+
   describe(':shorten', function()
     it('can shorten a path', function()
       local long_path = '/this/is/a/long/path'

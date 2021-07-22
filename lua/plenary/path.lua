@@ -50,9 +50,10 @@ local concat_paths = function(...)
   return table.concat({...}, path.sep)
 end
 
-local function is_root(pathname)
-  if path.sep == '\\' then
-    return string.match(pathname, '^[A-Z]:\\?$')
+local function is_root(pathname, sep)
+  sep = sep or path.sep
+  if sep == '\\' then
+    return string.match(pathname, '^[A-Z]:\\?$') ~= nil
   end
   return pathname == '/'
 end
@@ -299,6 +300,10 @@ function Path:normalize(cwd)
   self.filename = self.filename:gsub("^" .. path.home, '~', 1)
 
   return _normalize_path(self.filename)
+end
+
+function Path:is_root()
+  return is_root(self.filename, self._sep)
 end
 
 local function shorten_len(filename, len)
