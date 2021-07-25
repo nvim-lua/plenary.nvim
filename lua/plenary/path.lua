@@ -524,7 +524,7 @@ local _get_parent = (function()
 end)()
 
 function Path:parent()
-  return _get_parent(self:absolute()) or path.root(self:absolute())
+  return Path:new(_get_parent(self:absolute()) or path.root(self:absolute()))
 end
 
 function Path:parents()

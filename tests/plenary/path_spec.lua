@@ -410,7 +410,7 @@ describe('Path', function()
     end)
     it('should return itself if it corresponds to path.root', function()
       local p = Path:new(Path.path.root(vim.loop.cwd()))
-      assert.are.same(p:parent(), p.filename)
+      assert.are.same(p:parent(), p)
     end)
   end)
 
