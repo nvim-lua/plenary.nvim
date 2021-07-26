@@ -69,12 +69,14 @@ function Border._create_lines(content_win_options, border_win_options)
   local topright = (right_enabled and border_win_options.topright) or ''
 
   local titles
-  if border_win_options.title then
-    if type(border_win_options.title) == "string" then
-      titles = {["top-mid"] = border_win_options.title}
-    elseif type(border_win_options.title) == "table" then
-      titles = border_win_options.title
-    end
+  if type(border_win_options.title) == "string" then
+    titles = {["top-mid"] = border_win_options.title}
+  elseif type(border_win_options.title) == "table" then
+    titles = border_win_options.title
+  elseif not border_win_options.title then
+    titles = {}
+  else
+    error('Invalid option for `border_win_options.title`: ' .. border_win_options.title)
   end
   if content_win_options.row > 0 then
     local priority = {"top-left", "top-mid", "top-right"}
