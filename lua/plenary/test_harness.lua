@@ -41,6 +41,8 @@ end
 function harness.test_directory(directory, opts)
   print "Starting..."
   opts = vim.tbl_deep_extend("force", { winopts = { winblend = 3 }, sequential = false, keep_going = true }, opts or {})
+  local run_opts = vim.tbl_deep_extend("force", { keep_going = false }, opts.run_opts or {})
+  local run_opts_string = vim.fn.json_encode(run_opts):gsub("\n", " ")
 
   local res = {}
   if not headless then
@@ -68,10 +70,11 @@ function harness.test_directory(directory, opts)
   local failure = false
 
   local jobs = vim.tbl_map(function(p)
+    local command_string = p:absolute() .. " " .. run_opts_string
     local args = {
       "--headless",
       "-c",
-      string.format('lua require("plenary.busted").run("%s")', p:absolute()),
+      string.format('lua require("plenary.busted").run_command([=[%s]=], true)', command_string),
     }
 
     if opts.minimal ~= nil then

@@ -47,6 +47,9 @@ local current_description = {}
 local current_before_each = {}
 local current_after_each = {}
 
+local abort = false
+local run_opts = {}
+
 local add_description = function(desc)
   table.insert(current_description, desc)
 
@@ -99,6 +102,7 @@ end
 local SUCCESS = color_string("green", "Success")
 local FAIL = color_string("red", "Fail")
 local PENDING = color_string("yellow", "Pending")
+local ABORTED = color_string("yellow", "Aborted")
 
 local HEADER = string.rep("=", 40)
 
@@ -170,6 +174,11 @@ local run_each = function(tbl)
 end
 
 mod.it = function(desc, func)
+  if abort then
+    print(ABORTED, "||", table.concat(current_description, " ") .. " " .. desc)
+    return
+  end
+
   run_each(current_before_each)
   local ok, msg, desc_stack = call_inner(desc, func)
   run_each(current_after_each)
@@ -189,6 +198,10 @@ mod.it = function(desc, func)
 
     print(FAIL, "||", table.concat(test_result.descriptions, " "))
     print(indent(msg, 12))
+
+    if not run_opts.keep_going then
+      abort = true
+    end
   else
     to_insert = results.pass
     print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
@@ -213,7 +226,25 @@ after_each = mod.after_each
 clear = mod.clear
 assert = require "luassert"
 
-mod.run = function(file)
+function mod.run_command(command, json)
+  local split_string = vim.split(command, " ")
+  local file = table.remove(split_string, 1)
+
+  local opts = {}
+  if #split_string > 0 then
+    if json then
+      opts = vim.fn.json_decode(table.concat(split_string, " "))
+    else
+      opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
+    end
+  end
+
+  return mod.run(file, opts)
+end
+
+mod.run = function(file, opts)
+  run_opts = opts or {}
+
   print("\n" .. HEADER)
   print("Testing: ", file)
 
