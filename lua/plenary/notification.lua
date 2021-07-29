@@ -1,5 +1,5 @@
 local api = vim.api
-local popup = require('popup')
+local float = require('plenary.window.float')
 
 -- local function location_window(options)
     -- local default_options = {
@@ -189,15 +189,29 @@ local consumer = {}
 
 consumer.queue = {}
 
-consumer.notify = function(message)
-  table.insert(NOTIFICAION_QUEUE, message)
-  print(vim.inspect(string.format("NOTIFICATION: %s", message)))
+consumer.notify = function(...)
+  local messages = { ... }
+  for _, message in pairs(messages) do
+    table.insert(NOTIFICAION_QUEUE, message)
+    print(vim.inspect(string.format("NOTIFICATION: %s", message)))
+  end
 end
 
 consumer.setup = function()
   vim.notify = consumer.notify
 end
 
-consumer.setup()
+consumer.list_notifications = function()
+  local win_info = float.percentage_range_window(0.5, 0.5)
+  local lines = {}
 
-vim.notify("hello")
+  for i, notification in pairs(NOTIFICAION_QUEUE) do
+    table.insert(lines, string.format("%i: %s", i, notification))
+  end
+
+  api.nvim_buf_set_lines(win_info.bufnr, 0, -1, false, lines)
+end
+
+return {
+  consumer = consumer
+}
