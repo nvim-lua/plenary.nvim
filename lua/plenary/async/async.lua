@@ -1,8 +1,8 @@
 local co = coroutine
-local vararg = require('plenary.vararg')
-local errors = require('plenary.errors')
+local vararg = require "plenary.vararg"
+local errors = require "plenary.errors"
 local traceback_error = errors.traceback_error
-local f = require('plenary.functional')
+local f = require "plenary.functional"
 
 local M = {}
 
@@ -15,7 +15,9 @@ local function callback_or_next(step, thread, callback, ...)
   end
 
   if co.status(thread) == "dead" then
-    if callback == nil then return end
+    if callback == nil then
+      return
+    end
     callback(select(2, ...))
   else
     local returned_function = f.second(...)
@@ -23,7 +25,7 @@ local function callback_or_next(step, thread, callback, ...)
     assert(type(returned_function) == "function", "type error :: expected func")
     local rstat, msg = pcall(returned_function, vararg.rotate(nargs, step, select(4, ...)))
     if not rstat then
-      error(('Failed to call leaf async function: %s'):format(msg))
+      error(("Failed to call leaf async function: %s"):format(msg))
     end
   end
 end
@@ -79,7 +81,7 @@ M.wrap = function(func, argc)
   end
 
   local function leaf(...)
-    local nargs = select('#', ...)
+    local nargs = select("#", ...)
 
     if nargs == argc then
       return func(...)

@@ -3,7 +3,7 @@ local f = {}
 function f.kv_pairs(t)
   local results = {}
   for k, v in pairs(t) do
-    table.insert(results, {k,v})
+    table.insert(results, { k, v })
   end
   return results
 end
@@ -17,7 +17,7 @@ function f.join(array, sep)
 end
 
 function f.partial(fun, ...)
-  local args = {...}
+  local args = { ... }
   return function(...)
     return fun(unpack(args), ...)
   end
@@ -63,7 +63,7 @@ f.second = f.select_only(2)
 f.third = f.select_only(3)
 
 function f.last(...)
-  local length = select('#', ...)
+  local length = select("#", ...)
   local x = select(length, ...)
   return x
 end

@@ -1,4 +1,4 @@
-local Deque = require('plenary.async.structs').Deque
+local Deque = require("plenary.async.structs").Deque
 local eq = assert.are.same
 
 -- just a helper to create the test deque
@@ -24,12 +24,12 @@ local function new_deque()
   return deque
 end
 
-describe('deque', function()
-  it('should allow pushing and popping and finding len', function()
+describe("deque", function()
+  it("should allow pushing and popping and finding len", function()
     new_deque()
   end)
 
-  it('should be able to iterate from left', function()
+  it("should be able to iterate from left", function()
     local deque = new_deque()
 
     local iter = deque:ipairs_left()
@@ -55,7 +55,7 @@ describe('deque', function()
     eq(v, 5)
   end)
 
-  it('should be able to iterate from right', function()
+  it("should be able to iterate from right", function()
     local deque = new_deque()
 
     local iter = deque:ipairs_right()
@@ -81,7 +81,7 @@ describe('deque', function()
     eq(v, 2)
   end)
 
-  it('should allow clearing', function()
+  it("should allow clearing", function()
     local deque = new_deque()
 
     deque:clear()

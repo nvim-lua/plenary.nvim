@@ -1,4 +1,3 @@
-
 local window = {}
 
 window.try_close = function(win_id, force)
