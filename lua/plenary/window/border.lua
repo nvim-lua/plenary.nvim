@@ -1,5 +1,5 @@
-local tbl = require('plenary.tbl')
-local strings = require('plenary.strings')
+local tbl = require "plenary.tbl"
+local strings = require "plenary.strings"
 
 local Border = {}
 
@@ -65,8 +65,8 @@ function Border._create_lines(content_win_options, border_win_options)
 
   local topline = nil
 
-  local topleft = (left_enabled and border_win_options.topleft) or ''
-  local topright = (right_enabled and border_win_options.topright) or ''
+  local topleft = (left_enabled and border_win_options.topleft) or ""
+  local topright = (right_enabled and border_win_options.topright) or ""
 
   local titles
   if type(border_win_options.title) == "string" then
@@ -94,9 +94,7 @@ function Border._create_lines(content_win_options, border_win_options)
     end
     if topline == nil then
       if top_enabled then
-        topline = topleft
-          .. string.rep(border_win_options.top, content_win_options.width)
-          .. topright
+        topline = topleft .. string.rep(border_win_options.top, content_win_options.width) .. topright
       end
     end
   end
@@ -107,9 +105,9 @@ function Border._create_lines(content_win_options, border_win_options)
 
   local middle_line = string.format(
     "%s%s%s",
-    (left_enabled and border_win_options.left) or '',
-    string.rep(' ', content_win_options.width),
-    (right_enabled and border_win_options.right) or ''
+    (left_enabled and border_win_options.left) or "",
+    string.rep(" ", content_win_options.width),
+    (right_enabled and border_win_options.right) or ""
   )
 
   for _ = 1, content_win_options.height do
@@ -147,7 +145,9 @@ function Border._create_lines(content_win_options, border_win_options)
 end
 
 function Border:change_title(new_title)
-  if self._border_win_options.title == new_title then return end
+  if self._border_win_options.title == new_title then
+    return
+  end
 
   self._border_win_options.title = new_title
   self.contents = Border._create_lines(self.content_win_options, self._border_win_options)
@@ -155,21 +155,21 @@ function Border:change_title(new_title)
 end
 
 function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
-  assert(type(content_win_id) == 'number', "Must supply a valid win_id. It's possible you forgot to call with ':'")
+  assert(type(content_win_id) == "number", "Must supply a valid win_id. It's possible you forgot to call with ':'")
 
   -- TODO: Probably can use just deep_extend, now that it's available
   border_win_options = tbl.apply_defaults(border_win_options, {
     border_thickness = Border._default_thickness,
 
     -- Border options, could be passed as a list?
-    topleft  = '╔',
-    topright = '╗',
-    top      = '═',
-    left     = '║',
-    right    = '║',
-    botleft  = '╚',
-    botright = '╝',
-    bot      = '═',
+    topleft = "╔",
+    topright = "╗",
+    top = "═",
+    left = "║",
+    right = "║",
+    botleft = "╚",
+    botright = "╝",
+    bot = "═",
   })
 
   local obj = {}
@@ -177,7 +177,6 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   obj.content_win_id = content_win_id
   obj.content_win_options = content_win_options
   obj._border_win_options = border_win_options
-
 
   obj.bufnr = vim.api.nvim_create_buf(false, true)
   assert(obj.bufnr, "Failed to create border buffer")
@@ -198,22 +197,26 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
     height = content_win_options.height + thickness.top + thickness.bot,
   })
 
-  vim.cmd(string.format(
-    "autocmd BufDelete <buffer=%s> ++nested ++once :lua require('plenary.window').close_related_win(%s, %s)",
-    content_bufnr,
-    content_win_id,
-    obj.win_id))
+  vim.cmd(
+    string.format(
+      "autocmd BufDelete <buffer=%s> ++nested ++once :lua require('plenary.window').close_related_win(%s, %s)",
+      content_bufnr,
+      content_win_id,
+      obj.win_id
+    )
+  )
 
-  vim.cmd(string.format(
-    "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
-    content_bufnr,
-    obj.win_id))
-
+  vim.cmd(
+    string.format(
+      "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
+      content_bufnr,
+      obj.win_id
+    )
+  )
 
   setmetatable(obj, Border)
 
   return obj
 end
-
 
 return Border

@@ -1,8 +1,8 @@
-local a = require('plenary.async_lib.async')
+local a = require "plenary.async_lib.async"
 local await = a.await
 local async = a.async
 local co = coroutine
-local Deque = require('plenary.async_lib.structs').Deque
+local Deque = require("plenary.async_lib.structs").Deque
 local uv = vim.loop
 
 local M = {}
@@ -71,7 +71,7 @@ Condvar.__index = Condvar
 ---@class Condvar
 ---@return Condvar
 function Condvar.new()
-  return setmetatable({handles = {}}, Condvar)
+  return setmetatable({ handles = {} }, Condvar)
 end
 
 ---`blocks` the thread until a notification is received
@@ -82,7 +82,9 @@ end, 2)
 
 ---notify everyone that is waiting on this Condvar
 function Condvar:notify_all()
-  if #self.handles == 0 then return end
+  if #self.handles == 0 then
+    return
+  end
 
   for i, callback in ipairs(self.handles) do
     callback()
@@ -92,7 +94,9 @@ end
 
 ---notify randomly one person that is waiting on this Condvar
 function Condvar:notify_one()
-  if #self.handles == 0 then return end
+  if #self.handles == 0 then
+    return
+  end
 
   local idx = math.random(#self.handles)
   self.handles[idx]()
@@ -107,16 +111,18 @@ Semaphore.__index = Semaphore
 ---@class Semaphore
 ---@param initial_permits number: the number of permits that it can give out
 ---@return Semaphore
-function Semaphore.new(initial_permits) 
+function Semaphore.new(initial_permits)
   vim.validate {
     initial_permits = {
       initial_permits,
-      function(n) return n > 0 end,
-      'number greater than 0'
-    }
+      function(n)
+        return n > 0
+      end,
+      "number greater than 0",
+    },
   }
 
-  return setmetatable({permits = initial_permits, handles = {}}, Semaphore)
+  return setmetatable({ permits = initial_permits, handles = {} }, Semaphore)
 end
 
 ---async function, blocks until a permit can be acquired
@@ -167,12 +173,12 @@ M.channel.oneshot = function()
   --- sends a value
   local sender = function(...)
     if sent then
-      error("Oneshot channel can only send once")
+      error "Oneshot channel can only send once"
     end
 
     sent = true
 
-    local args = {...}
+    local args = { ... }
 
     if saved_callback then
       saved_callback(unpack(val or args))
@@ -185,7 +191,7 @@ M.channel.oneshot = function()
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
     if received then
-      error('Oneshot channel can only send one value!')
+      error "Oneshot channel can only send one value!"
     end
 
     if val then
@@ -243,7 +249,7 @@ M.channel.mpsc = function()
   local Sender = {}
 
   function Sender.send(...)
-    deque:pushleft({...})
+    deque:pushleft { ... }
     condvar:notify_all()
   end
 
@@ -306,7 +312,7 @@ M.block_on = function(future, timeout)
   local stat, ret
   a.run(future, function(_stat, ...)
     stat = _stat
-    ret = {...}
+    ret = { ... }
   end)
 
   local function check()
@@ -317,7 +323,7 @@ M.block_on = function(future, timeout)
   end
 
   if not vim.wait(timeout or 2000, check, 20, false) then
-    error("Blocking on future timed out or was interrupted")
+    error "Blocking on future timed out or was interrupted"
   end
 
   return unpack(ret)

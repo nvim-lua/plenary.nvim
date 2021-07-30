@@ -5,7 +5,7 @@
 
 local uv = vim.loop
 
-local F = require('plenary.functional')
+local F = require "plenary.functional"
 
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
@@ -20,10 +20,10 @@ path.home = vim.loop.os_homedir()
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
-    if os == 'linux' or os == 'osx' or os == 'bsd' then
-      return '/'
+    if os == "linux" or os == "osx" or os == "bsd" then
+      return "/"
     else
-      return '\\'
+      return "\\"
     end
   else
     return package.config:sub(1, 1)
@@ -31,11 +31,14 @@ path.sep = (function()
 end)()
 
 path.root = (function()
-  if path.sep == '/' then return function() return '/' end
+  if path.sep == "/" then
+    return function()
+      return "/"
+    end
   else
     return function(base)
       base = base or vim.loop.cwd()
-      return base:sub(1, 1) .. ':\\'
+      return base:sub(1, 1) .. ":\\"
     end
   end
 end)()
@@ -47,25 +50,25 @@ local band = function(reg, value)
 end
 
 local concat_paths = function(...)
-  return table.concat({...}, path.sep)
+  return table.concat({ ... }, path.sep)
 end
 
 local function is_root(pathname)
-  if path.sep == '\\' then
-    return string.match(pathname, '^[A-Z]:\\?$')
+  if path.sep == "\\" then
+    return string.match(pathname, "^[A-Z]:\\?$")
   end
-  return pathname == '/'
+  return pathname == "/"
 end
 
 local _split_by_separator = (function()
-    local formatted =  string.format("([^%s]+)", path.sep)
-    return function(filepath)
-        local t = {}
-        for str in string.gmatch(filepath, formatted) do
-            table.insert(t, str)
-        end
-        return t
+  local formatted = string.format("([^%s]+)", path.sep)
+  return function(filepath)
+    local t = {}
+    for str in string.gmatch(filepath, formatted) do
+      table.insert(t, str)
     end
+    return t
+  end
 end)()
 
 local function _normalize_path(filename)
@@ -74,24 +77,23 @@ local function _normalize_path(filename)
   local has = string.find(filename, "..", 1, true)
 
   if has then
-      local parts = _split_by_separator(filename)
+    local parts = _split_by_separator(filename)
 
-      local idx = 1
-      repeat
-          if parts[idx] == ".." then
-              table.remove(parts, idx)
-              table.remove(parts, idx - 1)
-              idx = idx - 2
-          end
-          idx = idx + 1
-      until idx > #parts
+    local idx = 1
+    repeat
+      if parts[idx] == ".." then
+        table.remove(parts, idx)
+        table.remove(parts, idx - 1)
+        idx = idx - 2
+      end
+      idx = idx + 1
+    until idx > #parts
 
-      out_file = path.root(filename) .. table.concat(parts, path.sep)
+    out_file = path.root(filename) .. table.concat(parts, path.sep)
   end
 
   return out_file
 end
-
 
 local clean = function(pathname)
   -- Remove double path seps, it's annoying
@@ -110,13 +112,12 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
-
 local Path = {
   path = path,
 }
 
 local check_self = function(self)
-  if type(self) == 'string' then
+  if type(self) == "string" then
     return Path:new(self)
   end
 
@@ -130,7 +131,7 @@ Path.__index = Path
 
 Path.__div = function(self, other)
   assert(Path.is_path(self))
-  assert(Path.is_path(other) or type(other) == 'string')
+  assert(Path.is_path(other) or type(other) == "string")
 
   return self:joinpath(other)
 end
@@ -149,11 +150,10 @@ Path.is_path = function(a)
   return getmetatable(a) == Path
 end
 
-
 function Path:new(...)
-  local args = {...}
+  local args = { ... }
 
-  if type(self) == 'string' then
+  if type(self) == "string" then
     table.insert(args, 1, self)
     self = Path
   end
@@ -173,13 +173,13 @@ function Path:new(...)
 
   -- TODO: Should probably remove and dumb stuff like double seps, periods in the middle, etc.
   local sep = path.sep
-  if type(path_input) == 'table' then
+  if type(path_input) == "table" then
     sep = path_input.sep or path.sep
     path_input.sep = nil
   end
 
   local path_string
-  if type(path_input) == 'table' then
+  if type(path_input) == "table" then
     -- TODO: It's possible this could be done more elegantly with __concat
     --       But I'm unsure of what we'd do to make that happen
     local path_objs = {}
@@ -187,14 +187,14 @@ function Path:new(...)
       if Path.is_path(v) then
         table.insert(path_objs, v.filename)
       else
-        assert(type(v) == 'string')
+        assert(type(v) == "string")
         table.insert(path_objs, v)
       end
     end
 
     path_string = table.concat(path_objs, sep)
   else
-    assert(type(path_input) == 'string', vim.inspect(path_input))
+    assert(type(path_input) == "string", vim.inspect(path_input))
     path_string = path_input
   end
 
@@ -205,7 +205,7 @@ function Path:new(...)
 
     -- Cached values
     _absolute = uv.fs_realpath(path_string),
-    _cwd = uv.fs_realpath('.'),
+    _cwd = uv.fs_realpath ".",
   }
 
   setmetatable(obj, Path)
@@ -233,7 +233,6 @@ function Path:_st_mode()
   return self:_stat().mode or 0
 end
 
-
 function Path:joinpath(...)
   return Path:new(self.filename, ...)
 end
@@ -242,7 +241,7 @@ function Path:absolute()
   if self:is_absolute() then
     return _normalize_path(self.filename)
   else
-    return _normalize_path(self._absolute or table.concat({self._cwd, self.filename}, self._sep))
+    return _normalize_path(self._absolute or table.concat({ self._cwd, self.filename }, self._sep))
   end
 end
 
@@ -258,8 +257,8 @@ function Path:expand()
   elseif string.find(self.filename, "^%.") then
     expanded = vim.loop.fs_realpath(self.filename)
     if expanded == nil then
-     expanded = vim.fn.fnamemodify(self.filename, ":p")
-   end
+      expanded = vim.fn.fnamemodify(self.filename, ":p")
+    end
   elseif string.find(self.filename, "%$") then
     local rep = string.match(self.filename, "([^%$][^/]*)")
     local val = os.getenv(rep)
@@ -271,7 +270,7 @@ function Path:expand()
   else
     expanded = self.filename
   end
-  return expanded and expanded or error("Path not valid")
+  return expanded and expanded or error "Path not valid"
 end
 
 function Path:make_relative(cwd)
@@ -296,7 +295,7 @@ function Path:normalize(cwd)
   self:make_relative(cwd)
 
   -- Substitute home directory w/ "~"
-  self.filename = self.filename:gsub("^" .. path.home, '~', 1)
+  self.filename = self.filename:gsub("^" .. path.home, "~", 1)
 
   return _normalize_path(self.filename)
 end
@@ -304,7 +303,7 @@ end
 local function shorten_len(filename, len)
   local final_match
   local final_path_components = {}
-  for match in (filename..path.sep):gmatch("(.-)"..path.sep) do
+  for match in (filename .. path.sep):gmatch("(.-)" .. path.sep) do
     if #match > len then
       table.insert(final_path_components, string.sub(match, 1, len))
     else
@@ -316,15 +315,16 @@ local function shorten_len(filename, len)
 
   local l = #final_path_components -- so that we don't need to keep calculating length
   table.remove(final_path_components, l) -- remove final slash
-  table.remove(final_path_components, l-1) -- remvove shortened final component
+  table.remove(final_path_components, l - 1) -- remvove shortened final component
   table.insert(final_path_components, final_match) -- insert full final component
 
   return table.concat(final_path_components)
 end
 
 local shorten = (function()
-  if jit and path.sep ~= '\\' then
-    local ffi = require('ffi') ffi.cdef [[
+  if jit and path.sep ~= "\\" then
+    local ffi = require "ffi"
+    ffi.cdef [[
     typedef unsigned char char_u;
     char_u *shorten_dir(char_u *str);
     ]]
@@ -344,7 +344,7 @@ local shorten = (function()
 end)()
 
 function Path:shorten(len)
-  assert(len ~= 0, 'len must be at least 1')
+  assert(len ~= 0, "len must be at least 1")
   if len and len > 1 then
     return shorten_len(self.filename, len)
   end
@@ -362,33 +362,33 @@ function Path:mkdir(opts)
     error("FileExistsError:" .. self:absolute())
   end
 
-  if not uv.fs_mkdir(self:_fs_filename(),  mode) then
+  if not uv.fs_mkdir(self:_fs_filename(), mode) then
     if parents then
       local dirs = self:_split()
-      local processed = ''
+      local processed = ""
       for _, dir in ipairs(dirs) do
-        if dir ~= '' then
+        if dir ~= "" then
           local joined = concat_paths(processed, dir)
-          if processed == '' and self._sep == '\\' then
+          if processed == "" and self._sep == "\\" then
             joined = dir
           end
           local stat = uv.fs_stat(joined) or {}
           local file_mode = stat.mode or 0
           if band(S_IF.REG, file_mode) then
-            error(string.format('%s is a regular file so we can\'t mkdir it', joined))
+            error(string.format("%s is a regular file so we can't mkdir it", joined))
           elseif band(S_IF.DIR, file_mode) then
             processed = joined
           else
             if uv.fs_mkdir(joined, mode) then
               processed = joined
             else
-              error('We couldn\'t mkdir: ' .. joined)
+              error("We couldn't mkdir: " .. joined)
             end
           end
         end
       end
     else
-      error('FileNotFoundError')
+      error "FileNotFoundError"
     end
   end
 
@@ -406,21 +406,21 @@ end
 function Path:rename(opts)
   opts = opts or {}
   if not opts.new_name or opts.new_name == "" then
-    error("Please provide the new name!")
+    error "Please provide the new name!"
   end
 
-    -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match('^%.%.?/?\\?.+') then
+  -- handles `.`, `..`, `./`, and `../`
+  if opts.new_name:match "^%.%.?/?\\?.+" then
     opts.new_name = {
       uv.fs_realpath(opts.new_name:sub(1, 3)),
-      opts.new_name:sub(4, #opts.new_name)
+      opts.new_name:sub(4, #opts.new_name),
     }
   end
 
   local new_path = Path:new(opts.new_name)
 
   if new_path:exists() then
-    error('File or directory already exists!')
+    error "File or directory already exists!"
   end
 
   local status = uv.fs_rename(self:absolute(), new_path:absolute())
@@ -433,10 +433,10 @@ function Path:copy(opts)
   opts = opts or {}
 
   -- handles `.`, `..`, `./`, and `../`
-  if opts.destination:match('^%.%.?/?\\?.+') then
+  if opts.destination:match "^%.%.?/?\\?.+" then
     opts.destination = {
       uv.fs_realpath(opts.destination:sub(1, 3)),
-      opts.destination:sub(4, #opts.destination)
+      opts.destination:sub(4, #opts.destination),
     }
   end
 
@@ -458,11 +458,13 @@ function Path:touch(opts)
   end
 
   if parents then
-    Path:new(self:parent()):mkdir({ parents = true })
+    Path:new(self:parent()):mkdir { parents = true }
   end
 
   local fd = uv.fs_open(self:_fs_filename(), "w", mode)
-  if not fd then error('Could not create file: ' .. self:_fs_filename()) end
+  if not fd then
+    error("Could not create file: " .. self:_fs_filename())
+  end
   uv.fs_close(fd)
 
   return true
@@ -473,11 +475,16 @@ function Path:rm(opts)
 
   local recursive = F.if_nil(opts.recursive, false, opts.recursive)
   if recursive then
-    local scan = require('plenary.scandir')
+    local scan = require "plenary.scandir"
     local abs = self:absolute()
 
     -- first unlink all files
-    scan.scan_dir(abs, { hidden = true, on_insert = function(file) uv.fs_unlink(file) end})
+    scan.scan_dir(abs, {
+      hidden = true,
+      on_insert = function(file)
+        uv.fs_unlink(file)
+      end,
+    })
 
     local dirs = scan.scan_dir(abs, { add_dirs = true, hidden = true })
     -- iterate backwards to clean up remaining dirs
@@ -500,13 +507,9 @@ function Path:is_dir()
   return band(S_IF.DIR, self:_st_mode())
 end
 
-function Path:is_file()
-  return band(S_IF.REG, self:_st_mode())
-end
-
 function Path:is_absolute()
-  if self._sep == '\\' then
-    return string.match(self.filename, '^[A-Z]:\\.*$')
+  if self._sep == "\\" then
+    return string.match(self.filename, "^[A-Z]:\\.*$")
   end
   return string.sub(self.filename, 1, 1) == self._sep
 end
@@ -517,14 +520,14 @@ function Path:_split()
 end
 
 local _get_parent = (function()
-  local formatted = string.format('^(.+)%s[^%s]+', path.sep, path.sep)
+  local formatted = string.format("^(.+)%s[^%s]+", path.sep, path.sep)
   return function(abs_path)
     return abs_path:match(formatted)
   end
 end)()
 
 function Path:parent()
-  return _get_parent(self:absolute()) or path.root(self:absolute())
+  return Path:new(_get_parent(self:absolute()) or path.root(self:absolute()))
 end
 
 function Path:parents()
@@ -547,11 +550,9 @@ end
 
 -- TODO:
 --  Maybe I can use libuv for this?
-function Path:open()
-end
+function Path:open() end
 
-function Path:close()
-end
+function Path:close() end
 
 function Path:write(txt, flag, mode)
   assert(flag, [[Path:write_text requires a flag! For example: 'w' or 'a']])
@@ -584,7 +585,9 @@ function Path:_read_async(callback)
     end
     vim.loop.fs_fstat(fd, function(err_fstat, stat)
       assert(not err_fstat, err_fstat)
-      if stat.type ~= 'file' then return callback('') end
+      if stat.type ~= "file" then
+        return callback ""
+      end
       vim.loop.fs_read(fd, stat.size, 0, function(err_read, data)
         assert(not err_read, err_read)
         vim.loop.fs_close(fd, function(err_close)
@@ -609,23 +612,27 @@ function Path:head(lines)
   local chunk_size = 256
 
   local fd = uv.fs_open(self:expand(), "r", 438)
-  if not fd then return end
+  if not fd then
+    return
+  end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then
+  if stat.type ~= "file" then
     uv.fs_close(fd)
     return nil
   end
 
-  local data = ''
+  local data = ""
   local index, count = 0, 0
   while count < lines and index < stat.size do
     local read_chunk = assert(uv.fs_read(fd, chunk_size, index))
 
     local i = 0
-    for char in read_chunk:gmatch"." do
-      if char == '\n' then
+    for char in read_chunk:gmatch "." do
+      if char == "\n" then
         count = count + 1
-        if count >= lines then break end
+        if count >= lines then
+          break
+        end
       end
       index = index + 1
       i = i + 1
@@ -635,7 +642,9 @@ function Path:head(lines)
   assert(uv.fs_close(fd))
 
   -- Remove potential newline at end of file
-  if data:sub(-1) == '\n' then data = data:sub(1, -2) end
+  if data:sub(-1) == "\n" then
+    data = data:sub(1, -2)
+  end
 
   return data
 end
@@ -646,14 +655,16 @@ function Path:tail(lines)
   local chunk_size = 256
 
   local fd = uv.fs_open(self:expand(), "r", 438)
-  if not fd then return end
+  if not fd then
+    return
+  end
   local stat = assert(uv.fs_fstat(fd))
-  if stat.type ~= 'file' then
+  if stat.type ~= "file" then
     uv.fs_close(fd)
     return nil
   end
 
-  local data = ''
+  local data = ""
   local index, count = stat.size - 1, 0
   while count < lines and index > 0 do
     local real_index = index - chunk_size
@@ -667,9 +678,11 @@ function Path:tail(lines)
     local i = #read_chunk
     while i > 0 do
       local char = read_chunk:sub(i, i)
-      if char == '\n' then
+      if char == "\n" then
         count = count + 1
-        if count >= lines then break end
+        if count >= lines then
+          break
+        end
       end
       index = index - 1
       i = i - 1
@@ -696,7 +709,9 @@ function Path:iter()
   local n = table.getn(data)
   return function()
     i = i + 1
-    if i <= n then return data[i] end
+    if i <= n then
+      return data[i]
+    end
   end
 end
 

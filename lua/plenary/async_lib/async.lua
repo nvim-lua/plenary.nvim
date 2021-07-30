@@ -1,8 +1,8 @@
 local co = coroutine
-local errors = require('plenary.errors')
+local errors = require "plenary.errors"
 local traceback_error = errors.traceback_error
-local f = require('plenary.functional')
-local tbl = require('plenary.tbl')
+local f = require "plenary.functional"
+local tbl = require "plenary.tbl"
 
 local M = {}
 
@@ -17,7 +17,7 @@ local function callback_or_next(step, thread, callback, ...)
   if co.status(thread) == "dead" then
     (callback or function() end)(select(2, ...))
   else
-    assert(select('#', select(2, ...)) == 1, "expected a single return value")
+    assert(select("#", select(2, ...)) == 1, "expected a single return value")
     local returned_future = f.second(...)
     assert(type(returned_future) == "function", "type error :: expected func")
     returned_future(step)
@@ -52,7 +52,7 @@ M.wrap = function(func, argc)
   end
 
   if type(argc) ~= "number" and argc ~= "vararg" then
-    traceback_error("expected argc to be a number or string literal 'vararg'")
+    traceback_error "expected argc to be a number or string literal 'vararg'"
   end
 
   return function(...)
@@ -93,7 +93,7 @@ M.join = M.wrap(function(futures, step)
     assert(type(future) == "function", "type error :: future must be function")
 
     local callback = function(...)
-      results[i] = {...}
+      results[i] = { ... }
       done = done + 1
       if done == len then
         step(results)

@@ -1,10 +1,10 @@
-require('plenary.async').tests.add_to_env()
+require("plenary.async").tests.add_to_env()
 local Condvar = a.control.Condvar
 local eq = assert.are.same
 local join, run_all = a.util.join, a.util.run_all
 
-describe('condvar', function()
-  a.it('should allow blocking', function()
+describe("condvar", function()
+  a.it("should allow blocking", function()
     local var = false
 
     local condvar = Condvar.new()
@@ -21,7 +21,7 @@ describe('condvar', function()
     eq(var, true)
   end)
 
-  a.it('should be able to notify one when running', function()
+  a.it("should be able to notify one when running", function()
     local counter = 0
 
     local condvar = Condvar.new()
@@ -60,7 +60,7 @@ describe('condvar', function()
     eq(counter, 3)
   end)
 
-  a.it('should allow notify_one to work when using await_all', function()
+  a.it("should allow notify_one to work when using await_all", function()
     local counter = 0
 
     local condvar = Condvar.new()
@@ -97,7 +97,7 @@ describe('condvar', function()
     eq(counter, 3)
   end)
 
-  a.it('should notify_all', function()
+  a.it("should notify_all", function()
     local counter = 0
 
     local condvar = Condvar.new()

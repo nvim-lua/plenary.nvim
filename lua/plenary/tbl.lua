@@ -17,7 +17,7 @@ function tbl.apply_defaults(original, defaults)
 end
 
 function tbl.pack(...)
-  return {n=select('#',...); ...}
+  return { n = select("#", ...), ... }
 end
 
 function tbl.unpack(t, i, j)
@@ -32,8 +32,8 @@ function tbl.freeze(t)
   return setmetatable({}, {
     __index = t,
     __newindex = function()
-      error("Attempt to modify frozen table")
-    end
+      error "Attempt to modify frozen table"
+    end,
   })
 end
 
