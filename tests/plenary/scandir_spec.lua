@@ -32,9 +32,11 @@ describe("scandir", function()
 
     it("and callback gets called for each entry", function()
       local count = 0
-      local dirs = scan.scan_dir(".", { on_insert = function()
-        count = count + 1
-      end })
+      local dirs = scan.scan_dir(".", {
+        on_insert = function()
+          count = count + 1
+        end,
+      })
       eq("table", type(dirs))
       eq(true, contains(dirs, "./CHANGELOG.md"))
       eq(true, contains(dirs, "./LICENSE"))

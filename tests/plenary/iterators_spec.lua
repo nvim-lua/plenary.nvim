@@ -40,9 +40,12 @@ describe("iterators", function()
     assert(not res)
 
     tbl = { 1, 2, 3, 4, "some random string", 6 }
-    eq(i.iter(tbl):find(function(x)
-      return type(x) == "string"
-    end), "some random string")
+    eq(
+      i.iter(tbl):find(function(x)
+        return type(x) == "string"
+      end),
+      "some random string"
+    )
   end)
 
   it("should be table to chain", function()

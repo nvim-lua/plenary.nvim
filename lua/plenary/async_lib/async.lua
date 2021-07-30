@@ -15,8 +15,7 @@ local function callback_or_next(step, thread, callback, ...)
   end
 
   if co.status(thread) == "dead" then
-    (callback or function()
-    end)(select(2, ...))
+    (callback or function() end)(select(2, ...))
   else
     assert(select("#", select(2, ...)) == 1, "expected a single return value")
     local returned_future = f.second(...)
@@ -130,8 +129,7 @@ end, 2)
 ---@param future Future
 ---@param callback function
 M.run = function(future, callback)
-  future(callback or function()
-  end)
+  future(callback or function() end)
 end
 
 ---Same as run but runs multiple futures
@@ -173,8 +171,7 @@ end
 --- ... -> ()
 M.void = function(async_func)
   return function(...)
-    async_func(...)(function()
-    end)
+    async_func(...)(function() end)
   end
 end
 

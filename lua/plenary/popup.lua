@@ -149,9 +149,13 @@ function popup.popup_create(what, vim_options)
 
   if vim_options.time then
     local timer = vim.loop.new_timer()
-    timer:start(vim_options.time, 0, vim.schedule_wrap(function()
-      vim.api.nvim_close_win(win_id, false)
-    end))
+    timer:start(
+      vim_options.time,
+      0,
+      vim.schedule_wrap(function()
+        vim.api.nvim_close_win(win_id, false)
+      end)
+    )
   end
 
   -- Buffer Options
@@ -198,10 +202,8 @@ function popup.popup_create(what, vim_options)
   return win_id
 end
 
-function popup.show(self, asdf)
-end
+function popup.show(self, asdf) end
 
-popup.show = function()
-end
+popup.show = function() end
 
 return popup

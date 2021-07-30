@@ -168,11 +168,7 @@ end
 function Job:_reset()
   self.is_shutdown = nil
 
-  if
-    self._shutdown_check
-    and uv.is_active(self._shutdown_check)
-    and not uv.is_closing(self._shutdown_check)
-  then
+  if self._shutdown_check and uv.is_active(self._shutdown_check) and not uv.is_closing(self._shutdown_check) then
     vim.api.nvim_err_writeln(debug.traceback "We may be memory leaking here. Please report to TJ.")
   end
   self._shutdown_check = uv.new_check()

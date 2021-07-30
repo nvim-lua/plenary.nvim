@@ -479,9 +479,12 @@ function Path:rm(opts)
     local abs = self:absolute()
 
     -- first unlink all files
-    scan.scan_dir(abs, { hidden = true, on_insert = function(file)
-      uv.fs_unlink(file)
-    end })
+    scan.scan_dir(abs, {
+      hidden = true,
+      on_insert = function(file)
+        uv.fs_unlink(file)
+      end,
+    })
 
     local dirs = scan.scan_dir(abs, { add_dirs = true, hidden = true })
     -- iterate backwards to clean up remaining dirs
@@ -551,11 +554,9 @@ end
 
 -- TODO:
 --  Maybe I can use libuv for this?
-function Path:open()
-end
+function Path:open() end
 
-function Path:close()
-end
+function Path:close() end
 
 function Path:write(txt, flag, mode)
   assert(flag, [[Path:write_text requires a flag! For example: 'w' or 'a']])

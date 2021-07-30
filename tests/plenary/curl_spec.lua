@@ -7,11 +7,14 @@ end
 describe("CURL Wrapper:", function()
   describe("request", function() -----------------------------------------------
     it("sends and returns table.", function()
-      eq("table", type(curl.request {
-        url = "https://postman-echo.com/get",
-        method = "get",
-        accept = "application/json",
-      }))
+      eq(
+        "table",
+        type(curl.request {
+          url = "https://postman-echo.com/get",
+          method = "get",
+          accept = "application/json",
+        })
+      )
     end)
 
     it("should accept the url as first argument.", function()
@@ -24,10 +27,13 @@ describe("CURL Wrapper:", function()
 
   describe("GET", function() --------------------------------------------------
     it("sends and returns table.", function()
-      eq("table", type(curl.get {
-        url = "https://postman-echo.com/get",
-        accept = "application/json",
-      }))
+      eq(
+        "table",
+        type(curl.get {
+          url = "https://postman-echo.com/get",
+          accept = "application/json",
+        })
+      )
     end)
 
     it("should accept the url as first argument.", function()

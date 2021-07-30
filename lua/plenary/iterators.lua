@@ -171,16 +171,20 @@ function Iterator:for_each(fn)
 end
 
 function Iterator:stateful()
-  return wrap(co.wrap(function()
-    self:for_each(function(...)
-      co.yield(f.first(...), ...)
-    end)
+  return wrap(
+    co.wrap(function()
+      self:for_each(function(...)
+        co.yield(f.first(...), ...)
+      end)
 
-    -- too make sure that we always return nil if there are no more
-    while true do
-      co.yield()
-    end
-  end), nil, nil)
+      -- too make sure that we always return nil if there are no more
+      while true do
+        co.yield()
+      end
+    end),
+    nil,
+    nil
+  )
 end
 
 -- function Iterator:stateful()

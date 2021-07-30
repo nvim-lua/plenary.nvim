@@ -56,9 +56,12 @@ util.kv_to_list = function(kv, prefix, sep)
 end
 
 util.kv_to_str = function(kv, sep, kvsep)
-  return F.join(F.kv_map(function(kvp)
-    return kvp[1] .. kvsep .. util.url_encode(kvp[2])
-  end, kv), sep)
+  return F.join(
+    F.kv_map(function(kvp)
+      return kvp[1] .. kvsep .. util.url_encode(kvp[2])
+    end, kv),
+    sep
+  )
 end
 
 util.gen_dump_path = function()
@@ -80,13 +83,17 @@ parse.headers = function(t)
   local upper = function(str)
     return string.gsub(" " .. str, "%W%l", string.upper):sub(2)
   end
-  return util.kv_to_list((function()
-    local normilzed = {}
-    for k, v in pairs(t) do
-      normilzed[upper(k:gsub("_", "%-"))] = v
-    end
-    return normilzed
-  end)(), "-H", ": ")
+  return util.kv_to_list(
+    (function()
+      local normilzed = {}
+      for k, v in pairs(t) do
+        normilzed[upper(k:gsub("_", "%-"))] = v
+      end
+      return normilzed
+    end)(),
+    "-H",
+    ": "
+  )
 end
 
 parse.data_body = function(t)
@@ -194,7 +201,8 @@ parse.request = function(opts)
     opts.raw,
     opts.output and { "-o", opts.output } or nil,
     parse.url(opts.url, opts.query),
-  }, opts
+  },
+    opts
 end
 
 -- Parse response ------------------------------------------

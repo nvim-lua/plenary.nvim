@@ -11,8 +11,7 @@ Object.__index = Object
 ---Does nothing.
 ---You have to implement this yourself for extra functionality when initializing
 ---@param self Object
-function Object:new()
-end
+function Object:new() end
 
 ---Create a new class/object by extending the base Object class.
 ---The extended object will have a field called `super` that will access the super class.
