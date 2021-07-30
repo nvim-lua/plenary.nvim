@@ -10,7 +10,7 @@ Deque.__index = Deque
 function Deque.new()
   -- the indexes are created with an offset so that the indices are consequtive
   -- otherwise, when both pushleft and pushright are used, the indices will have a 1 length hole in the middle
-  return setmetatable({first = 0, last = -1}, Deque)
+  return setmetatable({ first = 0, last = -1 }, Deque)
 end
 
 ---push to the left of the deque
@@ -33,9 +33,11 @@ end
 ---@return any
 function Deque:popleft()
   local first = self.first
-  if first > self.last then return nil end
+  if first > self.last then
+    return nil
+  end
   local value = self[first]
-  self[first] = nil        -- to allow garbage collection
+  self[first] = nil -- to allow garbage collection
   self.first = first + 1
   return value
 end
@@ -44,9 +46,11 @@ end
 ---@return any
 function Deque:popright()
   local last = self.last
-  if self.first > last then return nil end
+  if self.first > last then
+    return nil
+  end
   local value = self[last]
-  self[last] = nil         -- to allow garbage collection
+  self[last] = nil -- to allow garbage collection
   self.last = last - 1
   return value
 end

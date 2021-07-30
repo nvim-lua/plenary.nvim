@@ -21,7 +21,7 @@ end
 function Object:extend()
   local cls = {}
   for k, v in pairs(self) do
-    if k:find("__") == 1 then
+    if k:find "__" == 1 then
       cls[k] = v
     end
   end
@@ -35,7 +35,7 @@ end
 ---@param self Object
 ---@param nil ...
 function Object:implement(...)
-  for _, cls in pairs({...}) do
+  for _, cls in pairs { ... } do
     for k, v in pairs(cls) do
       if self[k] == nil and type(v) == "function" then
         self[k] = v

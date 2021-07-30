@@ -5,20 +5,19 @@
 
 local vim = vim
 
-local Border = require("plenary.window.border")
+local Border = require "plenary.window.border"
 
 local popup = {}
 
 popup._pos_map = {
-  topleft="NW",
-  topright="NE",
-  botleft="SW",
-  botright="SE",
+  topleft = "NW",
+  topright = "NE",
+  botleft = "SW",
+  botright = "SE",
 }
 
 -- Keep track of hidden popups, so we can load them with popup.show()
 popup._hidden = {}
-
 
 local function dict_default(options, key, default)
   if options[key] == nil then
@@ -28,21 +27,20 @@ local function dict_default(options, key, default)
   end
 end
 
-
 function popup.popup_create(what, vim_options)
   local bufnr
-  if type(what) == 'number' then
+  if type(what) == "number" then
     bufnr = what
   else
     bufnr = vim.api.nvim_create_buf(false, true)
     assert(bufnr, "Failed to create buffer")
 
     -- TODO: Handle list of lines
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, {what})
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, { what })
   end
 
   local option_defaults = {
-    posinvert = true
+    posinvert = true,
   }
 
   local win_opts = {}
@@ -65,7 +63,7 @@ function popup.popup_create(what, vim_options)
   end
 
   if vim_options.pos then
-    if vim_options.pos == 'center' then
+    if vim_options.pos == "center" then
       -- TODO: Do centering..
     else
       win_opts.anchor = popup._pos_map[vim_options.pos]
@@ -77,7 +75,7 @@ function popup.popup_create(what, vim_options)
   -- 		vertically and there is more space on the other side
   -- 		then the popup is placed on the other side of the
   -- 		position indicated by "line".
-  if dict_default(vim_options, 'posinvert', option_defaults) then
+  if dict_default(vim_options, "posinvert", option_defaults) then
     -- TODO: handle the invert thing
   end
 
@@ -89,7 +87,7 @@ function popup.popup_create(what, vim_options)
   -- 			the popup is moved to the left so as to fit the
   -- 			contents on the screen.  Set to TRUE to disable this.
 
-  win_opts.style = 'minimal'
+  win_opts.style = "minimal"
 
   -- Feels like maxheigh, minheight, maxwidth, minwidth will all be related
   win_opts.height = 5
@@ -108,17 +106,24 @@ function popup.popup_create(what, vim_options)
   if vim_options.border then
     local b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft
     if vim_options.borderchars == nil then
-      b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = {
-        '-' , '|'      , '-'   , '|'    , '┌'        , '┐'       , '┘'       , '└'
+      b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft = {
+        "-",
+        "|",
+        "-",
+        "|",
+        "┌",
+        "┐",
+        "┘",
+        "└",
       }
     elseif #vim_options.borderchars == 1 then
       -- TODO: Unpack 8 times cool to the same vars
-      print('...')
+      print "..."
     elseif #vim_options.borderchars == 2 then
       -- TODO: Unpack to edges & corners
-      print('...')
+      print "..."
     elseif #vim_options.borderchars == 8 then
-      b_top , b_rgight , b_bot , b_left , b_topleft , b_topright , b_botright , b_botleft = vim_options.borderhighlight
+      b_top, b_rgight, b_bot, b_left, b_topleft, b_topright, b_botright, b_botleft = vim_options.borderhighlight
     end
   end
 
@@ -131,22 +136,15 @@ function popup.popup_create(what, vim_options)
     win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
   end
 
-
   -- Moved, handled after since we need the window ID
   if vim_options.moved then
-    if vim_options.moved == 'any' then
-      vim.lsp.util.close_preview_autocmd({'CursorMoved', 'CursorMovedI'}, win_id)
-    elseif vim_options.moved == 'word' then
+    if vim_options.moved == "any" then
+      vim.lsp.util.close_preview_autocmd({ "CursorMoved", "CursorMovedI" }, win_id)
+    elseif vim_options.moved == "word" then
       -- TODO: Handle word, WORD, expr, and the range functions... which seem hard?
     end
   else
-    vim.cmd(
-      string.format(
-        "autocmd BufLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)",
-        bufnr,
-        win_id
-      )
-    )
+    vim.cmd(string.format("autocmd BufLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)", bufnr, win_id))
   end
 
   if vim_options.time then
@@ -158,7 +156,7 @@ function popup.popup_create(what, vim_options)
 
   -- Buffer Options
   if vim_options.cursorline then
-    vim.api.nvim_win_set_option(0, 'cursorline', true)
+    vim.api.nvim_win_set_option(0, "cursorline", true)
   end
 
   -- vim.api.nvim_win_set_option(0, 'wrap', dict_default(vim_options, 'wrap', option_defaults))
@@ -207,4 +205,3 @@ popup.show = function()
 end
 
 return popup
-

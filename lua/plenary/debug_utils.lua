@@ -7,8 +7,7 @@ end
 
 function debug_utils.sourced_filename()
   local str = debug_utils.sourced_filepath()
-  return str:match("^.*/(.*).lua$") or str
+  return str:match "^.*/(.*).lua$" or str
 end
-
 
 return debug_utils

@@ -14,13 +14,13 @@ local List = {}
 ---@param  tbl table: A list-like table containing the initial elements of the list
 ---@return List: A new list object
 function List.new(tbl)
-  if type(tbl) == 'table' then
+  if type(tbl) == "table" then
     local len = #tbl
     local obj = setmetatable(tbl, List)
     obj._len = len
     return obj
   end
-  error 'List constructor must be called with table argument'
+  error "List constructor must be called with table argument"
 end
 
 --- Checks whether the argument is a List object
@@ -34,25 +34,35 @@ end
 function List:__index(key)
   if self ~= List then
     local field = List[key]
-    if field then return field end
+    if field then
+      return field
+    end
   end
 end
 
 -- TODO: Similar to python, use [...] if the table references itself --
 function List:__tostring()
-  local elements = self:join ', '
-  return '[' .. elements .. ']'
+  local elements = self:join ", "
+  return "[" .. elements .. "]"
 end
 
 function List:__eq(other)
-  if #self ~= #other then return false end
-  for i = 1, #self do if self[i] ~= other[i] then return false end end
+  if #self ~= #other then
+    return false
+  end
+  for i = 1, #self do
+    if self[i] ~= other[i] then
+      return false
+    end
+  end
   return true
 end
 
 function List:__mul(other)
   local result = List.new {}
-  for i = 1, other do result[i] = self end
+  for i = 1, other do
+    result[i] = self
+  end
   return result
 end
 
@@ -173,11 +183,13 @@ end
 --- @param sep string: The separator to place between the elements. Default ''
 --- @return string: The elements in the list separated by sep
 function List:join(sep)
-  sep = sep or ''
-  local result = ''
+  sep = sep or ""
+  local result = ""
   for i, v in self:iter() do
     result = result .. tostring(v)
-    if i ~= #self then result = result .. sep end
+    if i ~= #self then
+      result = result .. sep
+    end
   end
   return result
 end
@@ -188,9 +200,11 @@ end
 --- @return List
 function List:concat(...)
   local result = self:copy()
-  local others = {...}
+  local others = { ... }
   for _, other in ipairs(others) do
-    for _, v in ipairs(other) do result:push(v) end
+    for _, v in ipairs(other) do
+      result:push(v)
+    end
   end
   return result
 end
@@ -214,7 +228,7 @@ end
 --- @return List: a list containing all the given elements
 --- @see table.pack
 function List.pack(...)
-  return List.new {...}
+  return List.new { ... }
 end
 
 --- Unpacks the elements from this list and returns them
@@ -225,20 +239,24 @@ end
 
 -- Iterator stuff
 
-local Iter = require 'plenary.iterators'
+local Iter = require "plenary.iterators"
 
 local itermetatable = getmetatable(Iter:wrap())
 
 local function forward_list_gen(param, state)
   state = state + 1
   local v = param[state]
-  if v ~= nil then return state, v end
+  if v ~= nil then
+    return state, v
+  end
 end
 
 local function backward_list_gen(param, state)
   state = state - 1
   local v = param[state]
-  if v ~= nil then return state, v end
+  if v ~= nil then
+    return state, v
+  end
 end
 
 --- Run the given predicate through all the elements pointed by this iterator,
@@ -284,17 +302,23 @@ end
 --- @return number: The number of occurrences of e
 function List:count(e)
   local count = 0
-  for _, v in self:iter() do if e == v then count = count + 1 end end
+  for _, v in self:iter() do
+    if e == v then
+      count = count + 1
+    end
+  end
   return count
 end
 
 --- Appends the elements in the given iterator to the list
 --- @param other table: An iterator object
 function List:extend(other)
-  if type(other) == 'table' and getmetatable(other) == itermetatable then
-    for _, v in other do self:push(v) end
+  if type(other) == "table" and getmetatable(other) == itermetatable then
+    for _, v in other do
+      self:push(v)
+    end
   else
-    error 'Argument must be an iterator'
+    error "Argument must be an iterator"
   end
 end
 
@@ -302,7 +326,11 @@ end
 --- @param e any: The object to test for
 --- @return boolean: True if e is present
 function List:contains(e)
-  for _, v in self:iter() do if v == e then return true end end
+  for _, v in self:iter() do
+    if v == e then
+      return true
+    end
+  end
   return false
 end
 
@@ -351,7 +379,9 @@ end
 --- @return List
 function List.from_iter(iter)
   local result = List.new {}
-  for _, v in iter do result:push(v) end
+  for _, v in iter do
+    result:push(v)
+  end
   return result
 end
 

@@ -1,4 +1,4 @@
-local floatwin = require("plenary.window.float")
+local floatwin = require "plenary.window.float"
 
 local run = {}
 
@@ -8,8 +8,9 @@ run.with_displayed_output = function(title_text, cmd, opts)
   local job_id = vim.fn.termopen(cmd)
 
   local count = 0
-  while not vim.wait(1000, function() return vim.fn.jobwait({job_id}, 0)[1] == -1 end)
-  do
+  while not vim.wait(1000, function()
+    return vim.fn.jobwait({ job_id }, 0)[1] == -1
+  end) do
     vim.cmd [[normal! G]]
     count = count + 1
 
