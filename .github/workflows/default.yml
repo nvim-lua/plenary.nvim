@@ -56,4 +56,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # CLI arguments
-          args: --color always --check lua/
+          args: --color always --check .
