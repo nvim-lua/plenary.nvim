@@ -142,7 +142,6 @@ end
 
 -- TODO: See where we concat the table, and maybe we could make this work.
 Path.__concat = function(self, other)
-  print(self, other)
   return self.filename .. other
 end
 
