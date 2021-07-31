@@ -28,7 +28,7 @@ Plug 'nvim-lua/plenary.nvim'
 
 ### plenary.job
 
-A Lua module to interactive with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
+A Lua module to interact with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
 Define optional callbacks for `on_stdout`, `on_stderr` and `on_exit` and `start` your Job.
 
 Note: Each job has an empty environment.
@@ -54,7 +54,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 
 ### plenary.scandir
 
-`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scan over a given directory, or a set of directories.
+`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scans over a given directory, or a set of directories.
 
 It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
 
