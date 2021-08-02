@@ -3,6 +3,7 @@
 --- Goal: Create objects that are extremely similar to Python's `Path` Objects.
 --- Reference: https://docs.python.org/3/library/pathlib.html
 
+local bit = require 'plenary.bit'
 local uv = vim.loop
 
 local F = require "plenary.functional"
