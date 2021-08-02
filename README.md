@@ -132,16 +132,8 @@ OTHER OTHER NOTE:
 Take a look at some test examples [here](TESTS_README.md).
 
 #### Colors
-To have "Success" in green and "Failed" in red, you need [nvim-terminal.lua](https://github.com/norcalli/nvim-terminal.lua).
-In order for it to work, make sure to run the setup function in your config.
-For `init.vim`:
-```vim
-lua require('terminal').setup()
-```
-For `init.lua`:
-```lua
-require('terminal').setup()
-```
+
+You no longer need nvim-terminal to get this to work. We use `nvim_open_term` now.
 
 ### plenary.filetype
 
