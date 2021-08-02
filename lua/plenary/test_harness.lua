@@ -18,15 +18,17 @@ local print_output = vim.schedule_wrap(function(_, ...)
   vim.cmd [[mode]]
 end)
 
-local nvim_output = vim.schedule_wrap(function(bufnr, ...)
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    return
-  end
+local get_nvim_output = function(job_id)
+  return vim.schedule_wrap(function(bufnr, ...)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
 
-  for _, v in ipairs { ... } do
-    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { v })
-  end
-end)
+    for _, v in ipairs { ... } do
+      vim.api.nvim_chan_send(job_id, v .. "\r\n")
+    end
+  end)
+end
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
@@ -45,8 +47,8 @@ function harness.test_directory(directory, opts)
   if not headless then
     res = win_float.percentage_range_window(0.95, 0.70, opts.winopts)
 
+    res.job_id = vim.api.nvim_open_term(res.bufnr, {})
     vim.api.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
-    vim.api.nvim_buf_set_option(res.bufnr, "filetype", "terminal")
 
     vim.api.nvim_win_set_option(res.win_id, "winhl", "Normal:Normal")
     vim.api.nvim_win_set_option(res.win_id, "conceallevel", 3)
@@ -55,10 +57,11 @@ function harness.test_directory(directory, opts)
     if res.border_win_id then
       vim.api.nvim_win_set_option(res.border_win_id, "winhl", "Normal:Normal")
     end
+
     vim.cmd "mode"
   end
 
-  local outputter = headless and print_output or nvim_output
+  local outputter = headless and print_output or get_nvim_output(res.job_id)
 
   local paths = harness._find_files_to_run(directory)
   for _, p in ipairs(paths) do
