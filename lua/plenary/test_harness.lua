@@ -23,7 +23,6 @@ local get_nvim_output = function(job_id)
     if not vim.api.nvim_buf_is_valid(bufnr) then
       return
     end
-
     for _, v in ipairs { ... } do
       vim.api.nvim_chan_send(job_id, v .. "\r\n")
     end
@@ -41,7 +40,7 @@ end
 
 function harness.test_directory(directory, opts)
   print "Starting..."
-  opts = vim.tbl_deep_extend("force", { winopts = { winblend = 3 } }, opts or {})
+  opts = vim.tbl_deep_extend("force", { winopts = { winblend = 3 }, sequential = false, keep_going = true }, opts or {})
 
   local res = {}
   if not headless then
@@ -57,18 +56,16 @@ function harness.test_directory(directory, opts)
     if res.border_win_id then
       vim.api.nvim_win_set_option(res.border_win_id, "winhl", "Normal:Normal")
     end
-
     vim.cmd "mode"
   end
 
   local outputter = headless and print_output or get_nvim_output(res.job_id)
 
   local paths = harness._find_files_to_run(directory)
-  for _, p in ipairs(paths) do
-    outputter(res.bufnr, "Scheduling: " .. p.filename)
-  end
 
   local path_len = #paths
+
+  local failure = false
 
   local jobs = vim.tbl_map(function(p)
     local args = {
@@ -86,7 +83,7 @@ function harness.test_directory(directory, opts)
       table.insert(args, opts.minimal_init)
     end
 
-    return Job:new {
+    local job = Job:new {
       command = vim.v.progpath,
       args = args,
 
@@ -112,12 +109,25 @@ function harness.test_directory(directory, opts)
         vim.cmd "mode"
       end),
     }
+    job.nvim_busted_path = p.filename
+    return job
   end, paths)
 
   log.debug "Running..."
   for i, j in ipairs(jobs) do
+    outputter(res.bufnr, "Scheduling: " .. j.nvim_busted_path)
     j:start()
-    log.debug("... Completed job number", i)
+    if opts.sequential then
+      log.debug("... Sequential wait for job number", i)
+      Job.join(j, 50000)
+      log.debug("... Completed job number", i)
+      if j.code ~= 0 then
+        failure = true
+        if not opts.keep_going then
+          break
+        end
+      end
+    end
   end
 
   -- TODO: Probably want to let people know when we've completed everything.
@@ -125,17 +135,20 @@ function harness.test_directory(directory, opts)
     return
   end
 
-  table.insert(jobs, 50000)
-  log.debug "...Waiting"
-  Job.join(unpack(jobs))
-  table.remove(jobs, table.getn(jobs))
+  if not opts.sequential then
+    table.insert(jobs, 50000)
+    log.debug "... Parallel wait"
+    Job.join(unpack(jobs))
+    log.debug "... Completed jobs"
+    table.remove(jobs, table.getn(jobs))
+    failure = f.any(function(_, v)
+      return v.code ~= 0
+    end, jobs)
+  end
   vim.wait(100)
-  log.debug "Done..."
 
   if headless then
-    if f.any(function(_, v)
-      return v.code ~= 0
-    end, jobs) then
+    if failure then
       os.exit(1)
     end
 
