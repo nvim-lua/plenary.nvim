@@ -72,7 +72,15 @@ local _split_by_separator = (function()
   end
 end)()
 
+local is_uri = function(filename)
+  return string.match(filename, "%w+://") ~= nil
+end
+
 local function _normalize_path(filename)
+  if is_uri(filename) then
+    return filename
+  end
+
   local out_file = filename
 
   local has = string.find(filename, "..", 1, true)
@@ -97,6 +105,10 @@ local function _normalize_path(filename)
 end
 
 local clean = function(pathname)
+  if is_uri(pathname) then
+    return pathname
+  end
+
   -- Remove double path seps, it's annoying
   pathname = pathname:gsub(path.sep .. path.sep, path.sep)
 
@@ -250,6 +262,10 @@ function Path:exists()
 end
 
 function Path:expand()
+  if is_uri(self.filename) then
+    return self.filename
+  end
+
   -- TODO support windows
   local expanded
   if string.find(self.filename, "~") then
@@ -274,6 +290,10 @@ function Path:expand()
 end
 
 function Path:make_relative(cwd)
+  if is_uri(self.filename) then
+    return self.filename
+  end
+
   self.filename = clean(self.filename)
   cwd = clean(F.if_nil(cwd, self._cwd, cwd))
   if self.filename == cwd then
@@ -292,6 +312,10 @@ function Path:make_relative(cwd)
 end
 
 function Path:normalize(cwd)
+  if is_uri(self.filename) then
+    return self.filename
+  end
+
   self:make_relative(cwd)
 
   -- Substitute home directory w/ "~"
@@ -329,7 +353,7 @@ local shorten = (function()
     char_u *shorten_dir(char_u *str);
     ]]
     return function(filename)
-      if not filename then
+      if not filename or is_uri(filename) then
         return filename
       end
 
