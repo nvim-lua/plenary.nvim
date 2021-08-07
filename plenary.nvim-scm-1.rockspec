@@ -94,5 +94,8 @@ build = {
 	   ["plenary.window.float"] = "lua/plenary/window/float.lua",
 	   ["plenary.window.init"] = "lua/plenary/window/init.lua",
    },
+   copy_directories = {
+	   'plugin'
+   }
 }
 
