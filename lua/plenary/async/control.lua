@@ -209,7 +209,7 @@ M.channel.mpsc = function()
     end
     local val = deque:popright()
     deque:clear()
-    return unpack(val)
+    return unpack(val or {})
   end
 
   return Sender, Receiver
