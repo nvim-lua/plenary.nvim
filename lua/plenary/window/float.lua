@@ -1,8 +1,7 @@
-local Border = require("plenary.window.border")
-local tbl = require('plenary.tbl')
+local Border = require "plenary.window.border"
+local tbl = require "plenary.tbl"
 
 _AssociatedBufs = {}
-
 
 local clear_buf_on_leave = function(bufnr)
   vim.cmd(
@@ -31,12 +30,12 @@ function win_float.default_opts(options)
   local left = math.floor((vim.o.columns - width) / 2)
 
   local opts = {
-    relative = 'editor',
-    row      = top,
-    col      = left,
-    width    = width,
-    height   = height,
-    style    = 'minimal'
+    relative = "editor",
+    row = top,
+    col = left,
+    width = width,
+    height = height,
+    style = "minimal",
   }
 
   return opts
@@ -50,19 +49,14 @@ function win_float.centered(options)
   local bufnr = options.bufnr or vim.api.nvim_create_buf(false, true)
   local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
 
-  vim.cmd('setlocal nocursorcolumn')
-  vim.api.nvim_win_set_option(win_id, 'winblend', options.winblend)
+  vim.cmd "setlocal nocursorcolumn"
+  vim.api.nvim_win_set_option(win_id, "winblend", options.winblend)
 
-  vim.cmd(
-    string.format(
-      "autocmd WinLeave <buffer> silent! execute 'bdelete! %s'",
-      bufnr
-    )
-  )
+  vim.cmd(string.format("autocmd WinLeave <buffer> silent! execute 'bdelete! %s'", bufnr))
 
   return {
-    bufnr=bufnr,
-    win_id=win_id,
+    bufnr = bufnr,
+    win_id = win_id,
   }
 end
 
@@ -83,16 +77,16 @@ function win_float.centered_with_top_win(top_text, options)
   local minor_bufnr = vim.api.nvim_create_buf(false, true)
   local minor_win_id = vim.api.nvim_open_win(minor_bufnr, true, minor_win_opts)
 
-  vim.cmd('setlocal nocursorcolumn')
-  vim.api.nvim_win_set_option(minor_win_id, 'winblend', options.winblend)
+  vim.cmd "setlocal nocursorcolumn"
+  vim.api.nvim_win_set_option(minor_win_id, "winblend", options.winblend)
 
   vim.api.nvim_buf_set_lines(minor_bufnr, 0, -1, false, top_text)
 
   local primary_bufnr = vim.api.nvim_create_buf(false, true)
   local primary_win_id = vim.api.nvim_open_win(primary_bufnr, true, primary_win_opts)
 
-  vim.cmd('setlocal nocursorcolumn')
-  vim.api.nvim_win_set_option(primary_win_id, 'winblend', options.winblend)
+  vim.cmd "setlocal nocursorcolumn"
+  vim.api.nvim_win_set_option(primary_win_id, "winblend", options.winblend)
 
   -- vim.cmd(
   --   string.format(
@@ -109,12 +103,14 @@ function win_float.centered_with_top_win(top_text, options)
   --   )
   -- )
 
-
   local primary_border = Border:new(primary_bufnr, primary_win_id, primary_win_opts, {})
   local minor_border = Border:new(minor_bufnr, minor_win_id, minor_win_opts, {})
 
   _AssociatedBufs[primary_bufnr] = {
-    primary_win_id, minor_win_id, primary_border.win_id, minor_border.win_id
+    primary_win_id,
+    minor_win_id,
+    primary_border.win_id,
+    minor_border.win_id,
   }
 
   clear_buf_on_leave(primary_bufnr)
@@ -146,12 +142,12 @@ function win_float.percentage_range_window(col_range, row_range, win_opts, borde
   default_win_opts.relative = "editor"
 
   local height_percentage, row_start_percentage
-  if type(row_range) == 'number' then
+  if type(row_range) == "number" then
     assert(row_range <= 1)
     assert(row_range > 0)
     height_percentage = row_range
     row_start_percentage = (1 - height_percentage) / 2
-  elseif type(row_range) == 'table' then
+  elseif type(row_range) == "table" then
     height_percentage = row_range[2] - row_range[1]
     row_start_percentage = row_range[1]
   else
@@ -159,15 +155,15 @@ function win_float.percentage_range_window(col_range, row_range, win_opts, borde
   end
 
   default_win_opts.height = math.ceil(vim.o.lines * height_percentage)
-  default_win_opts.row = math.ceil(vim.o.lines *  row_start_percentage)
+  default_win_opts.row = math.ceil(vim.o.lines * row_start_percentage)
 
   local width_percentage, col_start_percentage
-  if type(col_range) == 'number' then
+  if type(col_range) == "number" then
     assert(col_range <= 1)
     assert(col_range > 0)
     width_percentage = col_range
     col_start_percentage = (1 - width_percentage) / 2
-  elseif type(col_range) == 'table' then
+  elseif type(col_range) == "table" then
     width_percentage = col_range[2] - col_range[1]
     col_start_percentage = col_range[1]
   else
@@ -181,12 +177,12 @@ function win_float.percentage_range_window(col_range, row_range, win_opts, borde
   local win_id = vim.api.nvim_open_win(bufnr, true, default_win_opts)
   vim.api.nvim_win_set_buf(win_id, bufnr)
 
-  vim.cmd('setlocal nocursorcolumn')
-  vim.api.nvim_win_set_option(win_id, 'winblend', win_opts.winblend)
+  vim.cmd "setlocal nocursorcolumn"
+  vim.api.nvim_win_set_option(win_id, "winblend", win_opts.winblend)
 
   local border = Border:new(bufnr, win_id, default_win_opts, border_opts or {})
 
-  _AssociatedBufs[bufnr] = { win_id, border.win_id, }
+  _AssociatedBufs[bufnr] = { win_id, border.win_id }
 
   clear_buf_on_leave(bufnr)
 

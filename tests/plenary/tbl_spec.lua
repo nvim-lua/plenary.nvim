@@ -1,13 +1,13 @@
-local tbl = require('plenary.tbl')
+local tbl = require "plenary.tbl"
 
 local function should_fail(fun)
   local stat = pcall(fun)
   assert(not stat, "Function should have errored")
 end
 
-describe('tbl utilities', function()
-  it('should be able to freeze a table', function()
-    local t = {1, 2, 3}
+describe("tbl utilities", function()
+  it("should be able to freeze a table", function()
+    local t = { 1, 2, 3 }
     local frozen = tbl.freeze(t)
     assert(t[1] == frozen[1])
     assert(t[2] == frozen[2])

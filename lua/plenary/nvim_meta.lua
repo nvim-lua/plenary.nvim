@@ -3,7 +3,7 @@ local get_lua_version = function()
     return {
       lua = string.gsub(_VERSION, "Lua ", ""),
       jit = not not string.find(jit.version, "LuaJIT"),
-      version = string.gsub(jit.version, "LuaJIT ", "")
+      version = string.gsub(jit.version, "LuaJIT ", ""),
     }
   end
 

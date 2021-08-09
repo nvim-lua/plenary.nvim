@@ -28,7 +28,7 @@ Plug 'nvim-lua/plenary.nvim'
 
 ### plenary.job
 
-A Lua module to interactive with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
+A Lua module to interact with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
 Define optional callbacks for `on_stdout`, `on_stderr` and `on_exit` and `start` your Job.
 
 Note: Each job has an empty environment.
@@ -54,7 +54,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 
 ### plenary.scandir
 
-`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scan over a given directory, or a set of directories.
+`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scans over a given directory, or a set of directories.
 
 It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
 
@@ -100,9 +100,13 @@ nvim --headless -c "PlenaryBustedDirectory tests/plenary/ {minimal_init = 'tests
 ```
 
 Where the first argument is the directory you'd like to test. It will search for files with
-the pattern `*_spec.lua` and execute them in parallel in separate neovim instances.
+the pattern `*_spec.lua` and execute them in separate neovim instances.
 
-The second argument is an optional init.vim to specify so that you can make reproducible tests!
+The second argument is a Lua option table with the following fields:
+- `minimal_init`: specify an init.vim to use for this instance, uses `--noplugin`
+- `minimal`: uses `--noplugin` without an init script (overrides `minimal_init`)
+- `sequential`: whether to run tests sequentially (default is to run in parallel)
+- `keep_going`: if `sequential`, whether to continue on test failure (default true)
 
 The exit code is 0 when success and 1 when fail, so you can use it easily in a `Makefile`!
 
@@ -132,16 +136,8 @@ OTHER OTHER NOTE:
 Take a look at some test examples [here](TESTS_README.md).
 
 #### Colors
-To have "Success" in green and "Failed" in red, you need [nvim-terminal.lua](https://github.com/norcalli/nvim-terminal.lua).
-In order for it to work, make sure to run the setup function in your config.
-For `init.vim`:
-```vim
-lua require('terminal').setup()
-```
-For `init.lua`:
-```lua
-require('terminal').setup()
-```
+
+You no longer need nvim-terminal to get this to work. We use `nvim_open_term` now.
 
 ### plenary.filetype
 
@@ -192,6 +188,28 @@ And some other funcs are here to deal with common problems.
 * `strings.truncate`
 * `strings.align_str`
 * `strings.dedent`
+
+### plenary.profile
+
+Thin wrapper around LuaJIT's [`jit.p` profiler](https://blast.hk/moonloader/luajit/ext_profiler.html).
+
+```lua
+require'plenary.profile'.start("profile.log")
+
+-- code to be profiled
+
+require'plenary.profile'.stop()
+```
+
+You can use `start("profile.log", {flame = true})` to output the log in a
+flamegraph-compatible format. A flamegraph can be created from this using
+https://github.com/jonhoo/inferno via
+```
+inferno-flamegraph profile.log > flame.svg
+```
+The resulting interactive SVG file can be viewed in any browser.
+
+Status: WIP
 
 ### plenary.popup
 

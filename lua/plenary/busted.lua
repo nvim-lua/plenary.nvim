@@ -4,21 +4,24 @@ end
 
 local function get_trace(element, level, msg)
   local function trimTrace(info)
-    local index = info.traceback:find('\n%s*%[C]')
+    local index = info.traceback:find "\n%s*%[C]"
     info.traceback = info.traceback:sub(1, index)
     return info
   end
-  level = level or  3
+  level = level or 3
 
-  local thisdir = dirname(debug.getinfo(1, 'Sl').source, ":h")
-  local info = debug.getinfo(level, 'Sl')
-  while info.what == 'C' or info.short_src:match('luassert[/\\].*%.lua$') or
-        (info.source:sub(1,1) == '@' and thisdir == dirname(info.source)) do
+  local thisdir = dirname(debug.getinfo(1, "Sl").source, ":h")
+  local info = debug.getinfo(level, "Sl")
+  while
+    info.what == "C"
+    or info.short_src:match "luassert[/\\].*%.lua$"
+    or (info.source:sub(1, 1) == "@" and thisdir == dirname(info.source))
+  do
     level = level + 1
-    info = debug.getinfo(level, 'Sl')
+    info = debug.getinfo(level, "Sl")
   end
 
-  info.traceback = debug.traceback('', level)
+  info.traceback = debug.traceback("", level)
   info.message = msg
 
   -- local file = busted.getFile(element)
@@ -26,17 +29,15 @@ local function get_trace(element, level, msg)
   return file and file.getTrace(file.name, info) or trimTrace(info)
 end
 
-
-
-local is_headless = require('plenary.nvim_meta').is_headless
+local is_headless = require("plenary.nvim_meta").is_headless
 
 local print = function(...)
-  for _, v in ipairs({...}) do
+  for _, v in ipairs { ... } do
     io.stdout:write(tostring(v))
-    io.stdout:write("\t")
+    io.stdout:write "\t"
   end
 
-  io.stdout:write("\r\n")
+  io.stdout:write "\r\n"
 end
 
 local mod = {}
@@ -92,13 +93,7 @@ local color_string = function(color, str)
     return str
   end
 
-  return string.format("%s[%sm%s%s[%sm",
-    string.char(27),
-    color_table[color] or 0,
-    str,
-    string.char(27),
-    0
-  )
+  return string.format("%s[%sm%s%s[%sm", string.char(27), color_table[color] or 0, str, string.char(27), 0)
 end
 
 local SUCCESS = color_string("green", "Success")
@@ -112,7 +107,7 @@ mod.format_results = function(res)
   local num_fail = #res.fail
   local num_errs = #res.errs
 
-  print("")
+  print ""
   print(color_string("green", "Success: "), num_pass)
   print(color_string("red", "Failed : "), num_fail)
   print(color_string("red", "Errors : "), num_errs)
@@ -120,9 +115,9 @@ mod.format_results = function(res)
 end
 
 mod.describe = function(desc, func)
-  results.pass  = results.pass or {}
-  results.fail  = results.fail or {}
-  results.errs  = results.errs or {}
+  results.pass = results.pass or {}
+  results.fail = results.fail or {}
+  results.errs = results.errs or {}
   results.fatal = results.fatal or {}
 
   describe = mod.inner_describe
@@ -138,7 +133,7 @@ mod.inner_describe = function(desc, func)
   if not ok then
     table.insert(results.errs, {
       descriptions = desc_stack,
-      msg = msg
+      msg = msg,
     })
   end
 end
@@ -162,13 +157,14 @@ local indent = function(msg, spaces)
 
   local prefix = string.rep(" ", spaces)
   return prefix .. msg:gsub("\n", "\n" .. prefix)
-
 end
 
 local run_each = function(tbl)
   for _, v in pairs(tbl) do
     for _, w in ipairs(v) do
-      if type(w) == 'function' then w() end
+      if type(w) == "function" then
+        w()
+      end
     end
   end
 end
@@ -209,14 +205,13 @@ end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
 
-
 describe = mod.describe
 it = mod.it
 pending = mod.pending
 before_each = mod.before_each
 after_each = mod.after_each
 clear = mod.clear
-assert = require("luassert")
+assert = require "luassert"
 
 mod.run = function(file)
   print("\n" .. HEADER)
@@ -226,7 +221,7 @@ mod.run = function(file)
 
   if not ok then
     print(HEADER)
-    print("FAILED TO LOAD FILE")
+    print "FAILED TO LOAD FILE"
     print(color_string("red", msg))
     print(HEADER)
     if is_headless then
@@ -253,7 +248,7 @@ mod.run = function(file)
       os.exit(2)
     end
   elseif #results.fail > 0 then
-    print("Tests Failed. Exit: 1")
+    print "Tests Failed. Exit: 1"
 
     if is_headless then
       os.exit(1)
