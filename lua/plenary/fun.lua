@@ -1,9 +1,9 @@
-local tbl = require('plenary.tbl')
+local tbl = require "plenary.tbl"
 
 local M = {}
 
 function M.bind(fn, ...)
-  if select('#', ...) == 1 then
+  if select("#", ...) == 1 then
     local arg = ...
     return function(...)
       fn(arg, ...)
@@ -18,7 +18,7 @@ end
 
 function M.arify(fn, argc)
   return function(...)
-    if select('#', ...) ~= argc then
+    if select("#", ...) ~= argc then
       error(("Expected %s number of arguments"):format(argc))
     end
 

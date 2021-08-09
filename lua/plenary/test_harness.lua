@@ -1,123 +1,133 @@
-local Path = require("plenary.path")
-local Job = require("plenary.job")
+local Path = require "plenary.path"
+local Job = require "plenary.job"
 
-local f = require("plenary.functional")
-local log = require("plenary.log")
-local win_float = require("plenary.window.float")
+local f = require "plenary.functional"
+local log = require "plenary.log"
+local win_float = require "plenary.window.float"
 
 local headless = require("plenary.nvim_meta").is_headless
 
 local harness = {}
 
 local print_output = vim.schedule_wrap(function(_, ...)
-  for _, v in ipairs({...}) do
+  for _, v in ipairs { ... } do
     io.stdout:write(tostring(v))
-    io.stdout:write("\n")
+    io.stdout:write "\n"
   end
 
   vim.cmd [[mode]]
 end)
 
-local nvim_output = vim.schedule_wrap(function(bufnr, ...)
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    return
-  end
-
-  for _, v in ipairs({...}) do
-    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {v})
-  end
-end)
+local get_nvim_output = function(job_id)
+  return vim.schedule_wrap(function(bufnr, ...)
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+    for _, v in ipairs { ... } do
+      vim.api.nvim_chan_send(job_id, v .. "\r\n")
+    end
+  end)
+end
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
   local directory = table.remove(split_string, 1)
 
-  local opts = assert(loadstring('return ' .. table.concat(split_string, " ")))()
+  local opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
 
   return harness.test_directory(directory, opts)
 end
 
 function harness.test_directory(directory, opts)
-  print("Starting...")
-  opts = vim.tbl_deep_extend('force', {winopts = {winblend = 3}}, opts or {})
+  print "Starting..."
+  opts = vim.tbl_deep_extend("force", { winopts = { winblend = 3 }, sequential = false, keep_going = true }, opts or {})
 
   local res = {}
   if not headless then
     res = win_float.percentage_range_window(0.95, 0.70, opts.winopts)
 
+    res.job_id = vim.api.nvim_open_term(res.bufnr, {})
     vim.api.nvim_buf_set_keymap(res.bufnr, "n", "q", ":q<CR>", {})
-    vim.api.nvim_buf_set_option(res.bufnr, 'filetype', 'terminal')
 
-    vim.api.nvim_win_set_option(res.win_id, 'winhl', 'Normal:Normal')
-    vim.api.nvim_win_set_option(res.win_id, 'conceallevel', 3)
-    vim.api.nvim_win_set_option(res.win_id, 'concealcursor', 'n')
+    vim.api.nvim_win_set_option(res.win_id, "winhl", "Normal:Normal")
+    vim.api.nvim_win_set_option(res.win_id, "conceallevel", 3)
+    vim.api.nvim_win_set_option(res.win_id, "concealcursor", "n")
 
     if res.border_win_id then
-      vim.api.nvim_win_set_option(res.border_win_id, 'winhl', 'Normal:Normal')
+      vim.api.nvim_win_set_option(res.border_win_id, "winhl", "Normal:Normal")
     end
-    vim.cmd('mode')
+    vim.cmd "mode"
   end
 
-  local outputter = headless and print_output or nvim_output
+  local outputter = headless and print_output or get_nvim_output(res.job_id)
 
   local paths = harness._find_files_to_run(directory)
-  for _, p in ipairs(paths) do
-    outputter(res.bufnr, "Scheduling: " .. p.filename)
-  end
 
   local path_len = #paths
 
-  local jobs = vim.tbl_map(
-    function(p)
-      local args = {
-        '--headless',
-        '-c',
-        string.format('lua require("plenary.busted").run("%s")', p:absolute())
-      }
+  local failure = false
 
-      if opts.minimal ~= nil then
-        table.insert(args, '--noplugin')
-      elseif opts.minimal_init ~= nil then
-        table.insert(args, '--noplugin')
+  local jobs = vim.tbl_map(function(p)
+    local args = {
+      "--headless",
+      "-c",
+      string.format('lua require("plenary.busted").run("%s")', p:absolute()),
+    }
 
-        table.insert(args, '-u')
-        table.insert(args, opts.minimal_init)
-      end
+    if opts.minimal ~= nil then
+      table.insert(args, "--noplugin")
+    elseif opts.minimal_init ~= nil then
+      table.insert(args, "--noplugin")
 
-      return Job:new {
-        command = vim.v.progpath,
-        args = args,
+      table.insert(args, "-u")
+      table.insert(args, opts.minimal_init)
+    end
 
-        -- Can be turned on to debug
-        on_stdout = function(_, data)
-          if path_len == 1 then
-            outputter(res.bufnr, data)
-          end
-        end,
+    local job = Job:new {
+      command = vim.v.progpath,
+      args = args,
 
-        on_stderr = function(_, data)
-          if path_len == 1 then
-            outputter(res.bufnr, data)
-          end
-        end,
+      -- Can be turned on to debug
+      on_stdout = function(_, data)
+        if path_len == 1 then
+          outputter(res.bufnr, data)
+        end
+      end,
 
-        on_exit = vim.schedule_wrap(function(j_self, _, _)
-          if path_len ~= 1 then
-            outputter(res.bufnr, unpack(j_self:stderr_result()))
-            outputter(res.bufnr, unpack(j_self:result()))
-          end
+      on_stderr = function(_, data)
+        if path_len == 1 then
+          outputter(res.bufnr, data)
+        end
+      end,
 
-          vim.cmd('mode')
-        end)
-      }
-    end,
-    paths
-  )
+      on_exit = vim.schedule_wrap(function(j_self, _, _)
+        if path_len ~= 1 then
+          outputter(res.bufnr, unpack(j_self:stderr_result()))
+          outputter(res.bufnr, unpack(j_self:result()))
+        end
 
-  log.debug("Running...")
+        vim.cmd "mode"
+      end),
+    }
+    job.nvim_busted_path = p.filename
+    return job
+  end, paths)
+
+  log.debug "Running..."
   for i, j in ipairs(jobs) do
+    outputter(res.bufnr, "Scheduling: " .. j.nvim_busted_path)
     j:start()
-    log.debug("... Completed job number", i)
+    if opts.sequential then
+      log.debug("... Sequential wait for job number", i)
+      Job.join(j, 50000)
+      log.debug("... Completed job number", i)
+      if j.code ~= 0 then
+        failure = true
+        if not opts.keep_going then
+          break
+        end
+      end
+    end
   end
 
   -- TODO: Probably want to let people know when we've completed everything.
@@ -125,15 +135,20 @@ function harness.test_directory(directory, opts)
     return
   end
 
-  table.insert(jobs, 50000)
-  log.debug("...Waiting")
-  Job.join(unpack(jobs))
-  table.remove(jobs, table.getn(jobs))
+  if not opts.sequential then
+    table.insert(jobs, 50000)
+    log.debug "... Parallel wait"
+    Job.join(unpack(jobs))
+    log.debug "... Completed jobs"
+    table.remove(jobs, table.getn(jobs))
+    failure = f.any(function(_, v)
+      return v.code ~= 0
+    end, jobs)
+  end
   vim.wait(100)
-  log.debug("Done...")
 
   if headless then
-    if f.any(function(_, v) return v.code ~= 0 end, jobs) then
+    if failure then
       os.exit(1)
     end
 
@@ -143,8 +158,8 @@ end
 
 function harness._find_files_to_run(directory)
   local finder = Job:new {
-    command = 'find',
-    args = {directory, '-type', 'f', '-name', '*_spec.lua'},
+    command = "find",
+    args = { directory, "-type", "f", "-name", "*_spec.lua" },
   }
 
   return vim.tbl_map(Path.new, finder:sync())
@@ -157,18 +172,20 @@ function harness._run_path(test_type, directory)
   local win_id = 0
 
   for _, p in pairs(paths) do
-    print(" ")
+    print " "
     print("Loading Tests For: ", p:absolute(), "\n")
 
-    local ok, _ = pcall(function() dofile(p:absolute()) end)
+    local ok, _ = pcall(function()
+      dofile(p:absolute())
+    end)
 
     if not ok then
-      print("Failed to load file")
+      print "Failed to load file"
     end
   end
 
   harness:run(test_type, bufnr, win_id)
-  vim.cmd("qa!")
+  vim.cmd "qa!"
 
   return paths
 end

@@ -18,7 +18,7 @@ function profile.start(out, opts)
 end
 
 ---stop profiling
-profile.stop = p.stop()
+profile.stop = p.stop
 
 function profile.benchmark(iterations, f, ...)
   local start_time = vim.loop.hrtime()
