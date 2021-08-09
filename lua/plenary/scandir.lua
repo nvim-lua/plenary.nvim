@@ -13,33 +13,35 @@ local make_gitignore = function(basepath)
     local p = Path:new(v .. os_sep .. ".gitignore")
     if p:exists() then
       valid = true
-      patterns[v] = {ignored = {}, negated = {}}
+      patterns[v] = { ignored = {}, negated = {} }
       for l in p:iter() do
         local prefix = l:sub(1, 1)
-        local negated = prefix == '!'
+        local negated = prefix == "!"
         if negated then
-            l = l:sub(2)
-            prefix = l:sub(1, 1)
+          l = l:sub(2)
+          prefix = l:sub(1, 1)
         end
-        if prefix == '/' then
-            l = v .. l
+        if prefix == "/" then
+          l = v .. l
         end
-        if not (prefix == '' or prefix == '#') then
+        if not (prefix == "" or prefix == "#") then
           local el = vim.trim(l)
-          el = el:gsub('%-', '%%-')
-          el = el:gsub('%.', '%%.')
-          el = el:gsub('/%*%*/', '/%%w+/')
-          el = el:gsub('%*%*', '')
-          el = el:gsub('%*', '%%w+')
-          el = el:gsub('%?', '%%w')
-          if el ~= '' then
+          el = el:gsub("%-", "%%-")
+          el = el:gsub("%.", "%%.")
+          el = el:gsub("/%*%*/", "/%%w+/")
+          el = el:gsub("%*%*", "")
+          el = el:gsub("%*", "%%w+")
+          el = el:gsub("%?", "%%w")
+          if el ~= "" then
             table.insert(negated and patterns[v].negated or patterns[v].ignored, el)
           end
         end
       end
     end
   end
-  if not valid then return nil end
+  if not valid then
+    return nil
+  end
   return function(bp, entry)
     for _, v in ipairs(bp) do
       if entry:find(v, 1, true) then
@@ -47,9 +49,13 @@ local make_gitignore = function(basepath)
         for _, w in ipairs(patterns[v].ignored) do
           if not negated and entry:match(w) then
             for _, inverse in ipairs(patterns[v].negated) do
-              if not negated and entry:match(inverse) then negated = true end
+              if not negated and entry:match(inverse) then
+                negated = true
+              end
             end
-            if not negated then return false end
+            if not negated then
+              return false
+            end
           end
         end
       end
@@ -88,8 +94,8 @@ local gen_search_pat = function(pattern)
       end
       return false
     end
-  elseif type(pattern) == 'function' then
-     return pattern
+  elseif type(pattern) == "function" then
+    return pattern
   end
 end
 
@@ -169,7 +175,9 @@ m.scan_dir = function(path, opts)
     if fd then
       while true do
         local name, typ = uv.fs_scandir_next(fd)
-        if name == nil then break end
+        if name == nil then
+          break
+        end
         process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_search_pat)
       end
     end
@@ -223,7 +231,9 @@ m.scan_dir_async = function(path, opts)
     if not err then
       while true do
         local name, typ = uv.fs_scandir_next(fd)
-        if name == nil then break end
+        if name == nil then
+          break
+        end
         process_item(opts, name, typ, current_dir, next_dir, base_paths, data, gitignore, match_search_pat)
       end
       if table.getn(next_dir) == 0 then
