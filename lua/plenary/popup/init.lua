@@ -5,7 +5,7 @@
 
 local Border = require "plenary.window.border"
 local Window = require "plenary.window"
-local utils = require "popup.utils"
+local utils = require "plenary.popup.utils"
 
 local popup = {}
 
