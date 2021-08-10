@@ -110,7 +110,7 @@ describe("Job", function()
       assert.are.same(job:result(), results)
     end)
 
-    it("should return last line when there is no ending newline", function()
+    pending("should return last line when there is no ending newline", function()
       local results = {}
       local job = Job:new {
         command = "echo",
