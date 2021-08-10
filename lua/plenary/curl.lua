@@ -71,12 +71,11 @@ util.gen_dump_path = function()
     return string.format("%x", v)
   end)
   if P.path.sep == "\\" then
-    path = string.format("%s\\AppData\\Local\\Temp\\plenary_curl_%s.headers",
-      os.getenv("USERPROFILE"), id)
+    path = string.format("%s\\AppData\\Local\\Temp\\plenary_curl_%s.headers", os.getenv "USERPROFILE", id)
   else
     path = "/tmp/plenary_curl_" .. id .. ".headers"
   end
-  return {"-D", path}
+  return { "-D", path }
 end
 
 -- Parsers ----------------------------------------------------
