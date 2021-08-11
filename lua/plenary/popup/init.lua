@@ -2,6 +2,8 @@
 ---
 --- Wrapper to make the popup api from vim in neovim.
 --- Hope to get this part merged in at some point in the future.
+---
+--- Please make sure to update "POPUP.md" with any changes and/or notes.
 
 local Border = require "plenary.window.border"
 local Window = require "plenary.window"
