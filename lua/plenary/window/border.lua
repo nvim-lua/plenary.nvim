@@ -71,7 +71,7 @@ function Border._create_lines(content_win_options, border_win_options)
 
   local titles
   if type(border_win_options.title) == "string" then
-    titles = { { "top-mid", border_win_options.title }}
+    titles = { { "top-mid", border_win_options.title } }
   elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "table" then
     titles = border_win_options.title
   elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "string" then
