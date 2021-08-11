@@ -71,21 +71,31 @@ function Border._create_lines(content_win_options, border_win_options)
 
   local titles
   if type(border_win_options.title) == "string" then
-    titles = { ["top-mid"] = border_win_options.title }
-  elseif type(border_win_options.title) == "table" then
+    titles = { { "top-mid", border_win_options.title }}
+  elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "table" then
     titles = border_win_options.title
+  elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "string" then
+    titles = { border_win_options.title }
   elseif not border_win_options.title then
     titles = {}
   else
-    error("Invalid option for `border_win_options.title`: " .. border_win_options.title)
+    error("Invalid option for `border_win_options.title`: " .. tostring(border_win_options.title))
   end
+
   if content_win_options.row > 0 then
-    local priority = { "top-left", "top-mid", "top-right" }
-    for _, pos in pairs(priority) do
-      if titles[pos] then
+    local top_positions = { "top-left", "top-mid", "top-right" }
+    for _, title in pairs(titles) do
+      local top_title = false
+      for _, top_pos in pairs(top_positions) do
+        if title[1] == top_pos then
+          top_title = true
+          break
+        end
+      end
+      if top_title then
         topline = create_horizontal_line(
-          titles[pos],
-          pos,
+          title[2],
+          title[1],
           content_win_options.width,
           topleft,
           border_win_options.top or "",
@@ -120,12 +130,19 @@ function Border._create_lines(content_win_options, border_win_options)
     local botline = nil
     local botleft = (left_enabled and border_win_options.botleft) or ""
     local botright = (right_enabled and border_win_options.botright) or ""
-    local priority = { "bot-left", "bot-mid", "bot-right" }
-    for _, pos in pairs(priority) do
-      if titles[pos] then
+    local bot_positions = { "bot-left", "bot-mid", "bot-right" }
+    for _, title in pairs(titles) do
+      local bot_title = false
+      for _, bot_pos in pairs(bot_positions) do
+        if title[1] == bot_pos then
+          bot_title = true
+          break
+        end
+      end
+      if bot_title then
         botline = create_horizontal_line(
-          titles[pos],
-          pos,
+          title[2],
+          title[1],
           content_win_options.width,
           botleft,
           border_win_options.bot or "",
