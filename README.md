@@ -284,10 +284,7 @@ Status: WIP
 
 ### plenary.popup
 
-`popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
-to provide compatibility layer for Neovim.
-
-Status: WIP
+See [popup documentation](./POPUP.md) for both progress tracking and implemented APIs.
 
 ### plenary.window
 
