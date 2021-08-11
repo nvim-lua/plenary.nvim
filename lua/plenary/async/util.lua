@@ -1,8 +1,5 @@
 local a = require "plenary.async.async"
-local await = a.await
-local async = a.async
 local vararg = require "plenary.vararg"
-local uv = vim.loop
 -- local control = a.control
 local control = require "plenary.async.control"
 local channel = control.channel

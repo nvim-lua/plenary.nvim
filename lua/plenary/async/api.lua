@@ -1,4 +1,3 @@
-local a = require "plenary.async.async"
 local util = require "plenary.async.util"
 
 return setmetatable({}, {
