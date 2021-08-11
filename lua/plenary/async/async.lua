@@ -23,10 +23,7 @@ local function callback_or_next(step, thread, callback, ...)
     local returned_function = f.second(...)
     local nargs = f.third(...)
     assert(type(returned_function) == "function", "type error :: expected func")
-    local rstat, msg = pcall(returned_function, vararg.rotate(nargs, step, select(4, ...)))
-    if not rstat then
-      error(("Failed to call leaf async function: %s"):format(msg))
-    end
+    returned_function(vararg.rotate(nargs, step, select(4, ...)))
   end
 end
 
