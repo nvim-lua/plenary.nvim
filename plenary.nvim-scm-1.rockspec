@@ -49,7 +49,6 @@ build = {
 	   ["plenary.nvim_meta"] = "lua/plenary/nvim_meta.lua",
 	   ["plenary.operators"] = "lua/plenary/operators.lua",
 	   ["plenary.path"] = "lua/plenary/path.lua",
-	   ["plenary.popup"] = "lua/plenary/popup.lua",
 	   ["plenary.profile"] = "lua/plenary/profile.lua",
 	   ["plenary.reload"] = "lua/plenary/reload.lua",
 	   ["plenary.run"] = "lua/plenary/run.lua",
@@ -82,6 +81,9 @@ build = {
 	   ["plenary.lsp.override"] = "lua/plenary/lsp/override.lua",
 
 	   ["plenary.neorocks.init"] = "lua/plenary/neorocks/init.lua",
+
+	   ["plenary.popup.init"] = "lua/plenary/popup/init.lua",
+	   ["plenary.popup.utils"] = "lua/plenary/popup/utils.lua",
 
 	   ["plenary.profile.lua_profiler"] = "lua/plenary/profile/lua_profiler.lua",
 	   ["plenary.profile.memory_profiler"] = "lua/plenary/profile/memory_profiler.lua",
