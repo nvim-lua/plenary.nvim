@@ -13,15 +13,12 @@ Border._default_thickness = {
 }
 
 local calc_left_start = function(title_pos, title_len, total_width)
-  local align = vim.split(title_pos, "-")[2]
-  if align == "left" then
+  if string.find(title_pos, "W") then
     return 0
-  elseif align == "mid" then
-    return math.floor((total_width - title_len) / 2)
-  elseif align == "right" then
+  elseif string.find(title_pos, "E") then
     return total_width - title_len
   else
-    error("Invalid title position: " .. tostring(title_pos))
+    return math.floor((total_width - title_len) / 2)
   end
 end
 
@@ -69,33 +66,19 @@ function Border._create_lines(content_win_options, border_win_options)
   local topleft = (left_enabled and border_win_options.topleft) or ""
   local topright = (right_enabled and border_win_options.topright) or ""
 
-  local titles
-  if type(border_win_options.title) == "string" then
-    titles = { { "top-mid", border_win_options.title } }
-  elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "table" then
-    titles = border_win_options.title
-  elseif type(border_win_options.title) == "table" and type(border_win_options.title[1]) == "string" then
-    titles = { border_win_options.title }
-  elseif not border_win_options.title then
-    titles = {}
-  else
-    error("Invalid option for `border_win_options.title`: " .. tostring(border_win_options.title))
-  end
+  -- border_win_options.title should have be a list with entries of the
+  -- form: { pos = foo, text = bar }.
+  -- pos can take values in { "NW", "N", "NE", "SW", "S", "SE" }
+  local titles = type(border_win_options.title) == "string" and { { pos = "N", text = border_win_options.title } }
+    or border_win_options.title
+    or {}
 
   if content_win_options.row > 0 then
-    local top_positions = { "top-left", "top-mid", "top-right" }
-    for _, title in pairs(titles) do
-      local top_title = false
-      for _, top_pos in pairs(top_positions) do
-        if title[1] == top_pos then
-          top_title = true
-          break
-        end
-      end
-      if top_title then
+    for _, title in ipairs(titles) do
+      if string.find(title.pos, "N") then
         topline = create_horizontal_line(
-          title[2],
-          title[1],
+          title.text,
+          title.pos,
           content_win_options.width,
           topleft,
           border_win_options.top or "",
@@ -130,19 +113,11 @@ function Border._create_lines(content_win_options, border_win_options)
     local botline = nil
     local botleft = (left_enabled and border_win_options.botleft) or ""
     local botright = (right_enabled and border_win_options.botright) or ""
-    local bot_positions = { "bot-left", "bot-mid", "bot-right" }
-    for _, title in pairs(titles) do
-      local bot_title = false
-      for _, bot_pos in pairs(bot_positions) do
-        if title[1] == bot_pos then
-          bot_title = true
-          break
-        end
-      end
-      if bot_title then
+    for _, title in ipairs(titles) do
+      if string.find(title.pos, "S") then
         botline = create_horizontal_line(
-          title[2],
-          title[1],
+          title.text,
+          title.pos,
           content_win_options.width,
           botleft,
           border_win_options.bot or "",
