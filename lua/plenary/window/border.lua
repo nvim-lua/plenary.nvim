@@ -144,6 +144,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
     col = content_win_options.col - thickness.left,
     width = content_win_options.width + thickness.left + thickness.right,
     height = content_win_options.height + thickness.top + thickness.bot,
+    zindex = content_win_options.zindex or 50,
   })
 
   vim.cmd(
