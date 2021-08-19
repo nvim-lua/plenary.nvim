@@ -4,9 +4,9 @@ local M = {}
 
 M.setup = function(consumer)
   vim.notify = function(...)
-      local args = {...}
-      table.insert(NOTIFICATION_QUEUE, args[1])
-      consumer.notify(...)
+    local args = { ... }
+    table.insert(NOTIFICATION_QUEUE, args[1])
+    consumer.notify(...)
   end
 end
 
