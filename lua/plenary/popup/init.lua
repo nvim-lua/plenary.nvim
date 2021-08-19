@@ -201,6 +201,10 @@ function popup.create(what, vim_options)
   -- noautocmd, undocumented vim default per https://github.com/vim/vim/issues/5737
   win_opts.noautocmd = vim.F.if_nil(vim_options.noautocmd, true)
 
+  -- focusable,
+  -- vim popups are not focusable windows
+  win_opts.focusable = vim.F.if_nil(vim_options.focusable, false)
+
   local win_id
   if vim_options.hidden then
     assert(false, "I have not implemented this yet and don't know how")
@@ -346,6 +350,7 @@ function popup.create(what, vim_options)
 
   local border = nil
   if should_show_border then
+    border_options.focusable = vim_options.border_focusable
     border = Border:new(bufnr, win_id, win_opts, border_options)
   end
 
