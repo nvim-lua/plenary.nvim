@@ -198,6 +198,9 @@ function popup.create(what, vim_options)
   --   textpropwin
   --   textpropid
 
+  -- noautocmd, undocumented vim default per https://github.com/vim/vim/issues/5737
+  win_opts.noautocmd = vim.F.if_nil(vim_options.noautocmd, true)
+
   local win_id
   if vim_options.hidden then
     assert(false, "I have not implemented this yet and don't know how")
@@ -241,7 +244,12 @@ function popup.create(what, vim_options)
   end
 
   if vim_options.wrap ~= nil then
-    vim.api.nvim_win_set_option(win_id, "wrap", vim_options.wrap)
+    -- set_option wrap should/will trigger autocmd, see https://github.com/neovim/neovim/pull/13247
+    if vim_options.noautocmd then
+      vim.cmd(string.format("noautocmd lua vim.api.nvim_set_option(%s, wrap, %s)", win_id, vim_options.wrap))
+    else
+      vim.api.nvim_win_set_option(win_id, "wrap", vim_options.wrap)
+    end
   end
 
   -- ===== Not Implemented Options =====
@@ -358,7 +366,11 @@ function popup.create(what, vim_options)
   if should_enter then
     -- set focus after border creation so that it's properly placed (especially
     -- in relative cursor layout)
-    vim.api.nvim_set_current_win(win_id)
+    if vim_options.noautocmd then
+      vim.cmd("noautocmd lua vim.api.nvim_set_current_win(" .. win_id .. ")")
+    else
+      vim.api.nvim_set_current_win(win_id)
+    end
   end
 
   -- callback
