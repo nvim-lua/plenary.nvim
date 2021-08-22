@@ -37,6 +37,7 @@ return {
     ['hbs'] = 'handlebars',
     ['graphql'] = 'graphql',
     ['gql'] = 'graphql',
+    ['rkt'] = 'racket',
   },
   file_name = {
     ['cakefile'] = 'coffee',
