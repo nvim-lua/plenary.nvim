@@ -408,7 +408,7 @@ end
 function popup.resize(win_id, vim_options)
   -- Create win_options
   local win_opts = {}
-  win_opts.relative = 'editor'
+  win_opts.relative = "editor"
 
   win_opts.width = vim_options.width or vim.api.nvim_win_get_width(win_id)
   win_opts.height = vim_options.height or vim.api.nvim_win_get_height(win_id)
@@ -425,7 +425,6 @@ function popup.resize(win_id, vim_options)
   if border ~= nil then
     border:set_size(win_opts, border._border_win_options)
   end
-
 end
 
 function popup.execute_callback(bufnr)
