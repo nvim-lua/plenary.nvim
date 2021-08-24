@@ -190,7 +190,7 @@ function Border:set_size(content_win_options, border_win_options, create_window)
 end
 
 function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
-  assert(type(content_win_id) == 'number', "Must supply a valid win_id. It's possible you forgot to call with ':'")
+  assert(type(content_win_id) == "number", "Must supply a valid win_id. It's possible you forgot to call with ':'")
 
   local obj = {}
 
