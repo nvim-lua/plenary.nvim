@@ -1,10 +1,7 @@
-local a = require('plenary.async.async')
-local await = a.await
-local async = a.async
-local vararg = require('plenary.vararg')
-local uv = vim.loop
+local a = require "plenary.async.async"
+local vararg = require "plenary.vararg"
 -- local control = a.control
-local control = require('plenary.async.control')
+local control = require "plenary.async.control"
 local channel = control.channel
 
 local M = {}
@@ -29,7 +26,7 @@ M.block_on = function(async_function, timeout)
 
   a.run(async_function, function(_stat, ...)
     stat = _stat
-    ret = {...}
+    ret = { ... }
   end)
 
   local function check()
@@ -40,7 +37,7 @@ M.block_on = function(async_function, timeout)
   end
 
   if not vim.wait(timeout or 2000, check, 20, false) then
-    error("Blocking on future timed out or was interrupted")
+    error "Blocking on future timed out or was interrupted"
   end
 
   return unpack(ret)
@@ -63,7 +60,7 @@ M.join = function(async_fns)
     assert(type(async_fn) == "function", "type error :: future must be function")
 
     local cb = function(...)
-      results[i] = {...}
+      results[i] = { ... }
       done = done + 1
       if done == len then
         tx()

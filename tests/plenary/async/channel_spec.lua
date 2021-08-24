@@ -1,11 +1,11 @@
-require('plenary.async').tests.add_to_env()
+require("plenary.async").tests.add_to_env()
 local channel = a.control.channel
 local eq = assert.are.same
 local apcall = a.util.apcall
 
-describe('channel', function()
-  describe('oneshot', function()
-    a.it('should work when rx is used first', function()
+describe("channel", function()
+  describe("oneshot", function()
+    a.it("should work when rx is used first", function()
       local tx, rx = channel.oneshot()
 
       a.run(function()
@@ -14,21 +14,20 @@ describe('channel', function()
         eq("sent value", got)
       end)
 
-      tx("sent value")
-
+      tx "sent value"
     end)
 
-    a.it('should work when tx is used first', function()
+    a.it("should work when tx is used first", function()
       local tx, rx = channel.oneshot()
 
-      tx("sent value")
+      tx "sent value"
 
       local got = rx()
 
       eq("sent value", got)
     end)
 
-    a.it('should work with multiple returns', function()
+    a.it("should work with multiple returns", function()
       local tx, rx = channel.oneshot()
 
       a.run(function()
@@ -40,7 +39,7 @@ describe('channel', function()
       tx("sent value", "another sent value")
     end)
 
-    a.it('should work when sending a falsey value', function ()
+    a.it("should work when sending a falsey value", function()
       local tx, rx = channel.oneshot()
 
       tx(false)
@@ -54,7 +53,7 @@ describe('channel', function()
       eq(stat, false)
     end)
 
-    a.it('should work when sending a nil value', function ()
+    a.it("should work when sending a nil value", function()
       local tx, rx = channel.oneshot()
 
       tx(nil)
@@ -68,7 +67,7 @@ describe('channel', function()
       eq(stat, false)
     end)
 
-    a.it('should error when sending mulitple times', function()
+    a.it("should error when sending mulitple times", function()
       local tx, rx = channel.oneshot()
 
       tx()
@@ -76,7 +75,7 @@ describe('channel', function()
       eq(stat, false)
     end)
 
-    a.it('should block receiving multiple times', function()
+    a.it("should block receiving multiple times", function()
       local tx, rx = channel.oneshot()
       tx(true)
       rx()
@@ -85,8 +84,8 @@ describe('channel', function()
     end)
   end)
 
-  describe('counter', function()
-    a.it('should work', function()
+  describe("counter", function()
+    a.it("should work", function()
       local tx, rx = channel.counter()
 
       tx.send()
@@ -105,7 +104,7 @@ describe('channel', function()
       eq(counter, 3)
     end)
 
-    a.it('should work when getting last', function()
+    a.it("should work when getting last", function()
       local tx, rx = channel.counter()
 
       tx.send()

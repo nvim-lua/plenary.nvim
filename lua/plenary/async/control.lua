@@ -1,6 +1,6 @@
-local a = require('plenary.async.async')
-local Deque = require('plenary.async.structs').Deque
-local tbl = require('plenary.tbl')
+local a = require "plenary.async.async"
+local Deque = require("plenary.async.structs").Deque
+local tbl = require "plenary.tbl"
 
 local M = {}
 
@@ -10,7 +10,7 @@ Condvar.__index = Condvar
 ---@class Condvar
 ---@return Condvar
 function Condvar.new()
-  return setmetatable({handles = {}}, Condvar)
+  return setmetatable({ handles = {} }, Condvar)
 end
 
 ---`blocks` the thread until a notification is received
@@ -29,7 +29,9 @@ end
 
 ---notify randomly one person that is waiting on this Condvar
 function Condvar:notify_one()
-  if #self.handles == 0 then return end
+  if #self.handles == 0 then
+    return
+  end
 
   local idx = math.random(#self.handles)
   self.handles[idx]()
@@ -44,16 +46,18 @@ Semaphore.__index = Semaphore
 ---@class Semaphore
 ---@param initial_permits number: the number of permits that it can give out
 ---@return Semaphore
-function Semaphore.new(initial_permits) 
+function Semaphore.new(initial_permits)
   vim.validate {
     initial_permits = {
       initial_permits,
-      function(n) return n > 0 end,
-      'number greater than 0'
-    }
+      function(n)
+        return n > 0
+      end,
+      "number greater than 0",
+    },
   }
 
-  return setmetatable({permits = initial_permits, handles = {}}, Semaphore)
+  return setmetatable({ permits = initial_permits, handles = {} }, Semaphore)
 end
 
 ---async function, blocks until a permit can be acquired
@@ -104,7 +108,7 @@ M.channel.oneshot = function()
   --- sender is not async
   --- sends a value which can be nil
   local sender = function(...)
-    assert(not sent, 'Oneshot channel can only send once')
+    assert(not sent, "Oneshot channel can only send once")
     sent = true
 
     if saved_callback ~= nil then
@@ -113,7 +117,7 @@ M.channel.oneshot = function()
     end
 
     -- optimise for when there is only one or zero argument, no need to pack
-    local nargs = select('#', ...)
+    local nargs = select("#", ...)
     if nargs == 1 or nargs == 0 then
       val = ...
       is_single = true
@@ -125,7 +129,7 @@ M.channel.oneshot = function()
   --- receiver is async
   --- blocks until a value is received
   local receiver = a.wrap(function(callback)
-    assert(not received, 'Oneshot channel can only receive one value!')
+    assert(not received, "Oneshot channel can only receive one value!")
 
     if sent then
       received = true
@@ -186,7 +190,7 @@ M.channel.mpsc = function()
   local Sender = {}
 
   function Sender.send(...)
-    deque:pushleft({...})
+    deque:pushleft { ... }
     condvar:notify_all()
   end
 
@@ -205,7 +209,7 @@ M.channel.mpsc = function()
     end
     local val = deque:popright()
     deque:clear()
-    return unpack(val)
+    return unpack(val or {})
   end
 
   return Sender, Receiver

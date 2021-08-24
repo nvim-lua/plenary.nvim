@@ -22,27 +22,28 @@ and returns table:
 see test/plenary/curl_spec.lua for examples.
 
 author = github.com/tami5
-]]--
+]]
+--
 
 local util, parse, request = {}, {}, nil
 
 -- Helpers --------------------------------------------------
 -------------------------------------------------------------
-local F = require('plenary.functional')
-local J = require('plenary.job')
-local P = require('plenary.path')
+local F = require "plenary.functional"
+local J = require "plenary.job"
+local P = require "plenary.path"
 
 -- Utils ----------------------------------------------------
 -------------------------------------------------------------
 
 util.url_encode = function(str)
   if type(str) ~= "number" then
-  str = str:gsub("\r?\n", "\r\n")
-  str = str:gsub("([^%w%-%.%_%~ ])", function(c)
-    return string.format("%%%02X", c:byte())
-  end)
-  str = str:gsub(" ", "+")
-  return str
+    str = str:gsub("\r?\n", "\r\n")
+    str = str:gsub("([^%w%-%.%_%~ ])", function(c)
+      return string.format("%%%02X", c:byte())
+    end)
+    str = str:gsub(" ", "+")
+    return str
   else
     return str
   end
@@ -50,105 +51,138 @@ end
 
 util.kv_to_list = function(kv, prefix, sep)
   return vim.tbl_flatten(F.kv_map(function(kvp)
-    return {prefix, kvp[1] .. sep .. kvp[2]}
+    return { prefix, kvp[1] .. sep .. kvp[2] }
   end, kv))
 end
 
 util.kv_to_str = function(kv, sep, kvsep)
-  return F.join(F.kv_map(function(kvp)
-    return kvp[1] .. kvsep .. util.url_encode(kvp[2])
-  end, kv), sep)
+  return F.join(
+    F.kv_map(function(kvp)
+      return kvp[1] .. kvsep .. util.url_encode(kvp[2])
+    end, kv),
+    sep
+  )
 end
 
 util.gen_dump_path = function()
+  local path
   local id = string.gsub("xxxx4xxx", "[xy]", function(l)
     local v = (l == "x") and math.random(0, 0xf) or math.random(0, 0xb)
     return string.format("%x", v)
   end)
-  local path = "/tmp/plenary_curl_" .. id .. ".headers"
-  return {"-D", path}
+  if P.path.sep == "\\" then
+    path = string.format("%s\\AppData\\Local\\Temp\\plenary_curl_%s.headers", os.getenv "USERPROFILE", id)
+  else
+    path = "/tmp/plenary_curl_" .. id .. ".headers"
+  end
+  return { "-D", path }
 end
 
 -- Parsers ----------------------------------------------------
 ---------------------------------------------------------------
 
 parse.headers = function(t)
-  if not t then return end
+  if not t then
+    return
+  end
   local upper = function(str)
     return string.gsub(" " .. str, "%W%l", string.upper):sub(2)
   end
-  return util.kv_to_list((function()
-    local normilzed = {}
-    for k,v in pairs(t) do
-      normilzed[upper(k:gsub("_", "%-"))] = v
-    end
-    return normilzed
-  end)(), "-H", ": ")
+  return util.kv_to_list(
+    (function()
+      local normilzed = {}
+      for k, v in pairs(t) do
+        normilzed[upper(k:gsub("_", "%-"))] = v
+      end
+      return normilzed
+    end)(),
+    "-H",
+    ": "
+  )
 end
 
 parse.data_body = function(t)
-  if not t then return end
+  if not t then
+    return
+  end
   return util.kv_to_list(t, "-d", "=")
 end
 
 parse.raw_body = function(xs)
-  if not xs then return end
+  if not xs then
+    return
+  end
   if type(xs) == "table" then
     return parse.data_body(xs)
   else
-    return {"--data-raw", xs}
+    return { "--data-raw", xs }
   end
 end
 
 parse.form = function(t)
-  if not t then return end
+  if not t then
+    return
+  end
   return util.kv_to_list(t, "-F", "=")
 end
 
 parse.curl_query = function(t)
-  if not t then return end
+  if not t then
+    return
+  end
   return util.kv_to_str(t, "&", "=")
 end
 
 parse.method = function(s)
-  if not s then return end
+  if not s then
+    return
+  end
   if s ~= "head" then
-    return {"-X", string.upper(s)}
+    return { "-X", string.upper(s) }
   else
-    return {"-I"}
+    return { "-I" }
   end
 end
 
 parse.file = function(p)
-  if not p then return end
-  return {"-d", "@" .. P.expand(P.new(p)) }
+  if not p then
+    return
+  end
+  return { "-d", "@" .. P.expand(P.new(p)) }
 end
 
 parse.auth = function(xs)
-  if not xs then return end
-  return {"-u", type(xs) == "table" and util.kv_to_str(xs, nil, ":") or xs}
+  if not xs then
+    return
+  end
+  return { "-u", type(xs) == "table" and util.kv_to_str(xs, nil, ":") or xs }
 end
 
 parse.url = function(xs, q)
-  if not xs then return end
+  if not xs then
+    return
+  end
   q = parse.curl_query(q)
   if type(xs) == "string" then
     return q and xs .. "?" .. q or xs
   elseif type(xs) == "table" then
-    error("Low level URL definition is not supported.")
+    error "Low level URL definition is not supported."
   end
 end
 
 parse.accept_header = function(s)
-  if not s then return end
-  return {"-H", "Accept: " .. s}
+  if not s then
+    return
+  end
+  return { "-H", "Accept: " .. s }
 end
 
 -- Parse Request -------------------------------------------
 ------------------------------------------------------------
 parse.request = function(opts)
   if opts.body then
-    local b = opts.body; opts.body = nil
+    local b = opts.body
+    opts.body = nil
     if type(b) == "table" then
       opts.data = b
     elseif P.is_file(P.new(b)) then
@@ -157,8 +191,9 @@ parse.request = function(opts)
       opts.raw_body = b
     end
   end
-  return vim.tbl_flatten({
-    "-sSL", opts.dump,
+  return vim.tbl_flatten {
+    "-sSL",
+    opts.dump,
     opts.compressed and "--compressed" or nil,
     parse.method(opts.method),
     parse.headers(opts.headers),
@@ -169,9 +204,10 @@ parse.request = function(opts)
     parse.file(opts.in_file),
     parse.auth(opts.auth),
     opts.raw,
-    opts.output and {"-o", opts.output} or nil,
-    parse.url(opts.url, opts.query)
-  }), opts
+    opts.output and { "-o", opts.output } or nil,
+    parse.url(opts.url, opts.query),
+  },
+    opts
 end
 
 -- Parse response ------------------------------------------
@@ -188,7 +224,7 @@ parse.response = function(lines, dump_path, code)
     status = status,
     headers = headers,
     body = body,
-    exit = code
+    exit = code,
   }
 end
 
@@ -197,12 +233,14 @@ request = function(specs)
   local args, opts = parse.request(vim.tbl_extend("force", {
     compressed = true,
     dry_run = false,
-    dump =  util.gen_dump_path()
+    dump = util.gen_dump_path(),
   }, specs))
 
-  if opts.dry_run then return args end
+  if opts.dry_run then
+    return args
+  end
 
-  local job = J:new{
+  local job = J:new {
     command = "curl",
     args = args,
     on_exit = function(j, code)
@@ -212,7 +250,7 @@ request = function(specs)
       else
         response = output
       end
-    end
+    end,
   }
 
   if opts.callback then
@@ -237,19 +275,17 @@ return (function()
         spec.url = url
         spec.method = method
       end
-      opts = method == "request" and opts or (
-        vim.tbl_extend("keep", opts, spec)
-      )
+      opts = method == "request" and opts or (vim.tbl_extend("keep", opts, spec))
       return request(opts)
     end
   end
   return {
-    get = partial("get"),
-    post = partial("post"),
-    put = partial("put"),
-    head = partial("head"),
-    patch = partial("patch"),
-    delete = partial("delete"),
-    request = partial("request")
+    get = partial "get",
+    post = partial "post",
+    put = partial "put",
+    head = partial "head",
+    patch = partial "patch",
+    delete = partial "delete",
+    request = partial "request",
   }
 end)()

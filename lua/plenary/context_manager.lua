@@ -5,11 +5,11 @@ local context_manager = {}
 
 function context_manager.with(obj, callable)
   -- Wrap functions for people since we're nice
-  if type(obj) == 'function' then
+  if type(obj) == "function" then
     obj = coroutine.create(obj)
   end
 
-  if type(obj) == 'thread' then
+  if type(obj) == "thread" then
     local ok, context = coroutine.resume(obj)
     assert(ok, "Should have yielded in coroutine.")
 
@@ -38,7 +38,7 @@ end
 --- @param filename string|table -- If string, used as io.open(filename)
 ---                                 Else, should be a table with `filename` as an attribute
 function context_manager.open(filename, mode)
-  if type(filename) == 'table' and filename.filename then
+  if type(filename) == "table" and filename.filename then
     filename = filename.filename
   end
 

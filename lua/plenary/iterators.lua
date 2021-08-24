@@ -6,7 +6,7 @@
 ---@brief ]]
 
 local co = coroutine
-local f = require('plenary.functional')
+local f = require "plenary.functional"
 
 --------------------------------------------------------------------------------
 -- Tools
@@ -34,18 +34,22 @@ function Iterator:__call(param, state)
 end
 
 function Iterator:__tostring()
-  return '<iterator>'
+  return "<iterator>"
 end
 
 -- A special hack for zip/chain to skip last two state, if a wrapped iterator
 -- has been passed
 local numargs = function(...)
-  local n = select('#', ...)
+  local n = select("#", ...)
   if n >= 3 then
     -- Fix last argument
     local it = select(n - 2, ...)
-    if type(it) == 'table' and getmetatable(it) == Iterator and
-      it.param == select(n - 1, ...) and it.state == select(n, ...) then
+    if
+      type(it) == "table"
+      and getmetatable(it) == Iterator
+      and it.param == select(n - 1, ...)
+      and it.state == select(n, ...)
+    then
       return n - 2
     end
   end
@@ -73,9 +77,9 @@ local nil_gen = function(_param, _state)
   return nil
 end
 
-local ipairs_gen = ipairs({}) -- get the generating function from ipairs
+local ipairs_gen = ipairs {}
 
-local pairs_gen = pairs({}) -- get the generating function from pairs
+local pairs_gen = pairs {}
 
 local map_gen = function(map, key)
   key, value = pairs_gen(map, key)
@@ -95,7 +99,7 @@ local rawiter = function(obj, param, state)
   assert(obj ~= nil, "invalid iterator")
 
   if type(obj) == "table" then
-    local mt = getmetatable(obj);
+    local mt = getmetatable(obj)
 
     if mt ~= nil then
       if mt == Iterator then
@@ -109,9 +113,9 @@ local rawiter = function(obj, param, state)
       -- hash
       return map_gen, obj, nil
     end
-  elseif (type(obj) == "function") then
+  elseif type(obj) == "function" then
     return obj, param, state
-  elseif (type(obj) == "string") then
+  elseif type(obj) == "string" then
     if #obj == 0 then
       return nil_gen, nil, nil
     end
@@ -133,7 +137,7 @@ local function wrap(gen, param, state)
   return setmetatable({
     gen = gen,
     param = param,
-    state = state
+    state = state,
   }, Iterator)
 end
 
@@ -167,16 +171,20 @@ function Iterator:for_each(fn)
 end
 
 function Iterator:stateful()
-  return wrap(co.wrap(function()
-    self:for_each(function(...)
-      co.yield(f.first(...), ...)
-    end)
+  return wrap(
+    co.wrap(function()
+      self:for_each(function(...)
+        co.yield(f.first(...), ...)
+      end)
 
-    -- too make sure that we always return nil if there are no more
-    while true do
-      co.yield()
-    end
-  end), nil, nil)
+      -- too make sure that we always return nil if there are no more
+      while true do
+        co.yield()
+      end
+    end),
+    nil,
+    nil
+  )
 end
 
 -- function Iterator:stateful()
@@ -238,10 +246,10 @@ local range = function(start, stop, step)
   assert(type(step) == "number", "step must be a number")
   assert(step ~= 0, "step must not be zero")
 
-  if (step > 0) then
-    return wrap(range_gen, {stop, step}, start - step)
-  elseif (step < 0) then
-    return wrap(range_rev_gen, {stop, step}, start - step)
+  if step > 0 then
+    return wrap(range_gen, { stop, step }, start - step)
+  elseif step < 0 then
+    return wrap(range_rev_gen, { stop, step }, start - step)
   end
 end
 exports.range = range
@@ -263,10 +271,10 @@ end
 ---@param ...: the arguments to duplicate
 ---@return Iterator
 local duplicate = function(...)
-  if select('#', ...) <= 1 then
+  if select("#", ...) <= 1 then
     return wrap(duplicate_gen, select(1, ...), 0)
   else
-    return wrap(duplicate_table_gen, {...}, 0)
+    return wrap(duplicate_table_gen, { ... }, 0)
   end
 end
 exports.duplicate = duplicate
@@ -321,7 +329,7 @@ local rands = function(n, m)
     assert(type(m) == "number", "invalid second arg to rands")
   end
   assert(n < m, "empty interval")
-  return wrap(rands_gen, {n, m - 1}, 0)
+  return wrap(rands_gen, { n, m - 1 }, 0)
 end
 exports.rands = rands
 
@@ -349,7 +357,7 @@ end
 ---@param sep string: the separator to find and split based on
 ---@return Iterator
 local split = function(input, sep)
-  return wrap(split_gen, {input, sep}, 1)
+  return wrap(split_gen, { input, sep }, 1)
 end
 exports.split = split
 
@@ -380,14 +388,16 @@ end
 ---@param fun function: The function to map with. Will be called on each element
 ---@return Iterator
 function Iterator:map(fun)
-  return wrap(map_gen, {self.gen, self.param, fun}, self.state)
+  return wrap(map_gen, { self.gen, self.param, fun }, self.state)
 end
 
 local flatten_gen1
 do
   local it = function(new_iter, state_x, ...)
-    if state_x == nil then return nil end
-    return {new_iter.gen, new_iter.param, state_x}, ...
+    if state_x == nil then
+      return nil
+    end
+    return { new_iter.gen, new_iter.param, state_x }, ...
   end
 
   flatten_gen1 = function(state, state_x, ...)
@@ -405,12 +415,14 @@ do
       return it(new_iter, new_iter.gen(new_iter.param, new_iter.state))
     end
 
-    return {state[1], state[2], state_x}, ...
+    return { state[1], state[2], state_x }, ...
   end
 end
 
 local flatten_gen = function(_, state)
-  if state == nil then return end
+  if state == nil then
+    return
+  end
   local gen_x, param_x, state_x = state[1], state[2], state[3]
   return flatten_gen1(state, gen_x(param_x, state_x))
 end
@@ -418,7 +430,7 @@ end
 ---Iterator adapter that will recursivley flatten nested iterator structure
 ---@return Iterator
 function Iterator:flatten()
-  return wrap(flatten_gen, false, {self.gen, self.param, self.state})
+  return wrap(flatten_gen, false, { self.gen, self.param, self.state })
 end
 
 --------------------------------------------------------------------------------
@@ -426,7 +438,9 @@ end
 --------------------------------------------------------------------------------
 local filter1_gen = function(fun, gen_x, param_x, state_x, a)
   while true do
-    if state_x == nil or fun(a) then break; end
+    if state_x == nil or fun(a) then
+      break
+    end
     state_x, a = gen_x(param_x, state_x)
   end
   return state_x, a
@@ -453,7 +467,7 @@ filterm_gen = function(fun, gen_x, param_x, state_x, ...)
 end
 
 local filter_detect = function(fun, gen_x, param_x, state_x, ...)
-  if select('#', ...) < 2 then
+  if select("#", ...) < 2 then
     return filter1_gen(fun, gen_x, param_x, state_x, ...)
   else
     return filterm_gen(fun, gen_x, param_x, state_x, ...)
@@ -461,15 +475,15 @@ local filter_detect = function(fun, gen_x, param_x, state_x, ...)
 end
 
 local filter_gen = function(param, state_x)
-    local gen_x, param_x, fun = param[1], param[2], param[3]
-    return filter_detect(fun, gen_x, param_x, gen_x(param_x, state_x))
+  local gen_x, param_x, fun = param[1], param[2], param[3]
+  return filter_detect(fun, gen_x, param_x, gen_x(param_x, state_x))
 end
 
 ---Iterator adapter that will filter values
 ---@param fun function: The function to filter values with. If the function returns true, the value will be kept.
 ---@return Iterator
 function Iterator:filter(fun)
-  return wrap(filter_gen, {self.gen, self.param, fun}, self.state)
+  return wrap(filter_gen, { self.gen, self.param, fun }, self.state)
 end
 
 --------------------------------------------------------------------------------
@@ -534,7 +548,7 @@ end
 function Iterator:tolistn()
   local list = {}
   self:for_each(function(...)
-    table.insert(list, {...})
+    table.insert(list, { ... })
   end)
   return list
 end
@@ -563,9 +577,9 @@ local chain_gen_r2 = function(param, state, state_x, ...)
       return nil
     end
     state_x = param[3 * i]
-    return chain_gen_r1(param, {i, state_x})
+    return chain_gen_r1(param, { i, state_x })
   end
-  return {state[1], state_x}, ...
+  return { state[1], state_x }, ...
 end
 
 chain_gen_r1 = function(param, state)
@@ -598,7 +612,7 @@ local chain = function(...)
     param[3 * i] = state_x
   end
 
-  return wrap(chain_gen_r1, param, {1, param[3]})
+  return wrap(chain_gen_r1, param, { 1, param[3] })
 end
 
 Iterator.chain = chain

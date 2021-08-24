@@ -9,7 +9,7 @@ reload.reload_module = function(module_name, starts_with_only)
     end
   else
     matcher = function(pack)
-      return string.find(pack, '^' .. module_name)
+      return string.find(pack, "^" .. module_name)
     end
   end
 

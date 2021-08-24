@@ -18,6 +18,8 @@ Plug 'nvim-lua/plenary.nvim'
 
 ## Modules
 
+- `plenary.async`
+- `plenary.async_lib`
 - `plenary.job`
 - `plenary.path`
 - `plenary.scandir`
@@ -26,9 +28,78 @@ Plug 'nvim-lua/plenary.nvim'
 - `plenary.filetype`
 - `plenary.strings`
 
+### plenary.async
+
+A Lua module for asynchronous programming using coroutines. This library is built on native lua coroutines and `libuv`. Coroutines make it easy to avoid callback hell and allow for easy cooperative concurrency and cancellation. Apart from allowing users to perform asynchronous io easily, this library also functions as an abstraction for coroutines.
+
+#### Getting started
+
+You can do
+```lua
+local async = require "plenary.async"
+```
+All other modules are automatically required and can bet accessed by indexing `async`.
+You needn't worry about performance as this will require all the submodules lazily.
+
+#### A quick example
+
+Libuv luv provides this example of reading a file.
+
+```lua
+local uv = vim.loop
+
+local read_file = function(path, callback)
+  uv.fs_open(path, "r", 438, function(err, fd)
+    assert(not err, err)
+    uv.fs_fstat(fd, function(err, stat)
+      assert(not err, err)
+      uv.fs_read(fd, stat.size, 0, function(err, data)
+        assert(not err, err)
+        uv.fs_close(fd, function(err)
+          assert(not err, err)
+          callback(data)
+        end)
+      end)
+    end)
+  end)
+end
+```
+
+We can write it using the library like this:
+```lua
+local a = require "plenary.async"
+
+local read_file = function(path)
+  local err, fd = a.uv.fs_open(path, "r", 438)
+  assert(not err, err)
+
+  local err, stat = a.uv.fs_fstat(fd)
+  assert(not err, err)
+
+  local err, data = a.uv.fs_read(fd, stat.size, 0)
+  assert(not err, err)
+
+  local err = a.uv.fs_close(fd)
+  assert(not err, err)
+
+  return data
+end
+```
+
+#### Plugins using this
+
+- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
+- [vgit.nvim](https://github.com/tanvirtin/vgit.nvim)
+- [neogit](https://github.com/TimUntersberger/neogit) (using version 1)
+
+### plenary.async_lib
+
+Please use `plenary.async` instead. This was version 1 and is just here for compatibility reasons.
+
 ### plenary.job
 
-A Lua module to interactive with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
+A Lua module to interact with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
 Define optional callbacks for `on_stdout`, `on_stderr` and `on_exit` and `start` your Job.
 
 Note: Each job has an empty environment.
@@ -54,7 +125,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 
 ### plenary.scandir
 
-`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scan over a given directory, or a set of directories.
+`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scans over a given directory, or a set of directories.
 
 It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
 
@@ -100,9 +171,13 @@ nvim --headless -c "PlenaryBustedDirectory tests/plenary/ {minimal_init = 'tests
 ```
 
 Where the first argument is the directory you'd like to test. It will search for files with
-the pattern `*_spec.lua` and execute them in parallel in separate neovim instances.
+the pattern `*_spec.lua` and execute them in separate neovim instances.
 
-The second argument is an optional init.vim to specify so that you can make reproducible tests!
+The second argument is a Lua option table with the following fields:
+- `minimal_init`: specify an init.vim to use for this instance, uses `--noplugin`
+- `minimal`: uses `--noplugin` without an init script (overrides `minimal_init`)
+- `sequential`: whether to run tests sequentially (default is to run in parallel)
+- `keep_going`: if `sequential`, whether to continue on test failure (default true)
 
 The exit code is 0 when success and 1 when fail, so you can use it easily in a `Makefile`!
 
@@ -132,16 +207,8 @@ OTHER OTHER NOTE:
 Take a look at some test examples [here](TESTS_README.md).
 
 #### Colors
-To have "Success" in green and "Failed" in red, you need [nvim-terminal.lua](https://github.com/norcalli/nvim-terminal.lua).
-In order for it to work, make sure to run the setup function in your config.
-For `init.vim`:
-```vim
-lua require('terminal').setup()
-```
-For `init.lua`:
-```lua
-require('terminal').setup()
-```
+
+You no longer need nvim-terminal to get this to work. We use `nvim_open_term` now.
 
 ### plenary.filetype
 
@@ -217,10 +284,7 @@ Status: WIP
 
 ### plenary.popup
 
-`popup_*` clone of Vim's commands. If it gets good enough, will submit PR to Neovim and write C wrappers
-to provide compatibility layer for Neovim.
-
-Status: WIP
+See [popup documentation](./POPUP.md) for both progress tracking and implemented APIs.
 
 ### plenary.window
 

@@ -3,13 +3,28 @@
 ---         It may change in the future :)
 ---@brief ]]
 
-local exports = require('plenary.async.async')
-exports.uv = require('plenary.async.uv_async')
-exports.util = require('plenary.async.util')
-exports.lsp = require('plenary.async.lsp')
-exports.api = require('plenary.async.api')
-exports.tests = require('plenary.async.tests')
-exports.control = require('plenary.async.control')
+local lookups = {
+  uv = "plenary.async.uv_async",
+  util = "plenary.async.util",
+  lsp = "plenary.async.lsp",
+  api = "plenary.async.api",
+  tests = "plenary.async.tests",
+  control = "plenary.async.control",
+}
+
+local exports = setmetatable(require "plenary.async.async", {
+  __index = function(t, k)
+    local require_path = lookups[k]
+    if not require_path then
+      return
+    end
+
+    local mod = require(require_path)
+    t[k] = mod
+
+    return mod
+  end,
+})
 
 exports.tests.add_globals = function()
   a = exports

@@ -1,4 +1,4 @@
-local a = require('plenary.async.async')
+local a = require "plenary.async.async"
 
 local M = {}
 
