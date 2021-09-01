@@ -189,6 +189,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
     width = content_win_options.width + thickness.left + thickness.right,
     height = content_win_options.height + thickness.top + thickness.bot,
     noautocmd = content_win_options.noautocmd,
+    focusable = vim.F.if_nil(border_win_options.focusable, false),
   })
 
   vim.cmd(
