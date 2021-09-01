@@ -91,7 +91,7 @@ end
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 - [vgit.nvim](https://github.com/tanvirtin/vgit.nvim)
-- [neogit](https://github.com/TimUntersberger/neogit) (using version 1)
+- [neogit](https://github.com/TimUntersberger/neogit)
 
 ### plenary.async_lib
 
