@@ -183,7 +183,7 @@ end
 -- Can be used to create a new window (with `create_window = true`)
 -- or change an existing one
 function Border:set_size(content_win_options, border_win_options, create_window)
-  create_window = (create_window ~= nil) and create_window or false
+  create_window = vim.F.if_nil(create_window, false)
 
   local nvim_win_config
   nvim_win_config, border_win_options = calc_win_config(content_win_options, border_win_options)
