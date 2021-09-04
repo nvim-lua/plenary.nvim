@@ -95,6 +95,7 @@ function popup.create(what, vim_options)
 
   local option_defaults = {
     posinvert = true,
+    zindex = 50,
   }
 
   local win_opts = {}
@@ -201,8 +202,17 @@ function popup.create(what, vim_options)
   --   textpropwin
   --   textpropid
 
+  -- zindex, Priority for the popup, default 50.  Minimum value is
+  -- ,   1, maximum value is 32000.
+  local zindex = dict_default(vim_options, "zindex", option_defaults)
+  win_opts.zindex = utils.bounded(zindex, 1, 32000)
+
   -- noautocmd, undocumented vim default per https://github.com/vim/vim/issues/5737
   win_opts.noautocmd = vim.F.if_nil(vim_options.noautocmd, true)
+
+  -- focusable,
+  -- vim popups are not focusable windows
+  win_opts.focusable = vim.F.if_nil(vim_options.focusable, false)
 
   local win_id
   if vim_options.hidden then
@@ -349,6 +359,7 @@ function popup.create(what, vim_options)
 
   local border = nil
   if should_show_border then
+    border_options.focusable = vim_options.border_focusable
     border = Border:new(bufnr, win_id, win_opts, border_options)
     popup._borders[win_id] = border
   end

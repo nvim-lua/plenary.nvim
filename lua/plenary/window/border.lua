@@ -180,7 +180,9 @@ function Border:set_size(content_win_options, border_win_options, create_window)
     col = content_win_options.col - thickness.left,
     width = content_win_options.width + thickness.left + thickness.right,
     height = content_win_options.height + thickness.top + thickness.bot,
+    zindex = content_win_options.zindex or 50,
     noautocmd = content_win_options.noautocmd,
+    focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
   if create_window then
     self.win_id = vim.api.nvim_open_win(self.bufnr, false, nvim_win_config)
@@ -204,6 +206,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
 
   -- Create a border window and buffer, with border characters around the edge
   Border.set_size(obj, content_win_options, border_win_options, true)
+
 
   vim.cmd(
     string.format(
