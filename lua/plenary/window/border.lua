@@ -211,7 +211,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
 
   -- Create a border window and buffer, with border characters around the edge
   local nvim_win_config = Border.__update_lines_get_win_config(obj, content_win_options, border_win_options)
-  obj.win_id = vim.api.nvim_open_win(self.bufnr, false, nvim_win_config)
+  obj.win_id = vim.api.nvim_open_win(obj.bufnr, false, nvim_win_config)
 
   vim.cmd(
     string.format(
