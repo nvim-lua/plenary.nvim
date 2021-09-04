@@ -146,7 +146,7 @@ function popup.create(what, vim_options)
     if type(vim_options.line) == "string" then
       win_opts.row = cursor_relative_pos(vim_options.line, "row")
     else
-      win_opts.row = vim_options.line
+      win_opts.row = vim_options.line - 1
     end
   else
     win_opts.row = math.floor((vim.o.lines - win_opts.height)/2)
@@ -156,7 +156,7 @@ function popup.create(what, vim_options)
     if type(vim_options.col) == "string" then
       win_opts.col = cursor_relative_pos(vim_options.col, "col")
     else
-      win_opts.col = vim_options.col
+      win_opts.col = vim_options.col - 1
     end
   else
     win_opts.col = math.floor((vim.o.columns - win_opts.width)/2)
