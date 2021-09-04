@@ -147,14 +147,8 @@ function Border:change_title(new_title)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 end
 
--- Sets the size and position of the given Border.
--- Can be used to create a new window (with `create_window = true`)
--- or change an existing one
-function Border:set_size(content_win_options, border_win_options, create_window)
-  create_window = (create_window ~= nil) and create_window or false
-
-  -- TODO: Probably can use just deep_extend, now that it's available
-  border_win_options = tbl.apply_defaults(border_win_options, {
+local calc_win_config = function(content_win_options, border_win_options)
+  border_win_options = vim.tbl_deep_extend("keep", border_win_options, {
     border_thickness = Border._default_thickness,
 
     -- Border options, could be passed as a list?
@@ -167,9 +161,6 @@ function Border:set_size(content_win_options, border_win_options, create_window)
     botright = "╝",
     bot = "═",
   })
-
-  self.contents = Border._create_lines(content_win_options, border_win_options)
-  vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   local thickness = border_win_options.border_thickness
   local nvim_win_config = {
@@ -184,6 +175,24 @@ function Border:set_size(content_win_options, border_win_options, create_window)
     noautocmd = content_win_options.noautocmd,
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
+
+  return nvim_win_config, border_win_options
+end
+
+-- Sets the size and position of the given Border.
+-- Can be used to create a new window (with `create_window = true`)
+-- or change an existing one
+function Border:set_size(content_win_options, border_win_options, create_window)
+  create_window = (create_window ~= nil) and create_window or false
+
+  local nvim_win_config
+  nvim_win_config, border_win_options = calc_win_config(content_win_options, border_win_options)
+
+  -- Update border characters
+  self.contents = Border._create_lines(content_win_options, border_win_options)
+  vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
+
+  -- Update sizing
   if create_window then
     self.win_id = vim.api.nvim_open_win(self.bufnr, false, nvim_win_config)
   else
@@ -206,7 +215,6 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
 
   -- Create a border window and buffer, with border characters around the edge
   Border.set_size(obj, content_win_options, border_win_options, true)
-
 
   vim.cmd(
     string.format(
