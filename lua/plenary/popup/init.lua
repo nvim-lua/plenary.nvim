@@ -117,7 +117,12 @@ function popup.create(what, vim_options)
   win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
   win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
 
-  -- 
+  -- pos
+  --
+  -- Using "topleft", "topright", "botleft", "botright" defines what corner of the popup "line"
+  -- and "col" are used for. When not set "topleft" behaviour is used.
+  -- Alternatively "center" can be used to position the popup in the center of the Neovim window,
+  -- in which case "line" and "col" are ignored.
   if vim_options.pos then
     if vim_options.pos == "center" then
       vim_options.line = 0
@@ -149,7 +154,7 @@ function popup.create(what, vim_options)
       win_opts.row = vim_options.line - 1
     end
   else
-    win_opts.row = math.floor((vim.o.lines - win_opts.height)/2)
+    win_opts.row = math.floor((vim.o.lines - win_opts.height) / 2)
   end
 
   if vim_options.col and vim_options.col ~= 0 then
@@ -159,7 +164,7 @@ function popup.create(what, vim_options)
       win_opts.col = vim_options.col - 1
     end
   else
-    win_opts.col = math.floor((vim.o.columns - win_opts.width)/2)
+    win_opts.col = math.floor((vim.o.columns - win_opts.width) / 2)
   end
 
   -- , fixed    When FALSE (the default), and:
