@@ -56,6 +56,10 @@ function harness.test_directory(directory, opts)
     if res.border_win_id then
       vim.api.nvim_win_set_option(res.border_win_id, "winhl", "Normal:Normal")
     end
+
+    if res.bufnr then
+      vim.api.nvim_buf_set_option(res.bufnr, "filetype", "PlenaryTestPopup")
+    end
     vim.cmd "mode"
   end
 
