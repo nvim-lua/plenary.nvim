@@ -9,6 +9,8 @@ local Border = require "plenary.window.border"
 local Window = require "plenary.window"
 local utils = require "plenary.popup.utils"
 
+local if_nil = vim.F.if_nil
+
 local popup = {}
 
 popup._pos_map = {
@@ -34,6 +36,77 @@ end
 
 -- Callbacks to be called later by popup.execute_callback
 popup._callbacks = {}
+
+-- Convert the positional {vim_options} to compatible neovim options and add them to {win_opts}
+-- If an option is not given in {vim_options}, fall back to {default_opts}
+local function add_position_config(win_opts, vim_options, default_opts)
+  default_opts = default_opts or {}
+
+  local cursor_relative_pos = function(pos_str, dim)
+    assert(string.find(pos_str, "^cursor"), "Invalid value for " .. dim)
+    win_opts.relative = "cursor"
+    local line = 0
+    if (pos_str):match "cursor%+(%d+)" then
+      line = line + tonumber((pos_str):match "cursor%+(%d+)")
+    elseif (pos_str):match "cursor%-(%d+)" then
+      line = line - tonumber((pos_str):match "cursor%-(%d+)")
+    end
+    return line
+  end
+
+  if vim_options.line then
+    if type(vim_options.line) == "string" then
+      win_opts.row = cursor_relative_pos(vim_options.line, "row")
+    else
+      win_opts.row = vim_options.line
+    end
+  else
+    -- TODO: It says it needs to be "vertically cenetered"?...
+    -- wut is that.
+    win_opts.row = if_nil(default_opts.row, 0)
+  end
+
+  if vim_options.col then
+    if type(vim_options.col) == "string" then
+      win_opts.col = cursor_relative_pos(vim_options.col, "col")
+    else
+      win_opts.col = vim_options.col
+    end
+  else
+    -- TODO: It says it needs to be "horizontally cenetered"?...
+    win_opts.col = if_nil(default_opts.col, 0)
+  end
+
+  if vim_options.pos then
+    if vim_options.pos == "center" then
+      -- TODO: Do centering..
+    else
+      win_opts.anchor = popup._pos_map[vim_options.pos]
+    end
+  else
+    win_opts.anchor = if_nil(default_opts.anchor, "NW") -- NW is the default, but makes `posinvert` easier to implement
+  end
+
+  -- , fixed    When FALSE (the default), and:
+  -- ,      - "pos" is "botleft" or "topleft", and
+  -- ,      - "wrap" is off, and
+  -- ,      - the popup would be truncated at the right edge of
+  -- ,        the screen, then
+  -- ,     the popup is moved to the left so as to fit the
+  -- ,     contents on the screen.  Set to TRUE to disable this.
+
+  -- Feels like maxheight, minheight, maxwidth, minwidth will all be related
+  --
+  -- maxheight  Maximum height of the contents, excluding border and padding.
+  -- minheight  Minimum height of the contents, excluding border and padding.
+  -- maxwidth  Maximum width of the contents, excluding border, padding and scrollbar.
+  -- minwidth  Minimum width of the contents, excluding border, padding and scrollbar.
+  local width = if_nil(vim_options.width, default_opts.width)
+  local height = if_nil(vim_options.height, default_opts.height)
+  win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
+  win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
+
+end
 
 function popup.create(what, vim_options)
   local bufnr
@@ -98,82 +171,22 @@ function popup.create(what, vim_options)
     zindex = 50,
   }
 
-  local win_opts = {}
-  win_opts.relative = "editor"
-
-  local cursor_relative_pos = function(pos_str, dim)
-    assert(string.find(pos_str, "^cursor"), "Invalid value for " .. dim)
-    win_opts.relative = "cursor"
-    local line = 0
-    if (pos_str):match "cursor%+(%d+)" then
-      line = line + tonumber((pos_str):match "cursor%+(%d+)")
-    elseif (pos_str):match "cursor%-(%d+)" then
-      line = line - tonumber((pos_str):match "cursor%-(%d+)")
-    end
-    return line
-  end
-
-  if vim_options.line then
-    if type(vim_options.line) == "string" then
-      win_opts.row = cursor_relative_pos(vim_options.line, "row")
-    else
-      win_opts.row = vim_options.line
-    end
-  else
-    -- TODO: It says it needs to be "vertically cenetered"?...
-    -- wut is that.
-    win_opts.row = 0
-  end
-
-  if vim_options.col then
-    if type(vim_options.col) == "string" then
-      win_opts.col = cursor_relative_pos(vim_options.col, "col")
-    else
-      win_opts.col = vim_options.col
-    end
-  else
-    -- TODO: It says it needs to be "horizontally cenetered"?...
-    win_opts.col = 0
-  end
-
-  if vim_options.pos then
-    if vim_options.pos == "center" then
-      -- TODO: Do centering..
-    else
-      win_opts.anchor = popup._pos_map[vim_options.pos]
-    end
-  else
-    win_opts.anchor = "NW" -- This is the default, but makes `posinvert` easier to implement
-  end
-
-  -- , fixed    When FALSE (the default), and:
-  -- ,      - "pos" is "botleft" or "topleft", and
-  -- ,      - "wrap" is off, and
-  -- ,      - the popup would be truncated at the right edge of
-  -- ,        the screen, then
-  -- ,     the popup is moved to the left so as to fit the
-  -- ,     contents on the screen.  Set to TRUE to disable this.
-
-  win_opts.style = "minimal"
-
-  -- Feels like maxheight, minheight, maxwidth, minwidth will all be related
-  --
-  -- maxheight  Maximum height of the contents, excluding border and padding.
-  -- minheight  Minimum height of the contents, excluding border and padding.
-  -- maxwidth  Maximum width of the contents, excluding border, padding and scrollbar.
-  -- minwidth  Minimum width of the contents, excluding border, padding and scrollbar.
-  local width = vim_options.width or 1
-  local height
+  vim_options.width = if_nil(vim_options.width, 1)
   if type(what) == "number" then
-    height = vim.api.nvim_buf_line_count(what)
+    vim_options.height = vim.api.nvim_buf_line_count(what)
   else
     for _, v in ipairs(what) do
-      width = math.max(width, #v)
+      vim_options.width = math.max(vim_options.width, #v)
     end
-    height = #what
+    vim_options.height = #what
   end
-  win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
-  win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
+
+  local win_opts = {}
+  win_opts.relative = "editor"
+  win_opts.style = "minimal"
+
+  -- Add positional and sizing config to win_opts
+  add_position_config(win_opts, vim_options, { width = 1 })
 
   -- posinvert, When FALSE the value of "pos" is always used.  When
   -- ,   TRUE (the default) and the popup does not fit
@@ -208,11 +221,11 @@ function popup.create(what, vim_options)
   win_opts.zindex = utils.bounded(zindex, 1, 32000)
 
   -- noautocmd, undocumented vim default per https://github.com/vim/vim/issues/5737
-  win_opts.noautocmd = vim.F.if_nil(vim_options.noautocmd, true)
+  win_opts.noautocmd = if_nil(vim_options.noautocmd, true)
 
   -- focusable,
   -- vim popups are not focusable windows
-  win_opts.focusable = vim.F.if_nil(vim_options.focusable, false)
+  win_opts.focusable = if_nil(vim_options.focusable, false)
 
   local win_id
   if vim_options.hidden then
@@ -422,18 +435,21 @@ end
 -- - col
 -- - height
 -- - width
--- Unimplemented options here include: max/min height/width, pos, fixed
+-- Unimplemented vim options here include: max/min height/width, pos, fixed
 function popup.move(win_id, vim_options)
   -- Create win_options
   local win_opts = {}
   win_opts.relative = "editor"
 
-  win_opts.width = vim_options.width or vim.api.nvim_win_get_width(win_id)
-  win_opts.height = vim_options.height or vim.api.nvim_win_get_height(win_id)
-
   local current_pos = vim.api.nvim_win_get_position(win_id)
-  win_opts.row = vim_options.line or current_pos[1]
-  win_opts.col = vim_options.col or current_pos[2]
+  local default_opts = {
+    width = vim.api.nvim_win_get_width(win_id),
+    height = vim.api.nvim_win_get_height(win_id),
+    row = current_pos[1],
+    col = current_pos[2],
+  }
+
+  add_position_config(win_opts, vim_options, default_opts)
 
   -- Update content window
   vim.api.nvim_win_set_config(win_id, win_opts)
