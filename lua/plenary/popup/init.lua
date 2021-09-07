@@ -185,7 +185,7 @@ function popup.create(what, vim_options)
   win_opts.style = "minimal"
 
   -- Add positional and sizing config to win_opts
-  add_position_config(win_opts, vim_options, { width = 1 })
+  add_position_config(win_opts, vim_options, { width = 1, height = 1 })
 
   -- posinvert, When FALSE the value of "pos" is always used.  When
   -- ,   TRUE (the default) and the popup does not fit
@@ -434,7 +434,10 @@ end
 -- - col
 -- - height
 -- - width
--- Unimplemented vim options here include: max/min height/width, pos, fixed
+-- - maxheight/minheight
+-- - maxwidth/minwidth
+-- - pos
+-- Unimplemented vim options here include: fixed
 function popup.move(win_id, vim_options)
   -- Create win_options
   local win_opts = {}
