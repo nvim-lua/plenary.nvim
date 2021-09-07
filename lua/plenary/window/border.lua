@@ -149,7 +149,7 @@ end
 
 -- Updates characters for border lines, and returns nvim_win_config
 -- (generally used in conjunction with `set_size` or `new`)
-function Border:__update_lines_get_win_config(content_win_options, border_win_options)
+function Border:__align_calc_config(content_win_options, border_win_options)
   border_win_options = vim.tbl_deep_extend("keep", border_win_options, {
     border_thickness = Border._default_thickness,
 
@@ -190,7 +190,7 @@ end
 -- or change an existing one
 function Border:set_size(content_win_options, border_win_options)
   -- Update lines in border buffer, and get config for border window
-  local nvim_win_config = self:__update_lines_get_win_config(content_win_options, border_win_options)
+  local nvim_win_config = self:__align_calc_config(content_win_options, border_win_options)
 
   -- Set config for border window
   vim.api.nvim_win_set_config(self.win_id, nvim_win_config)
@@ -210,7 +210,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   vim.api.nvim_buf_set_option(obj.bufnr, "bufhidden", "wipe")
 
   -- Create a border window and buffer, with border characters around the edge
-  local nvim_win_config = Border.__update_lines_get_win_config(obj, content_win_options, border_win_options)
+  local nvim_win_config = Border.__align_calc_config(obj, content_win_options, border_win_options)
   obj.win_id = vim.api.nvim_open_win(obj.bufnr, false, nvim_win_config)
 
   vim.cmd(
