@@ -105,7 +105,6 @@ local function add_position_config(win_opts, vim_options, default_opts)
   local height = if_nil(vim_options.height, default_opts.height)
   win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
   win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
-
 end
 
 function popup.create(what, vim_options)
