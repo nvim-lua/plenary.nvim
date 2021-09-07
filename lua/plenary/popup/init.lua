@@ -54,6 +54,7 @@ local function add_position_config(win_opts, vim_options, default_opts)
     return line
   end
 
+  -- line/row
   if vim_options.line then
     if type(vim_options.line) == "string" then
       win_opts.row = cursor_relative_pos(vim_options.line, "row")
@@ -66,6 +67,7 @@ local function add_position_config(win_opts, vim_options, default_opts)
     win_opts.row = if_nil(default_opts.row, 0)
   end
 
+  -- col
   if vim_options.col then
     if type(vim_options.col) == "string" then
       win_opts.col = cursor_relative_pos(vim_options.col, "col")
@@ -77,6 +79,7 @@ local function add_position_config(win_opts, vim_options, default_opts)
     win_opts.col = if_nil(default_opts.col, 0)
   end
 
+  -- pos
   if vim_options.pos then
     if vim_options.pos == "center" then
       -- TODO: Do centering..
@@ -451,6 +454,7 @@ function popup.move(win_id, vim_options)
     col = current_pos[2],
   }
 
+  -- Add positional and sizing config to win_opts
   add_position_config(win_opts, vim_options, default_opts)
 
   -- Update content window
