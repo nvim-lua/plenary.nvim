@@ -416,7 +416,14 @@ function popup.create(what, vim_options)
   }
 end
 
-function popup.resize(win_id, vim_options)
+-- Move popup with window id {win_id} to the position specified with {vim_options}.
+-- {vim_options} may contain the following items that determine the popup position/size:
+-- - line
+-- - col
+-- - height
+-- - width
+-- Unimplemented options here include: max/min height/width, pos, fixed
+function popup.move(win_id, vim_options)
   -- Create win_options
   local win_opts = {}
   win_opts.relative = "editor"
