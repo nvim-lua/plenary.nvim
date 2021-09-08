@@ -1,9 +1,8 @@
 local B = {}
 local stat = require "plenary.benchmark.stat"
 
-local get_stat = function(runs, fun)
+local get_stat = function(start, runs, fun)
   local result = {}
-  local start = vim.loop.hrtime()
 
   for i = 1, runs do
     fun()
@@ -12,7 +11,6 @@ local get_stat = function(runs, fun)
 
   local ret = {}
 
-  ret.elapsed = vim.loop.hrtime() - start
   ret.max, ret.min = stat.maxmin(result)
   ret.mean = stat.mean(result)
   ret.median = stat.median(result)
@@ -21,54 +19,48 @@ local get_stat = function(runs, fun)
   return ret
 end
 
+local get_output = function(name, res)
+  return ('  - ("%s") min: %.3fs, max: %.3fs, mean: %.3fs, median: %fs, std: %fs\n'):format(
+    name,
+    res.min,
+    res.max,
+    res.mean,
+    res.median,
+    res.std
+  )
+end
+
 ---@class benchmark_run_opts
 ---@field warmup number @number of initial runs before starting to track time.
 ---@field runs number @number of runs to make
----@field fun function @function to execute
+---@field funs table<string, function> @function to execute
 
 ---Benchmark a function
 ---@param name string @benchmark name
 ---@param opts benchmark_run_opts
-B.run = function(name, opts)
-  for i = 1, opts.warmup do
-    opts.fun()
+local bench = function(name, opts)
+  for _ = 1, opts.warmup or 5 do
+    for _, fun in pairs(opts.funs) do
+      fun()
+    end
+  end
+  local start = vim.loop.hrtime()
+
+  local output, res = "", {}
+
+  for k, fun in pairs(opts.funs) do
+    res[k] = get_stat(start, opts.runs, fun)
+    output = output .. get_output(k, res[k])
   end
 
-  local res = get_stat(opts.runs, opts.fun)
+  res.elapsed = vim.loop.hrtime() - start
 
-  print(('("%s") Benchmark: \n\n  - total elapsed time: %.3fms'):format(name, res.elapsed))
-  print("  - runs: " .. opts.runs)
   print(
-    ("  - min: %.3fs, max: %.3fs, mean: %.3fs, median: %fs, std: %fs\n"):format(
-      res.min,
-      res.max,
-      res.mean,
-      res.median,
-      res.std
-    )
+    ('("%s") Benchmark: \n\n  - total elapsed time: %.3fms\n  - runs: %s\n'):format(name, res.elapsed, opts.runs)
+      .. output
   )
 
   return res
 end
 
----@class benchmark_compare_opts
----@field warmup number @number of initial runs before starting to track time.
----@field runs number @number of runs to make
----@field new function @function to test
----@field base function @function to compare against
-
----Compare between {fun1} and {fun1} results
----@param name string @benchmark name
----@param opts benchmark_compare_opts
-B.compare = function(name, opts)
-  for i = 1, opts.warmuwarmup do
-    opts.new()
-    opts.base()
-  end
-
-  local base_result = get_stat(opts.runs, opts.base)
-  local new_result = get_stat(opts.runs, opts.new)
-  ---
-end
-
-return B
+return bench
