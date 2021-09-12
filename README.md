@@ -178,6 +178,8 @@ The second argument is a Lua option table with the following fields:
 - `minimal`: uses `--noplugin` without an init script (overrides `minimal_init`)
 - `sequential`: whether to run tests sequentially (default is to run in parallel)
 - `keep_going`: if `sequential`, whether to continue on test failure (default true)
+- `timeout`: controls the maximum time allotted to each job in parallel or
+  sequential operation (defaults to 50,000 milliseconds)
 
 The exit code is 0 when success and 1 when fail, so you can use it easily in a `Makefile`!
 
