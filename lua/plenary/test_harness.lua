@@ -40,16 +40,12 @@ end
 
 function harness.test_directory(directory, opts)
   print "Starting..."
-  opts = vim.tbl_deep_extend(
-    "force",
-    {
-      winopts = { winblend = 3 },
-      sequential = false,
-      keep_going = true,
-      timeout = 50000,
-    },
-    opts or {}
-  )
+  opts = vim.tbl_deep_extend("force", {
+    winopts = { winblend = 3 },
+    sequential = false,
+    keep_going = true,
+    timeout = 50000,
+  }, opts or {})
 
   local res = {}
   if not headless then
