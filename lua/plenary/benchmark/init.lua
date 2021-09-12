@@ -14,14 +14,36 @@ end
 
 local get_output = function(index, res, runs)
   -- divine with a sutable one / 1e3, 1e6, 1e9
+  local time_types = { "ns", "μs", "ms" }
+
+  local get_leading = function(time)
+    time = math.floor(time)
+    local count = 0
+    repeat
+      time = math.floor(time / 10)
+      count = count + 1
+    until time <= 0
+    return count
+  end
+
+  local get_best_fmt = function(time)
+    for _, v in ipairs(time_types) do
+      if math.abs(time) < 1000.0 then
+        return string.format("%s%3.1f %s", string.rep(" ", 3 - get_leading(time)), time, v)
+      end
+      time = time / 1000.0
+    end
+    return string.format("%.1f %s", time, "s")
+  end
+
   return string.format(
-    "Benchmark #%d: '%s'\n  Time(mean ± σ):    %.1f ms ± %.1f ms\n  Range(min … max):  %.1f ms … %.1f ms  %d runs\n",
+    "Benchmark #%d: '%s'\n  Time(mean ± σ):    %s ± %s\n  Range(min … max):  %s … %s  %d runs\n",
     index,
     res.name,
-    res.stats.mean / 1e6,
-    res.stats.std / 1e6,
-    res.stats.min / 1e6,
-    res.stats.max / 1e6,
+    get_best_fmt(res.stats.mean),
+    get_best_fmt(res.stats.std),
+    get_best_fmt(res.stats.min),
+    get_best_fmt(res.stats.max),
     runs
   )
 end
