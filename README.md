@@ -38,7 +38,7 @@ You can do
 ```lua
 local async = require "plenary.async"
 ```
-All other modules are automatically required and can bet accessed by indexing `async`.
+All other modules are automatically required and can be accessed by indexing `async`.
 You needn't worry about performance as this will require all the submodules lazily.
 
 #### A quick example
