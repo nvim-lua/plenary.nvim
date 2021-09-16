@@ -92,25 +92,33 @@ M.strcharpart = (function()
   end
 end)()
 
-M.truncate = function(str, len, dots)
+M.truncate = function(str, len, dots, direction)
   str = tostring(str) -- We need to make sure its an actually a string and not a number
   dots = dots or "…"
+  direction = direction or 1
   if M.strdisplaywidth(str) <= len then
     return str
   end
-  local start = 0
+  local start = direction > 0 and 0 or str:len()
   local current = 0
   local result = ""
   local len_of_dots = M.strdisplaywidth(dots)
+  local concat = function(a, b, dir)
+    if dir > 0 then
+      return a .. b
+    else
+      return b .. a
+    end
+  end
   while true do
     local part = M.strcharpart(str, start, 1)
     current = current + M.strdisplaywidth(part)
     if (current + len_of_dots) > len then
-      result = result .. dots
+      result = concat(result, dots, direction)
       break
     end
-    result = result .. part
-    start = start + 1
+    result = concat(result, part, direction)
+    start = start + direction
   end
   return result
 end
