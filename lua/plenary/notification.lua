@@ -1,29 +1,43 @@
 local api = vim.api
 local M = {}
 
---- WHAT THIS REQUIRES
---- consuemr to should have a setup method
---- if the consuemr has a queue behavior, then consumer.queue should be a table
---- that acts as the queue
-M.has_queue_behavior = false
-M.setup = function(consumer)
-  if consumer.queue then
-    M.has_queue_behavior = true
-  end
+M.notification_store = {} -- place to store all notifications
+M.actions = {} -- actions that can be done to a notifcation
 
-  if M.has_queue_behavior then
-    vim.notify = function(...)
-      local args = { ... }
-      table.insert(consumer.queue, args[1])
-      consumer.notify(...)
-    end
-  else
-    vim.notify = function(...)
-      consumer.notify(...)
-    end
+local random = math.random
+local function uuid()
+  local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+  return string.gsub(template, '[xy]', function (c)
+      local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+      return string.format('%x', v)
+  end)
+end
+
+M.setup = function(consumer, opts)
+  if consumer.setup then pcall(consumer.setup) end
+
+  vim.notify = function(message)
+    local notification = {
+      message = message,
+    }
+    M.notification_store[uuid()] = notification
   end
 end
 
-M.example_consumer = {}
+M.actions.dismiss = function(notifcation_id)
+  local i = (function()
+    for _i, _ in ipairs(M.notification_store) do
+      if _i == notifcation_id then
+        return _i
+      end
+    end
+  end)()
+
+  if i == nil then
+    error("invalid notification id")
+  end
+
+  table.remove(M.notification_store, i)
+end
 
 return M
