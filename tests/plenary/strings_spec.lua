@@ -52,11 +52,11 @@ describe("strings", function()
       { args = { "abcde", 4, nil, 1 }, expected = { single = "abc…", double = "ab…" } },
       {
         args = { "アイウエオ", 11, nil, 1 },
-        expected = { single = "アイウエオ", double = "アイウエオ" }
+        expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       {
         args = { "アイウエオ", 10, nil, 1 },
-        expected = { single = "アイウエオ", double = "アイウエオ" }
+        expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       { args = { "アイウエオ", 9, nil, 1 }, expected = { single = "アイウエ…", double = "アイウ…" } },
       { args = { "アイウエオ", 8, nil, 1 }, expected = { single = "アイウ…", double = "アイウ…" } },
@@ -72,11 +72,11 @@ describe("strings", function()
       { args = { "abcde", 4, nil, -1 }, expected = { single = "…cde", double = "…de" } },
       {
         args = { "アイウエオ", 11, nil, 1 },
-        expected = { single = "アイウエオ", double = "アイウエオ" }
+        expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       {
         args = { "アイウエオ", 10, nil, 1 },
-        expected = { single = "アイウエオ", double = "アイウエオ" }
+        expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       { args = { "アイウエオ", 9, nil, -1 }, expected = { single = "…イウエオ", double = "…ウエオ" } },
       { args = { "アイウエオ", 8, nil, -1 }, expected = { single = "…ウエオ", double = "…ウエオ" } },
