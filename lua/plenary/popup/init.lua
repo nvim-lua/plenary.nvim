@@ -98,61 +98,6 @@ function popup.create(what, vim_options)
   local win_opts = {}
   win_opts.relative = "editor"
 
-  local cursor_relative_pos = function(pos_str, dim)
-    assert(string.find(pos_str, "^cursor"), "Invalid value for " .. dim)
-    win_opts.relative = "cursor"
-    local line = 0
-    if (pos_str):match "cursor%+(%d+)" then
-      line = line + tonumber((pos_str):match "cursor%+(%d+)")
-    elseif (pos_str):match "cursor%-(%d+)" then
-      line = line - tonumber((pos_str):match "cursor%-(%d+)")
-    end
-    return line
-  end
-
-  if vim_options.line then
-    if type(vim_options.line) == "string" then
-      win_opts.row = cursor_relative_pos(vim_options.line, "row")
-    else
-      win_opts.row = vim_options.line
-    end
-  else
-    -- TODO: It says it needs to be "vertically cenetered"?...
-    -- wut is that.
-    win_opts.row = 0
-  end
-
-  if vim_options.col then
-    if type(vim_options.col) == "string" then
-      win_opts.col = cursor_relative_pos(vim_options.col, "col")
-    else
-      win_opts.col = vim_options.col
-    end
-  else
-    -- TODO: It says it needs to be "horizontally cenetered"?...
-    win_opts.col = 0
-  end
-
-  if vim_options.pos then
-    if vim_options.pos == "center" then
-      -- TODO: Do centering..
-    else
-      win_opts.anchor = popup._pos_map[vim_options.pos]
-    end
-  else
-    win_opts.anchor = "NW" -- This is the default, but makes `posinvert` easier to implement
-  end
-
-  -- , fixed    When FALSE (the default), and:
-  -- ,      - "pos" is "botleft" or "topleft", and
-  -- ,      - "wrap" is off, and
-  -- ,      - the popup would be truncated at the right edge of
-  -- ,        the screen, then
-  -- ,     the popup is moved to the left so as to fit the
-  -- ,     contents on the screen.  Set to TRUE to disable this.
-
-  win_opts.style = "minimal"
-
   -- Feels like maxheight, minheight, maxwidth, minwidth will all be related
   --
   -- maxheight  Maximum height of the contents, excluding border and padding.
@@ -171,6 +116,66 @@ function popup.create(what, vim_options)
   end
   win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
   win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
+
+  -- pos
+  --
+  -- Using "topleft", "topright", "botleft", "botright" defines what corner of the popup "line"
+  -- and "col" are used for. When not set "topleft" behaviour is used.
+  -- Alternatively "center" can be used to position the popup in the center of the Neovim window,
+  -- in which case "line" and "col" are ignored.
+  if vim_options.pos then
+    if vim_options.pos == "center" then
+      vim_options.line = 0
+      vim_options.col = 0
+      win_opts.anchor = "NW"
+    else
+      win_opts.anchor = popup._pos_map[vim_options.pos]
+    end
+  else
+    win_opts.anchor = "NW" -- This is the default, but makes `posinvert` easier to implement
+  end
+
+  local cursor_relative_pos = function(pos_str, dim)
+    assert(string.find(pos_str, "^cursor"), "Invalid value for " .. dim)
+    win_opts.relative = "cursor"
+    local line = 0
+    if (pos_str):match "cursor%+(%d+)" then
+      line = line + tonumber((pos_str):match "cursor%+(%d+)")
+    elseif (pos_str):match "cursor%-(%d+)" then
+      line = line - tonumber((pos_str):match "cursor%-(%d+)")
+    end
+    return line
+  end
+
+  if vim_options.line and vim_options.line ~= 0 then
+    if type(vim_options.line) == "string" then
+      win_opts.row = cursor_relative_pos(vim_options.line, "row")
+    else
+      win_opts.row = vim_options.line - 1
+    end
+  else
+    win_opts.row = math.floor((vim.o.lines - win_opts.height) / 2)
+  end
+
+  if vim_options.col and vim_options.col ~= 0 then
+    if type(vim_options.col) == "string" then
+      win_opts.col = cursor_relative_pos(vim_options.col, "col")
+    else
+      win_opts.col = vim_options.col - 1
+    end
+  else
+    win_opts.col = math.floor((vim.o.columns - win_opts.width) / 2)
+  end
+
+  -- , fixed    When FALSE (the default), and:
+  -- ,      - "pos" is "botleft" or "topleft", and
+  -- ,      - "wrap" is off, and
+  -- ,      - the popup would be truncated at the right edge of
+  -- ,        the screen, then
+  -- ,     the popup is moved to the left so as to fit the
+  -- ,     contents on the screen.  Set to TRUE to disable this.
+
+  win_opts.style = "minimal"
 
   -- posinvert, When FALSE the value of "pos" is always used.  When
   -- ,   TRUE (the default) and the popup does not fit
