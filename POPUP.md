@@ -10,7 +10,7 @@ stablization and any required features are merged into Neovim, we can upstream
 this and expose the API in vimL to create better compatibility.
 
 ## Notices
-- **2021-09-05:** we now follow Vim's convention of the first line/column of the screen being indexed 1, so that 0 can be used for centering.
+- **2021-09-19:** we now follow Vim's convention of the first line/column of the screen being indexed 1, so that 0 can be used for centering.
 - **2021-08-19:** we now follow Vim's default to `noautocmd` on popup creation. This can be overriden with `vim_options.noautocmd=false`
 
 ## List of Neovim Features Required:
