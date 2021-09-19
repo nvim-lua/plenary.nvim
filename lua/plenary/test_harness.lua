@@ -40,7 +40,12 @@ end
 
 function harness.test_directory(directory, opts)
   print "Starting..."
-  opts = vim.tbl_deep_extend("force", { winopts = { winblend = 3 }, sequential = false, keep_going = true }, opts or {})
+  opts = vim.tbl_deep_extend("force", {
+    winopts = { winblend = 3 },
+    sequential = false,
+    keep_going = true,
+    timeout = 50000,
+  }, opts or {})
 
   local res = {}
   if not headless then
@@ -55,6 +60,10 @@ function harness.test_directory(directory, opts)
 
     if res.border_win_id then
       vim.api.nvim_win_set_option(res.border_win_id, "winhl", "Normal:Normal")
+    end
+
+    if res.bufnr then
+      vim.api.nvim_buf_set_option(res.bufnr, "filetype", "PlenaryTestPopup")
     end
     vim.cmd "mode"
   end
@@ -119,7 +128,7 @@ function harness.test_directory(directory, opts)
     j:start()
     if opts.sequential then
       log.debug("... Sequential wait for job number", i)
-      Job.join(j, 50000)
+      Job.join(j, opts.timeout)
       log.debug("... Completed job number", i)
       if j.code ~= 0 then
         failure = true
@@ -136,7 +145,7 @@ function harness.test_directory(directory, opts)
   end
 
   if not opts.sequential then
-    table.insert(jobs, 50000)
+    table.insert(jobs, opts.timeout)
     log.debug "... Parallel wait"
     Job.join(unpack(jobs))
     log.debug "... Completed jobs"

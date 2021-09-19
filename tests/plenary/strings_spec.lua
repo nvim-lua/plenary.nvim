@@ -88,8 +88,9 @@ describe("strings", function()
       { args = { "├─┤", 2, nil, -1 }, expected = { single = "…┤", double = "…" } },
     } do
       for _, ambiwidth in ipairs { "single", "double" } do
-        local msg = ("ambiwidth = %s, [%s, %d] -> %s"):format(
+        local msg = ("ambiwidth = %s, direction = %s, [%s, %d] -> %s"):format(
           ambiwidth,
+          (case.args[4] > 0) and "right" or "left",
           case.args[1],
           case.args[2],
           case.expected[ambiwidth]
