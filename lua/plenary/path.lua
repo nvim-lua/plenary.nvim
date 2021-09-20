@@ -510,10 +510,29 @@ function Path:copy(opts)
       opts.destination:sub(4, #opts.destination),
     }
   end
-
   local dest = Path:new(opts.destination)
 
-  return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
+  if not self:is_dir() then
+    return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
+  else
+    dest:mkdir { parents = vim.F.if_nil(opts.parents, true), exists_ok = vim.F.if_nil(opts.exists_ok, true) }
+    local scan = require "plenary.scandir"
+    local data = {}
+    scan.scan_dir(self.filename, {
+      respect_gitignore = vim.F.if_nil(opts.respect_gitignore, true),
+      hidden = vim.F.if_nil(opts.hidden, false),
+      depth = 1,
+      add_dirs = vim.F.if_nil(opts.add_dirs, true),
+      on_insert = function(entry)
+        table.insert(data, Path:new(entry))
+      end,
+    })
+    for _, path_ in ipairs(data) do
+      local suffix = table.remove(path_:_split())
+      local new_opts = vim.tbl_deep_extend("keep", { destination = dest:joinpath(suffix).filename }, opts)
+      path_:copy(new_opts)
+    end
+  end
 end
 
 function Path:touch(opts)
