@@ -73,7 +73,17 @@ function Border._create_lines(content_win_options, border_win_options)
     or border_win_options.title
     or {}
 
-  if content_win_options.row > 0 then
+  --[[
+  --  Ensure that the topline is drawn only if the row is positive (for an absolute position) or if when added to the current
+  --  cursor line (for a cursor relative position) it is also a positive value.
+  --]]
+  if
+    content_win_options.row > 0
+    or (
+      content_win_options.relative == "cursor"
+      and content_win_options.row + vim.api.nvim_win_get_cursor(0)[1] + vim.api.nvim_win_get_position(0)[1] > 1
+    )
+  then
     for _, title in ipairs(titles) do
       if string.find(title.pos, "N") then
         topline = create_horizontal_line(
@@ -92,6 +102,8 @@ function Border._create_lines(content_win_options, border_win_options)
         topline = topleft .. string.rep(border_win_options.top, content_win_options.width) .. topright
       end
     end
+  else
+    border_win_options.border_thickness.top = 0
   end
 
   if topline then
