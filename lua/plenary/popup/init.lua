@@ -54,40 +54,42 @@ local function add_position_config(win_opts, vim_options, default_opts)
     return line
   end
 
-  -- line/row
-  if vim_options.line then
+  if vim_options.line and vim_options.line ~= 0 then
     if type(vim_options.line) == "string" then
       win_opts.row = cursor_relative_pos(vim_options.line, "row")
     else
-      win_opts.row = vim_options.line
+      win_opts.row = vim_options.line - 1
     end
   else
-    -- TODO: It says it needs to be "vertically cenetered"?...
-    -- wut is that.
-    win_opts.row = if_nil(default_opts.row, 0)
+    win_opts.row = math.floor((vim.o.lines - win_opts.height) / 2)
   end
 
-  -- col
-  if vim_options.col then
+  if vim_options.col and vim_options.col ~= 0 then
     if type(vim_options.col) == "string" then
       win_opts.col = cursor_relative_pos(vim_options.col, "col")
     else
-      win_opts.col = vim_options.col
+      win_opts.col = vim_options.col - 1
     end
   else
-    -- TODO: It says it needs to be "horizontally cenetered"?...
-    win_opts.col = if_nil(default_opts.col, 0)
+    win_opts.col = math.floor((vim.o.columns - win_opts.width) / 2)
   end
 
   -- pos
+  --
+  -- Using "topleft", "topright", "botleft", "botright" defines what corner of the popup "line"
+  -- and "col" are used for. When not set "topleft" behaviour is used.
+  -- Alternatively "center" can be used to position the popup in the center of the Neovim window,
+  -- in which case "line" and "col" are ignored.
   if vim_options.pos then
     if vim_options.pos == "center" then
-      -- TODO: Do centering..
+      vim_options.line = 0
+      vim_options.col = 0
+      win_opts.anchor = "NW"
     else
       win_opts.anchor = popup._pos_map[vim_options.pos]
     end
   else
-    win_opts.anchor = if_nil(default_opts.anchor, "NW") -- NW is the default, but makes `posinvert` easier to implement
+    win_opts.anchor = "NW" -- This is the default, but makes `posinvert` easier to implement
   end
 
   -- , fixed    When FALSE (the default), and:
@@ -172,6 +174,7 @@ function popup.create(what, vim_options)
     posinvert = true,
     zindex = 50,
   }
+
 
   vim_options.width = if_nil(vim_options.width, 1)
   if type(what) == "number" then
