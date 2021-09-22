@@ -113,6 +113,8 @@ local function add_position_config(win_opts, vim_options, default_opts)
 end
 
 function popup.create(what, vim_options)
+  vim_options = vim.deepcopy(vim_options)
+
   local bufnr
   if type(what) == "number" then
     bufnr = what
