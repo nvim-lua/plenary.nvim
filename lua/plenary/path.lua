@@ -502,6 +502,7 @@ end
 
 function Path:copy(opts)
   opts = opts or {}
+  opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
 
   -- handles `.`, `..`, `./`, and `../`
   if opts.destination:match "^%.%.?/?\\?.+" then
@@ -514,23 +515,27 @@ function Path:copy(opts)
 
   if not self:is_dir() then
     return uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = true })
-  else
-    dest:mkdir { parents = vim.F.if_nil(opts.parents, true), exists_ok = vim.F.if_nil(opts.exists_ok, true) }
-    local scan = require "plenary.scandir"
+  end
+  if opts.recursive then
+    dest:mkdir {
+      parents = F.if_nil(opts.parents, true, opts.parents),
+      exists_ok = F.if_nil(opts.exists_ok, true, opts.exists),
+    }
     local data = {}
+    local scan = require "plenary.scandir"
     scan.scan_dir(self.filename, {
-      respect_gitignore = vim.F.if_nil(opts.respect_gitignore, true),
-      hidden = vim.F.if_nil(opts.hidden, false),
+      respect_gitignore = F.if_nil(opts.respect_gitignore, true, opts.respect_gitignore),
+      hidden = F.if_nil(opts.hidden, false, opts.hidden),
       depth = 1,
-      add_dirs = vim.F.if_nil(opts.add_dirs, true),
+      add_dirs = F.if_nil(opts.add_dirs, true, opts.add_dirs),
       on_insert = function(entry)
         table.insert(data, Path:new(entry))
       end,
     })
     for _, path_ in ipairs(data) do
       local suffix = table.remove(path_:_split())
-      local new_opts = vim.tbl_deep_extend("keep", { destination = dest:joinpath(suffix).filename }, opts)
-      path_:copy(new_opts)
+      local new_opts = vim.tbl_deep_extend("force", opts, { destination = dest:joinpath(suffix).filename })
+      return path_:copy(new_opts)
     end
   end
 end
