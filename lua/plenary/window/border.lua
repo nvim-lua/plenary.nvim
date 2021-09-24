@@ -201,6 +201,8 @@ end
 -- Can be used to create a new window (with `create_window = true`)
 -- or change an existing one
 function Border:move(content_win_options, border_win_options)
+  self.content_win_options = content_win_options
+  self._border_win_options = border_win_options
 
   -- Update lines in border buffer, and get config for border window
   local nvim_win_config = self:__align_calc_config(content_win_options, border_win_options)
