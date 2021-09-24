@@ -468,7 +468,7 @@ function popup.move(win_id, vim_options)
   -- Update border window (if present)
   local border = popup._borders[win_id]
   if border ~= nil then
-    border:set_size(win_opts, border._border_win_options)
+    border:move(win_opts, border._border_win_options)
   end
 end
 
