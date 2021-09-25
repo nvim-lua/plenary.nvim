@@ -521,21 +521,18 @@ function Path:copy(opts)
       parents = F.if_nil(opts.parents, true, opts.parents),
       exists_ok = F.if_nil(opts.exists_ok, true, opts.exists),
     }
-    local data = {}
     local scan = require "plenary.scandir"
-    scan.scan_dir(self.filename, {
+    local data = scan.scan_dir(self.filename, {
       respect_gitignore = F.if_nil(opts.respect_gitignore, true, opts.respect_gitignore),
-      hidden = F.if_nil(opts.hidden, false, opts.hidden),
+      hidden = F.if_nil(opts.hidden, true, opts.hidden),
       depth = 1,
       add_dirs = F.if_nil(opts.add_dirs, true, opts.add_dirs),
-      on_insert = function(entry)
-        table.insert(data, Path:new(entry))
-      end,
     })
-    for _, path_ in ipairs(data) do
-      local suffix = table.remove(path_:_split())
+    for _, entry in ipairs(data) do
+      local entry_path = Path:new(entry)
+      local suffix = table.remove(entry_path:_split())
       local new_opts = vim.tbl_deep_extend("force", opts, { destination = dest:joinpath(suffix).filename })
-      return path_:copy(new_opts)
+      return entry_path:copy(new_opts)
     end
   end
 end
