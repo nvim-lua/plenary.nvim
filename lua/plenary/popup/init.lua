@@ -177,7 +177,6 @@ function popup.create(what, vim_options)
     zindex = 50,
   }
 
-
   vim_options.width = if_nil(vim_options.width, 1)
   if type(what) == "number" then
     vim_options.height = vim.api.nvim_buf_line_count(what)
