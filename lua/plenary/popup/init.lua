@@ -54,6 +54,17 @@ local function add_position_config(win_opts, vim_options, default_opts)
     return line
   end
 
+  -- Feels like maxheight, minheight, maxwidth, minwidth will all be related
+  --
+  -- maxheight  Maximum height of the contents, excluding border and padding.
+  -- minheight  Minimum height of the contents, excluding border and padding.
+  -- maxwidth  Maximum width of the contents, excluding border, padding and scrollbar.
+  -- minwidth  Minimum width of the contents, excluding border, padding and scrollbar.
+  local width = if_nil(vim_options.width, default_opts.width)
+  local height = if_nil(vim_options.height, default_opts.height)
+  win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
+  win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
+
   if vim_options.line and vim_options.line ~= 0 then
     if type(vim_options.line) == "string" then
       win_opts.row = cursor_relative_pos(vim_options.line, "row")
@@ -100,16 +111,6 @@ local function add_position_config(win_opts, vim_options, default_opts)
   -- ,     the popup is moved to the left so as to fit the
   -- ,     contents on the screen.  Set to TRUE to disable this.
 
-  -- Feels like maxheight, minheight, maxwidth, minwidth will all be related
-  --
-  -- maxheight  Maximum height of the contents, excluding border and padding.
-  -- minheight  Minimum height of the contents, excluding border and padding.
-  -- maxwidth  Maximum width of the contents, excluding border, padding and scrollbar.
-  -- minwidth  Minimum width of the contents, excluding border, padding and scrollbar.
-  local width = if_nil(vim_options.width, default_opts.width)
-  local height = if_nil(vim_options.height, default_opts.height)
-  win_opts.width = utils.bounded(width, vim_options.minwidth, vim_options.maxwidth)
-  win_opts.height = utils.bounded(height, vim_options.minheight, vim_options.maxheight)
 end
 
 function popup.create(what, vim_options)
