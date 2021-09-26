@@ -110,7 +110,6 @@ local function add_position_config(win_opts, vim_options, default_opts)
   -- ,        the screen, then
   -- ,     the popup is moved to the left so as to fit the
   -- ,     contents on the screen.  Set to TRUE to disable this.
-
 end
 
 function popup.create(what, vim_options)
