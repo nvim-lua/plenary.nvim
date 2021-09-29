@@ -26,6 +26,8 @@ local default_config = {
   -- Should write to a file
   use_file = true,
 
+  use_quickfix = false,
+
   -- Any messages above this level will be logged.
   level = p_debug and "debug" or "info",
 
@@ -137,6 +139,19 @@ log.new = function(config, standalone)
       fp:write(str)
       fp:close()
     end
+
+    -- Output to quickfix
+    if config.use_quickfix then
+        local qf_entry ={
+            -- remove the @ getinfo adds to the file path
+            filename = info.source:sub(2),
+            lnum = info.currentline,
+            col = 1,
+            text = msg,
+        }
+        vim.fn.setqflist({qf_entry}, 'a')
+    end
+
   end
 
   for i, x in ipairs(config.modes) do
