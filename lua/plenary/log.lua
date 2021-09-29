@@ -151,7 +151,7 @@ log.new = function(config, standalone)
             col = 1,
             text = formatted_msg,
         }
-        vim.fn.setqflist({qf_entry}, 'a')
+        vim.fn.setqflist({qf_entry}, "a")
     end
 
   end
