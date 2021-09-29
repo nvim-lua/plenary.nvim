@@ -26,6 +26,7 @@ local default_config = {
   -- Should write to a file
   use_file = true,
 
+  -- Should write to the quickfix list
   use_quickfix = false,
 
   -- Any messages above this level will be logged.
