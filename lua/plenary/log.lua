@@ -144,7 +144,7 @@ log.new = function(config, standalone)
     -- Output to quickfix
     if config.use_quickfix then
         local formatted_msg = string.format("[%s] %s", nameupper, msg)
-        local qf_entry ={
+        local qf_entry = {
             -- remove the @ getinfo adds to the file path
             filename = info.source:sub(2),
             lnum = info.currentline,
