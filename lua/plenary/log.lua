@@ -143,17 +143,16 @@ log.new = function(config, standalone)
 
     -- Output to quickfix
     if config.use_quickfix then
-        local formatted_msg = string.format("[%s] %s", nameupper, msg)
-        local qf_entry = {
-            -- remove the @ getinfo adds to the file path
-            filename = info.source:sub(2),
-            lnum = info.currentline,
-            col = 1,
-            text = formatted_msg,
-        }
-        vim.fn.setqflist({qf_entry}, "a")
+      local formatted_msg = string.format("[%s] %s", nameupper, msg)
+      local qf_entry = {
+        -- remove the @ getinfo adds to the file path
+        filename = info.source:sub(2),
+        lnum = info.currentline,
+        col = 1,
+        text = formatted_msg,
+      }
+      vim.fn.setqflist({ qf_entry }, "a")
     end
-
   end
 
   for i, x in ipairs(config.modes) do
