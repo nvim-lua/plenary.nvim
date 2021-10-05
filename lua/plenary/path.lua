@@ -83,7 +83,7 @@ local function _normalize_path(filename)
 
   local out_file = filename
 
-  local has = string.find(filename, "..", 1, true)
+  local has = string.find(filename, "/..", 1, true) or string.find(filename, "../", 1, true)
 
   if has then
     local parts = _split_by_separator(filename)

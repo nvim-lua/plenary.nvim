@@ -185,6 +185,15 @@ describe("Path", function()
       local final = Path:new(orig):normalize()
       assert.are.same(final, "/lua/plenary/path.lua")
     end)
+
+    it("can normalize paths containing ...", function()
+      assert.are.same(Path:new(vim.fn.fnameescape("[...test].txt")):normalize(vim.loop.cwd()), "\\[...test].txt")
+    end)
+
+    it("can normalize paths containing both .. and ...", function()
+      assert.are.same(Path:new(vim.fn.fnameescape("dir1/dir2/../[...test].txt")):normalize(vim.loop.cwd()), "dir1/\\[...test].txt")
+    end)
+
   end)
 
   describe(":shorten", function()
