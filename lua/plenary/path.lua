@@ -76,6 +76,13 @@ local is_uri = function(filename)
   return string.match(filename, "^%w+://") ~= nil
 end
 
+local is_absolute = function(filename, sep)
+  if sep == "\\" then
+    return string.match(filename, "^[A-Z]:\\.*$")
+  end
+  return string.sub(filename, 1, 1) == sep
+end
+
 local function _normalize_path(filename)
   if is_uri(filename) then
     return filename
@@ -98,7 +105,12 @@ local function _normalize_path(filename)
       idx = idx + 1
     until idx > #parts
 
-    out_file = path.root(filename) .. table.concat(parts, path.sep)
+    local prefix = ''
+    if is_absolute(filename, path.sep) then
+      prefix = path.root(filename)
+    end
+
+    out_file = prefix .. table.concat(parts, path.sep)
   end
 
   return out_file
@@ -532,10 +544,7 @@ function Path:is_dir()
 end
 
 function Path:is_absolute()
-  if self._sep == "\\" then
-    return string.match(self.filename, "^[A-Z]:\\.*$")
-  end
-  return string.sub(self.filename, 1, 1) == self._sep
+  return is_absolute(self.filename, self._sep)
 end
 -- }}}
 
