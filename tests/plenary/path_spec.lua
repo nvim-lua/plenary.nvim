@@ -186,12 +186,12 @@ describe("Path", function()
       assert.are.same(final, "/lua/plenary/path.lua")
     end)
 
-    it("can normalize paths containing ...", function()
-      assert.are.same(Path:new(vim.fn.fnameescape("[...test].txt")):normalize(vim.loop.cwd()), "\\[...test].txt")
+    it("can normalize relative paths", function()
+      assert.are.same(Path:new("lua/plenary/path.lua"):normalize(), "lua/plenary/path.lua")
     end)
 
-    it("can normalize paths containing both .. and ...", function()
-      assert.are.same(Path:new(vim.fn.fnameescape("dir1/dir2/../[...test].txt")):normalize(vim.loop.cwd()), "dir1/\\[...test].txt")
+    it("can normalize relative paths containing ..", function()
+      assert.are.same(Path:new("lua/plenary/path.lua/../path.lua"):normalize(), "lua/plenary/path.lua")
     end)
 
   end)
