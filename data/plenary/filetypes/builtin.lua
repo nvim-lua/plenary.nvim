@@ -41,6 +41,10 @@ return {
   },
   file_name = {
     ['cakefile'] = 'coffee',
+    ['.babelrc'] = 'json',
+    ['.prettierrc'] = 'json',
+    ['.eslintrc'] = 'json',
+    ['.firebaserc'] = 'json',
   },
   shebang = shebang
 }
