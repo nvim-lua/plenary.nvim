@@ -105,7 +105,7 @@ local function _normalize_path(filename)
       idx = idx + 1
     until idx > #parts
 
-    local prefix = ''
+    local prefix = ""
     if is_absolute(filename, path.sep) then
       prefix = path.root(filename)
     end

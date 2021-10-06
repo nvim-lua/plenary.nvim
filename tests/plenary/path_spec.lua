@@ -193,7 +193,6 @@ describe("Path", function()
     it("can normalize relative paths containing ..", function()
       assert.are.same(Path:new("lua/plenary/path.lua/../path.lua"):normalize(), "lua/plenary/path.lua")
     end)
-
   end)
 
   describe(":shorten", function()
