@@ -193,6 +193,18 @@ describe("Path", function()
     it("can normalize relative paths containing ..", function()
       assert.are.same(Path:new("lua/plenary/path.lua/../path.lua"):normalize(), "lua/plenary/path.lua")
     end)
+
+    it("can normalize relative paths with initial ..", function()
+      local p = Path:new "../lua/plenary/path.lua"
+      p._cwd = "/tmp/lua"
+      assert.are.same("lua/plenary/path.lua", p:normalize())
+    end)
+
+    it("can normalize relative paths to absolute when initial .. count matches cwd parts", function()
+      local p = Path:new "../../tmp/lua/plenary/path.lua"
+      p._cwd = "/tmp/lua"
+      assert.are.same("/tmp/lua/plenary/path.lua", p:normalize())
+    end)
   end)
 
   describe(":shorten", function()

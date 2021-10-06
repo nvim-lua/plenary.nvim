@@ -83,7 +83,7 @@ local is_absolute = function(filename, sep)
   return string.sub(filename, 1, 1) == sep
 end
 
-local function _normalize_path(filename)
+local function _normalize_path(filename, cwd)
   if is_uri(filename) then
     return filename
   end
@@ -96,17 +96,26 @@ local function _normalize_path(filename)
     local parts = _split_by_separator(filename)
 
     local idx = 1
+    local initial_up_count = 0
+
     repeat
       if parts[idx] == ".." then
+        if idx == 1 then
+          initial_up_count = initial_up_count + 1
+        end
         table.remove(parts, idx)
         table.remove(parts, idx - 1)
-        idx = idx - 2
+        if idx > 1 then
+          idx = idx - 2
+        else
+          idx = idx - 1
+        end
       end
       idx = idx + 1
     until idx > #parts
 
     local prefix = ""
-    if is_absolute(filename, path.sep) then
+    if is_absolute(filename, path.sep) or #_split_by_separator(cwd) == initial_up_count then
       prefix = path.root(filename)
     end
 
@@ -263,9 +272,9 @@ end
 
 function Path:absolute()
   if self:is_absolute() then
-    return _normalize_path(self.filename)
+    return _normalize_path(self.filename, self._cwd)
   else
-    return _normalize_path(self._absolute or table.concat({ self._cwd, self.filename }, self._sep))
+    return _normalize_path(self._absolute or table.concat({ self._cwd, self.filename }, self._sep), self._cwd)
   end
 end
 
@@ -333,7 +342,7 @@ function Path:normalize(cwd)
   -- Substitute home directory w/ "~"
   self.filename = self.filename:gsub("^" .. path.home, "~", 1)
 
-  return _normalize_path(self.filename)
+  return _normalize_path(self.filename, self._cwd)
 end
 
 local function shorten_len(filename, len)
