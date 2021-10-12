@@ -1,4 +1,3 @@
-local tbl = require "plenary.tbl"
 local strings = require "plenary.strings"
 
 local Border = {}
@@ -190,6 +189,9 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
 
+  -- Ensure border win options are correctly saved to ensure things like
+  -- change_title don't puke with these not being set.
+  self._border_win_options = border_win_options
   -- Update border characters
   self.contents = Border._create_lines(content_win_options, border_win_options)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
