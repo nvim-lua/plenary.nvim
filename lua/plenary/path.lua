@@ -276,10 +276,10 @@ function Path:expand()
       expanded = vim.fn.fnamemodify(self.filename, ":p")
     end
   elseif string.find(self.filename, "%$") then
-    local rep = string.match(self.filename, "([^%$][^/]*)")
+    local rep = string.match(self.filename, "([^%${][^}/]*)")
     local val = os.getenv(rep)
     if val then
-      expanded = string.gsub(string.gsub(self.filename, rep, val), "%$", "")
+      expanded = string.gsub(string.gsub(self.filename, rep, val), "[%${}]", "")
     else
       expanded = nil
     end
