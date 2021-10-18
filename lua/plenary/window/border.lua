@@ -189,11 +189,11 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
 
-  -- Ensure border win options are correctly saved to ensure things like
-  -- change_title don't puke with these not being set.
+  -- Ensure the relevant contests and border win_options are set
   self._border_win_options = border_win_options
-  -- Update border characters
+  self.content_win_options = content_win_options
   self.contents = Border._create_lines(content_win_options, border_win_options)
+
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   return nvim_win_config
@@ -203,9 +203,6 @@ end
 -- Can be used to create a new window (with `create_window = true`)
 -- or change an existing one
 function Border:move(content_win_options, border_win_options)
-  self.content_win_options = content_win_options
-  self._border_win_options = border_win_options
-
   -- Update lines in border buffer, and get config for border window
   local nvim_win_config = self:__align_calc_config(content_win_options, border_win_options)
 
@@ -219,8 +216,6 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   local obj = {}
 
   obj.content_win_id = content_win_id
-  obj.content_win_options = content_win_options
-  obj._border_win_options = border_win_options
 
   obj.bufnr = vim.api.nvim_create_buf(false, true)
   assert(obj.bufnr, "Failed to create border buffer")
