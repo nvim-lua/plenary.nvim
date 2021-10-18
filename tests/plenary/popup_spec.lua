@@ -46,6 +46,7 @@ describe("plenary.popup", function()
 
   it("can apply a border highlight", function()
     local _, opts = popup.create("hello there", {
+      border = true,
       borderhighlight = "PopupColor2",
     })
 
