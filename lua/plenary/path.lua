@@ -324,23 +324,41 @@ function Path:normalize(cwd)
   return _normalize_path(self.filename)
 end
 
-local function shorten_len(filename, len)
-  local final_match
+local function shorten_len(filename, len, exclude)
+  exclude = exclude or {-1}
+  local exc = {}
+
+  -- get parts in a table
+  local parts = (function()
+    local r = {}
+    for m in (filename .. path.sep):gmatch("(.-)" .. path.sep) do
+      r[#r+1] = m
+    end
+    return r
+  end)()
+
+  for _, v in pairs(exclude) do
+    if v < 0 then
+      exc[v + #parts + 1] = true
+    else
+      exc[v] = true
+    end
+  end
+
   local final_path_components = {}
-  for match in (filename .. path.sep):gmatch("(.-)" .. path.sep) do
-    if #match > len then
+  local count = 1
+  for _, match in ipairs(parts) do
+    if not exc[count] and #match > len then
       table.insert(final_path_components, string.sub(match, 1, len))
     else
       table.insert(final_path_components, match)
     end
     table.insert(final_path_components, path.sep)
-    final_match = match
+    count = count + 1
   end
 
   local l = #final_path_components -- so that we don't need to keep calculating length
   table.remove(final_path_components, l) -- remove final slash
-  table.remove(final_path_components, l - 1) -- remvove shortened final component
-  table.insert(final_path_components, final_match) -- insert full final component
 
   return table.concat(final_path_components)
 end
@@ -367,10 +385,10 @@ local shorten = (function()
   end
 end)()
 
-function Path:shorten(len)
+function Path:shorten(len, exclude)
   assert(len ~= 0, "len must be at least 1")
   if len and len > 1 then
-    return shorten_len(self.filename, len)
+    return shorten_len(self.filename, len, exclude)
   end
   return shorten(self.filename)
 end
