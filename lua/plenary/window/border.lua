@@ -50,7 +50,7 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
   local ranges
   if title_len ~= 0 then
     -- Need to calculate again due to multi-byte characters
-    local r_start = string.len(left_char) + left_start * string.len(mid_char)
+    local r_start = string.len(left_char) + math.max(left_start, 0) * string.len(mid_char)
     ranges = { { r_start, r_start + string.len(title) } }
   end
   return horizontal_line, ranges
