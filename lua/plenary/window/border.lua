@@ -47,7 +47,13 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
     string.rep(mid_char, width - title_len - left_start),
     right_char
   )
-  return horizontal_line
+  local ranges
+  if title_len ~= 0 then
+    -- Need to calculate again due to multi-byte characters
+    local r_start = string.len(left_char) + left_start * string.len(mid_char)
+    ranges = { { r_start, r_start + string.len(title) } }
+  end
+  return horizontal_line, ranges
 end
 
 function Border._create_lines(content_win_options, border_win_options)
@@ -60,6 +66,7 @@ function Border._create_lines(content_win_options, border_win_options)
   local left_enabled = thickness.left == 1
 
   local border_lines = {}
+  local ranges = {}
 
   local topline = nil
 
@@ -86,7 +93,8 @@ function Border._create_lines(content_win_options, border_win_options)
   then
     for _, title in ipairs(titles) do
       if string.find(title.pos, "N") then
-        topline = create_horizontal_line(
+        local top_ranges
+        topline, top_ranges = create_horizontal_line(
           title.text,
           title.pos,
           content_win_options.width,
@@ -94,6 +102,9 @@ function Border._create_lines(content_win_options, border_win_options)
           border_win_options.top or "",
           topright
         )
+        for _, r in pairs(top_ranges) do
+          table.insert(ranges, { 0, r[1], r[2] })
+        end
         break
       end
     end
@@ -127,7 +138,8 @@ function Border._create_lines(content_win_options, border_win_options)
     local botright = (right_enabled and border_win_options.botright) or ""
     for _, title in ipairs(titles) do
       if string.find(title.pos, "S") then
-        botline = create_horizontal_line(
+        local bot_ranges
+        botline, bot_ranges = create_horizontal_line(
           title.text,
           title.pos,
           content_win_options.width,
@@ -135,6 +147,9 @@ function Border._create_lines(content_win_options, border_win_options)
           border_win_options.bot or "",
           botright
         )
+        for _, r in pairs(bot_ranges) do
+          table.insert(ranges, { content_win_options.height + 1, r[1], r[2] })
+        end
         break
       end
     end
@@ -146,7 +161,7 @@ function Border._create_lines(content_win_options, border_win_options)
     table.insert(border_lines, botline)
   end
 
-  return border_lines
+  return border_lines, ranges
 end
 
 function Border:change_title(new_title)
@@ -155,8 +170,21 @@ function Border:change_title(new_title)
   end
 
   self._border_win_options.title = new_title
-  self.contents = Border._create_lines(self.content_win_options, self._border_win_options)
+  self.contents, self.title_ranges = Border._create_lines(self.content_win_options, self._border_win_options)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
+
+  if self._border_win_options.titlehighlight and self.title_ranges then
+    for _, r in pairs(self.title_ranges) do
+      vim.api.nvim_buf_add_highlight(
+        self.bufnr,
+        -1, -- TODO: sort a namespace
+        self._border_win_options.titlehighlight,
+        r[1],
+        r[2],
+        r[3]
+      )
+    end
+  end
 end
 
 -- Updates characters for border lines, and returns nvim_win_config
@@ -191,7 +219,7 @@ function Border:__align_calc_config(content_win_options, border_win_options)
   }
 
   -- Update border characters
-  self.contents = Border._create_lines(content_win_options, border_win_options)
+  self.contents, self.title_ranges = Border._create_lines(content_win_options, border_win_options)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   return nvim_win_config
@@ -227,6 +255,23 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   -- Create a border window and buffer, with border characters around the edge
   local nvim_win_config = Border.__align_calc_config(obj, content_win_options, border_win_options)
   obj.win_id = vim.api.nvim_open_win(obj.bufnr, false, nvim_win_config)
+
+  if border_win_options.highlight then
+    vim.api.nvim_win_set_option(obj.win_id, "winhl", border_win_options.highlight)
+  end
+
+  if border_win_options.titlehighlight and obj.title_ranges then
+    for _, r in pairs(obj.title_ranges) do
+      vim.api.nvim_buf_add_highlight(
+        obj.bufnr,
+        -1, -- TODO: sort a namespace
+        border_win_options.titlehighlight,
+        r[1],
+        r[2],
+        r[3]
+      )
+    end
+  end
 
   vim.cmd(
     string.format(
