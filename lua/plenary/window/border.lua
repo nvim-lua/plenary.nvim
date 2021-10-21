@@ -167,7 +167,7 @@ end
 local set_title_highlights = function(bufnr, ranges, hl)
     for _, r in pairs(ranges) do
       vim.api.nvim_buf_add_highlight(
-        bufnr
+        bufnr,
         -1, -- TODO: sort a namespace
         hl,
         r[1],
