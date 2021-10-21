@@ -389,10 +389,6 @@ function popup.create(what, vim_options)
     vim.api.nvim_win_set_option(win_id, "winhl", string.format("Normal:%s", vim_options.highlight))
   end
 
-  -- if should_show_border and vim_options.borderhighlight then
-  --   vim.api.nvim_win_set_option(border.win_id, "winhl", string.format("Normal:%s", vim_options.borderhighlight))
-  -- end
-
   -- enter
   local should_enter = vim_options.enter
   if should_enter == nil then
