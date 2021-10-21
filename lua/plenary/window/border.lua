@@ -265,7 +265,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
   end
 
   if border_win_options.titlehighlight and obj.title_ranges then
-    set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
+    set_title_highlights(obj.bufnr, obj.title_ranges, obj._border_win_options.titlehighlight)
   end
 
   vim.cmd(
