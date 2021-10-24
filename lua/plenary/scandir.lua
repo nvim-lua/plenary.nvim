@@ -186,7 +186,7 @@ m.scan_dir = function(path, opts)
 end
 
 --- m.scan_dir_async
--- Search directory recursive and syncronous
+-- Search directory recursive and asyncronous
 -- @param path: string or table
 --   string has to be a valid path
 --   table has to be a array of valid paths
