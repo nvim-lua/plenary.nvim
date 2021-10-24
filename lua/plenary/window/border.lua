@@ -221,7 +221,6 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
 
-
   -- Ensure the relevant contests and border win_options are set
   self._border_win_options = border_win_options
   self.content_win_options = content_win_options
