@@ -35,6 +35,7 @@ return {
     ['nix'] = 'nix',
     ['erb'] = 'eruby',
     ['hbs'] = 'handlebars',
+    ['hdbs'] = 'handlebars',
     ['graphql'] = 'graphql',
     ['gql'] = 'graphql',
     ['rkt'] = 'racket',
