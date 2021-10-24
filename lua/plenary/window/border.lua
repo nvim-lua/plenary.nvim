@@ -164,15 +164,17 @@ function Border._create_lines(content_win_options, border_win_options)
 end
 
 local set_title_highlights = function(bufnr, ranges, hl)
-  for _, r in pairs(ranges) do
-    vim.api.nvim_buf_add_highlight(
-      bufnr,
-      -1, -- TODO: sort a namespace
-      hl,
-      r[1],
-      r[2],
-      r[3]
-    )
+  if hl and ranges then
+    for _, r in pairs(ranges) do
+      vim.api.nvim_buf_add_highlight(
+        bufnr,
+        -1, -- TODO: sort a namespace
+        hl,
+        r[1],
+        r[2],
+        r[3]
+      )
+    end
   end
 end
 
@@ -262,9 +264,7 @@ function Border:new(content_bufnr, content_win_id, content_win_options, border_w
     vim.api.nvim_win_set_option(obj.win_id, "winhl", border_win_options.highlight)
   end
 
-  if border_win_options.titlehighlight and obj.title_ranges then
-    set_title_highlights(obj.bufnr, obj.title_ranges, obj._border_win_options.titlehighlight)
-  end
+  set_title_highlights(obj.bufnr, obj.title_ranges, obj._border_win_options.titlehighlight)
 
   vim.cmd(
     string.format(
