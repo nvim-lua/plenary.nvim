@@ -234,6 +234,8 @@ function Border:move(content_win_options, border_win_options)
 
   -- Set config for border window
   vim.api.nvim_win_set_config(self.win_id, nvim_win_config)
+
+  set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
 end
 
 function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
