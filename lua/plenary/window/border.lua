@@ -180,9 +180,7 @@ function Border:change_title(new_title)
   self.contents, self.title_ranges = Border._create_lines(self.content_win_options, self._border_win_options)
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
-  if self._border_win_options.titlehighlight and self.title_ranges then
-    set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
-  end
+  set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
 end
 
 -- Updates characters for border lines, and returns nvim_win_config
