@@ -46,7 +46,7 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
     string.rep(mid_char, width - title_len - left_start),
     right_char
   )
-  local ranges
+  local ranges = {}
   if title_len ~= 0 then
     -- Need to calculate again due to multi-byte characters
     local r_start = string.len(left_char) + math.max(left_start, 0) * string.len(mid_char)
