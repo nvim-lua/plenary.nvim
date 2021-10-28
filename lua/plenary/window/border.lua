@@ -164,7 +164,8 @@ function Border._create_lines(content_win_options, border_win_options)
 end
 
 local set_title_highlights = function(bufnr, ranges, hl)
-  if hl and ranges then
+  -- Check if both `hl` and `ranges` are provided, and `ranges` is not the empty table.
+  if hl and ranges and next(ranges) then
     for _, r in pairs(ranges) do
       vim.api.nvim_buf_add_highlight(bufnr, -1, hl, r[1], r[2], r[3])
     end
