@@ -325,6 +325,7 @@ function Path:normalize(cwd)
 end
 
 local function shorten_len(filename, len, exclude)
+  len = len or 1
   exclude = exclude or {-1}
   local exc = {}
 
@@ -387,7 +388,7 @@ end)()
 
 function Path:shorten(len, exclude)
   assert(len ~= 0, "len must be at least 1")
-  if len and len > 1 then
+  if (len and len > 1) or exclude ~= nil then
     return shorten_len(self.filename, len, exclude)
   end
   return shorten(self.filename)
