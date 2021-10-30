@@ -326,14 +326,14 @@ end
 
 local function shorten_len(filename, len, exclude)
   len = len or 1
-  exclude = exclude or {-1}
+  exclude = exclude or { -1 }
   local exc = {}
 
   -- get parts in a table
   local parts = (function()
     local r = {}
     for m in (filename .. path.sep):gmatch("(.-)" .. path.sep) do
-      r[#r+1] = m
+      r[#r + 1] = m
     end
     return r
   end)()
