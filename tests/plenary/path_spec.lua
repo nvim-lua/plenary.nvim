@@ -447,7 +447,7 @@ describe("Path", function()
       Path:new(vim.loop.fs_realpath "../some_random_filename.lua"):rm()
     end)
 
-    it("cannot copy a file if override false", function()
+    it("cannot copy an existing file if override false", function()
       local p1 = Path:new "a_random_filename.rs"
       local p2 = Path:new "not_a_random_filename.rs"
       assert(pcall(p1.touch, p1))
@@ -463,7 +463,19 @@ describe("Path", function()
       p2:rm()
     end)
 
-    it("cannot copy an existing file if override false", function()
+    it("can copy directories recursively", function()
+      -- vim.tbl_flatten doesn't work
+      local flatten
+      flatten = function(ret, t)
+        for _, v in pairs(t) do
+          if type(v) == "table" then
+            flatten(ret, v)
+          else
+            table.insert(ret, v)
+          end
+        end
+      end
+
       local files = { "file1", "file2", ".file3" }
 
       local src_dir = Path:new "src"
@@ -486,25 +498,45 @@ describe("Path", function()
       end
 
       for _, hidden in ipairs { true, false } do
-        local trg_dir = Path:new "trg"
-        src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = false }
-        local sub_trg_dir = trg_dir:joinpath(sub_dirs[1])
-        local sub_sub_trg_dir = sub_trg_dir:joinpath(sub_dirs[2])
-        local trg_dirs = { trg_dir, sub_trg_dir, sub_sub_trg_dir }
+        -- override = `false` should NOT copy as it was copied beforehand
+        for _, override in ipairs { true, false } do
+          local trg_dir = Path:new "trg"
+          local success = src_dir:copy { destination = trg_dir, recursive = true, override = override, hidden = hidden }
+          -- the files are already created because we iterate first with `override=true`
+          -- hence, we test here that no file ops have been committed: any value in tbl of tbls should be false
+          if not override then
+            local file_ops = {}
+            flatten(file_ops, success)
+            -- 3 layers with at at least 2 and at most 3 files (`hidden = true`)
+            local num_files = not hidden and 6 or 9
+            assert(#file_ops == num_files)
+            for _, op in ipairs(file_ops) do
+              assert(op == false)
+            end
+          else
+            local sub_trg_dir = trg_dir:joinpath(sub_dirs[1])
+            local sub_sub_trg_dir = sub_trg_dir:joinpath(sub_dirs[2])
+            local trg_dirs = { trg_dir, sub_trg_dir, sub_sub_trg_dir }
 
-        -- generate files on every directory level
-        for level, file in ipairs(files) do
-          for _, dir in ipairs(trg_dirs) do
-            local p = dir:joinpath(file .. "_" .. level .. ".lua")
-            -- file 3 is hidden
-            if not (level == 3) then
-              assert(p:exists())
-            else
-              assert(p:exists() == hidden)
+            -- generate files on every directory level
+            for level, file in ipairs(files) do
+              for _, dir in ipairs(trg_dirs) do
+                local p = dir:joinpath(file .. "_" .. level .. ".lua")
+                -- file 3 is hidden
+                if not (level == 3) then
+                  assert(p:exists())
+                else
+                  assert(p:exists() == hidden)
+                end
+              end
             end
           end
+          -- only clean up once we tested that we dont want to copy
+          -- if `override=true`
+          if not override then
+            trg_dir:rm { recursive = true }
+          end
         end
-        trg_dir:rm { recursive = true }
       end
 
       src_dir:rm { recursive = true }
