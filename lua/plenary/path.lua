@@ -500,7 +500,7 @@ function Path:rename(opts)
   return status
 end
 
---- Copy files and folders.
+--- Copy files or folders.
 ---@param opts table: options to pass to toggling registered actions
 ---@field destination string|Path: target file path to copy to
 ---@field recursive bool: whether to copy folders recursively (default: true)
@@ -508,7 +508,7 @@ end
 ---@field interactive bool: confirm if copy would override; precedes `override` (default: false)
 ---@field respect_gitignore bool: skip folders ignored by all detected `gitignore`s (default: true)
 ---@field hidden bool: whether to add hidden files in recursively copying folders (default: true)
----@return table {Path: bool} indicating sucess of copy; nested tables constitute sub dirs
+---@return table {[Path of destination]: bool} indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
   opts = opts or {}
   opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
@@ -530,16 +530,21 @@ function Path:copy(opts)
   if not self:is_dir() then
     local flags = {}
     if opts.interactive and dest:exists() then
-      vim.ui.select({ "Yes", "No" }, { prompt = string.format("Overwrite existing %s?", dest:absolute()) }, function(_, idx)
-        success[self] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not (idx == 1) }) or false
-      end)
+      vim.ui.select(
+        { "Yes", "No" },
+        { prompt = string.format("Overwrite existing %s?", dest:absolute()) },
+        function(_, idx)
+          success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not (idx == 1) }) or false
+        end
+      )
     else
       flags.excl = not opts.override
       -- nil: not overriden if `override = false`
-      success[self] = uv.fs_copyfile(self:absolute(), dest:absolute(), flags) or false
+      success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), flags) or false
     end
     return success
   end
+  -- dir
   if opts.recursive then
     dest:mkdir {
       parents = F.if_nil(opts.parents, true, opts.parents),
@@ -560,9 +565,11 @@ function Path:copy(opts)
       opts.destination = nil
       local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
       -- nil: not overriden if `override = false`
-      success[entry_path] = entry_path:copy(new_opts) or false
+      success[new_dest] = entry_path:copy(new_opts) or false
     end
     return success
+  else
+    error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
   end
 end
 
