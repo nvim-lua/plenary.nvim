@@ -447,7 +447,7 @@ describe("Path", function()
       Path:new(vim.loop.fs_realpath "../some_random_filename.lua"):rm()
     end)
 
-    it("cannot copy a file if it's already exists", function()
+    it("cannot copy a file if override false", function()
       local p1 = Path:new "a_random_filename.rs"
       local p2 = Path:new "not_a_random_filename.rs"
       assert(pcall(p1.touch, p1))
@@ -455,12 +455,59 @@ describe("Path", function()
       assert(p1:exists())
       assert(p2:exists())
 
-      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs" }))
+      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs", override = false }))
       assert.are.same(p1.filename, "a_random_filename.rs")
       assert.are.same(p2.filename, "not_a_random_filename.rs")
 
       p1:rm()
       p2:rm()
+    end)
+
+    it("cannot copy an existing file if override false", function()
+      local files = { "file1", "file2", ".file3" }
+
+      local src_dir = Path:new "src"
+      src_dir:mkdir()
+
+      local sub_dirs = { "sub_dir1", "sub_dir2" }
+      local sub_src_dir = src_dir:joinpath(sub_dirs[1])
+      sub_src_dir:mkdir()
+      local sub_sub_src_dir = sub_src_dir:joinpath(sub_dirs[2])
+      sub_sub_src_dir:mkdir()
+      local src_dirs = { src_dir, sub_src_dir, sub_sub_src_dir }
+
+      -- generate {level}_{file}{#}.lua on every directory level
+      for level, file in ipairs(files) do
+        for _, dir in ipairs(src_dirs) do
+          local p = dir:joinpath(file .. "_" .. level .. ".lua")
+          assert(pcall(p.touch, p))
+          assert(p:exists())
+        end
+      end
+
+      for _, hidden in ipairs { true, false } do
+        local trg_dir = Path:new "trg"
+        src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = false }
+        local sub_trg_dir = trg_dir:joinpath(sub_dirs[1])
+        local sub_sub_trg_dir = sub_trg_dir:joinpath(sub_dirs[2])
+        local trg_dirs = { trg_dir, sub_trg_dir, sub_sub_trg_dir }
+
+        -- generate files on every directory level
+        for level, file in ipairs(files) do
+          for _, dir in ipairs(trg_dirs) do
+            local p = dir:joinpath(file .. "_" .. level .. ".lua")
+            -- file 3 is hidden
+            if not (level == 3) then
+              assert(p:exists())
+            else
+              assert(p:exists() == hidden)
+            end
+          end
+        end
+        trg_dir:rm { recursive = true }
+      end
+
+      src_dir:rm { recursive = true }
     end)
   end)
 
