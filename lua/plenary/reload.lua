@@ -1,6 +1,11 @@
 local reload = {}
 
 reload.reload_module = function(module_name, starts_with_only)
+  -- Default to starts with only
+  if starts_with_only == nil then
+    starts_with_only = true
+  end
+
   -- TODO: Might need to handle cpath / compiled lua packages? Not sure.
   local matcher
   if not starts_with_only then
