@@ -331,8 +331,13 @@ local function shorten_len(filename, len, exclude)
 
   -- get parts in a table
   local parts = {}
+  local empty_pos = {}
   for m in (filename .. path.sep):gmatch("(.-)" .. path.sep) do
-    parts[#parts + 1] = m
+    if m ~= "" then
+      parts[#parts + 1] = m
+    else
+      table.insert(empty_pos, #parts + 1)
+    end
   end
 
   for _, v in pairs(exclude) do
@@ -357,6 +362,11 @@ local function shorten_len(filename, len, exclude)
 
   local l = #final_path_components -- so that we don't need to keep calculating length
   table.remove(final_path_components, l) -- remove final slash
+
+  -- add back empty positions
+  for i = #empty_pos, 1, -1 do
+    table.insert(final_path_components, empty_pos[i], path.sep)
+  end
 
   return table.concat(final_path_components)
 end
