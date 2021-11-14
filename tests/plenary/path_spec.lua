@@ -213,10 +213,8 @@ describe("Path", function()
       local short_path = Path:new(long_path):shorten()
       assert.are.same(short_path, "/t/i/a/l/path")
     end)
-  end)
 
-  describe(":shorten", function()
-    it("can shorten a path components to a given length", function()
+    it("can shorten a path's components to a given length", function()
       local long_path = "/this/is/a/long/path"
       local short_path = Path:new(long_path):shorten(2)
       assert.are.same(short_path, "/th/is/a/lo/path")
@@ -230,6 +228,41 @@ describe("Path", function()
       long_path = "this/is/an/extremely/long/path"
       short_path = Path:new(long_path):shorten(5)
       assert.are.same(short_path, "this/is/an/extre/long/path")
+    end)
+
+    it("can shorten a path's components when excluding parts", function()
+      local long_path = "/this/is/a/long/path"
+      local short_path = Path:new(long_path):shorten(nil, { 1, -1 })
+      assert.are.same(short_path, "/this/i/a/l/path")
+
+      -- without the leading /
+      long_path = "this/is/a/long/path"
+      short_path = Path:new(long_path):shorten(nil, { 1, -1 })
+      assert.are.same(short_path, "this/i/a/l/path")
+
+      -- where excluding positions greater than the number of parts
+      long_path = "this/is/an/extremely/long/path"
+      short_path = Path:new(long_path):shorten(nil, { 2, 4, 6, 8 })
+      assert.are.same(short_path, "t/is/a/extremely/l/path")
+
+      -- where excluding positions less than the negation of the number of parts
+      long_path = "this/is/an/extremely/long/path"
+      short_path = Path:new(long_path):shorten(nil, { -2, -4, -6, -8 })
+      assert.are.same(short_path, "this/i/an/e/long/p")
+    end)
+
+    it("can shorten a path's components to a given length and exclude positions", function()
+      local long_path = "/this/is/a/long/path"
+      local short_path = Path:new(long_path):shorten(2, { 1, -1 })
+      assert.are.same(short_path, "/this/is/a/lo/path")
+
+      long_path = "this/is/a/long/path"
+      short_path = Path:new(long_path):shorten(3, { 2, -2 })
+      assert.are.same(short_path, "thi/is/a/long/pat")
+
+      long_path = "this/is/an/extremely/long/path"
+      short_path = Path:new(long_path):shorten(5, { 3, -3 })
+      assert.are.same(short_path, "this/is/an/extremely/long/path")
     end)
   end)
 
