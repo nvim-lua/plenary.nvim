@@ -74,7 +74,6 @@ function Border._create_lines(content_win_id, content_win_options, border_win_op
   local border_lines = {}
   local ranges = {}
 
-
   -- border_win_options.title should have be a list with entries of the
   -- form: { pos = foo, text = bar }.
   -- pos can take values in { "NW", "N", "NE", "SW", "S", "SE" }
@@ -180,7 +179,11 @@ function Border:change_title(new_title)
   end
 
   self._border_win_options.title = new_title
-  self.contents, self.title_ranges = Border._create_lines(self.content_win_id, self.content_win_options, self._border_win_options)
+  self.contents, self.title_ranges = Border._create_lines(
+    self.content_win_id,
+    self.content_win_options,
+    self._border_win_options
+  )
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
