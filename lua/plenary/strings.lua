@@ -130,9 +130,9 @@ M.truncate = function(str, len, dots, direction)
     if M.strdisplaywidth(str) <= len then
       return str
     end
-    local len1 = math.floor((len + M.strdisplaywidth(dots))/ 2)
-    local len2 = len - len1 + M.strdisplaywidth(dots)
+    local len1 = math.floor((len + M.strdisplaywidth(dots)) / 2)
     local s1 = truncate(str, len1, dots, 1)
+    local len2 = len - M.strdisplaywidth(s1) + M.strdisplaywidth(dots)
     local s2 = truncate(str, len2, dots, -1)
     return s1 .. s2:sub(dots:len() + 1)
   end
