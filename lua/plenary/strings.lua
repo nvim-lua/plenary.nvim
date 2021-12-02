@@ -120,18 +120,21 @@ local truncate = function(str, len, dots, direction)
   return result
 end
 
-M.truncate = function (str, len, dots, direction)
+M.truncate = function(str, len, dots, direction)
   str = tostring(str) -- We need to make sure its an actually a string and not a number
   dots = dots or "…"
   direction = direction or 1
   if direction ~= 0 then
     return truncate(str, len, dots, direction)
   else
-    local len1 = math.floor(len/2) + M.strdisplaywidth(dots)
+    if M.strdisplaywidth(str) <= len then
+      return str
+    end
+    local len1 = math.floor((len + M.strdisplaywidth(dots))/ 2)
     local len2 = len - len1 + M.strdisplaywidth(dots)
     local s1 = truncate(str, len1, dots, 1)
     local s2 = truncate(str, len2, dots, -1)
-    return s1 .. s2:sub(dots:len()+1)
+    return s1 .. s2:sub(dots:len() + 1)
   end
 end
 
