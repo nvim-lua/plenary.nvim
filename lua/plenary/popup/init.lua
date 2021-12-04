@@ -561,7 +561,9 @@ end
 -- If popup window {id} is not found an empty Dict is returned.
 function popup.getpos(win_id)
   local obj = Popup.__lookup[win_id]
-  if not obj then return {} end
+  if not obj then
+    return {}
+  end
   return obj:getpos()
 end
 
