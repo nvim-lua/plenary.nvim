@@ -55,22 +55,24 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
   return horizontal_line, ranges
 end
 
-function Border._create_lines(content_win_options, border_win_options)
+function Border._create_lines(content_win_id, content_win_options, border_win_options)
+  local content_pos = vim.api.nvim_win_get_position(content_win_id)
+  local content_height = vim.api.nvim_win_get_height(content_win_id)
+  local content_width = vim.api.nvim_win_get_width(content_win_id)
+
   -- TODO: Handle border width, which I haven't right here.
   local thickness = border_win_options.border_thickness
 
   local top_enabled = thickness.top == 1
-  local right_enabled = thickness.right == 1
+  local right_enabled = thickness.right == 1 and content_pos[2] + content_width < vim.o.columns
   local bot_enabled = thickness.bot == 1
-  local left_enabled = thickness.left == 1
+  local left_enabled = thickness.left == 1 and content_pos[2] > 0
+
+  border_win_options.border_thickness.left = left_enabled and 1 or 0
+  border_win_options.border_thickness.right = right_enabled and 1 or 0
 
   local border_lines = {}
   local ranges = {}
-
-  local topline = nil
-
-  local topleft = (left_enabled and border_win_options.topleft) or ""
-  local topright = (right_enabled and border_win_options.topright) or ""
 
   -- border_win_options.title should have be a list with entries of the
   -- form: { pos = foo, text = bar }.
@@ -79,17 +81,11 @@ function Border._create_lines(content_win_options, border_win_options)
     or border_win_options.title
     or {}
 
-  --[[
-  --  Ensure that the topline is drawn only if the row is positive (for an absolute position) or if when added to the current
-  --  cursor line (for a cursor relative position) it is also a positive value.
-  --]]
-  if
-    content_win_options.row > 0
-    or (
-      content_win_options.relative == "cursor"
-      and content_win_options.row + vim.api.nvim_win_get_cursor(0)[1] + vim.api.nvim_win_get_position(0)[1] > 1
-    )
-  then
+  local topline = nil
+  local topleft = (left_enabled and border_win_options.topleft) or ""
+  local topright = (right_enabled and border_win_options.topright) or ""
+  -- Only calculate the topline if there is space above the first content row (relative to the editor)
+  if content_pos[1] > 0 then
     for _, title in ipairs(titles) do
       if string.find(title.pos, "N") then
         local top_ranges
@@ -131,10 +127,10 @@ function Border._create_lines(content_win_options, border_win_options)
     table.insert(border_lines, middle_line)
   end
 
-  if bot_enabled then
-    local botline = nil
-    local botleft = (left_enabled and border_win_options.botleft) or ""
-    local botright = (right_enabled and border_win_options.botright) or ""
+  local botline = nil
+  local botleft = (left_enabled and border_win_options.botleft) or ""
+  local botright = (right_enabled and border_win_options.botright) or ""
+  if content_pos[1] + content_height < vim.o.lines then
     for _, title in ipairs(titles) do
       if string.find(title.pos, "S") then
         local bot_ranges
@@ -153,10 +149,15 @@ function Border._create_lines(content_win_options, border_win_options)
       end
     end
     if botline == nil then
-      if top_enabled then
+      if bot_enabled then
         botline = botleft .. string.rep(border_win_options.bot, content_win_options.width) .. botright
       end
     end
+  else
+    border_win_options.border_thickness.bot = 0
+  end
+
+  if botline then
     table.insert(border_lines, botline)
   end
 
@@ -178,7 +179,11 @@ function Border:change_title(new_title)
   end
 
   self._border_win_options.title = new_title
-  self.contents, self.title_ranges = Border._create_lines(self.content_win_options, self._border_win_options)
+  self.contents, self.title_ranges = Border._create_lines(
+    self.content_win_id,
+    self.content_win_options,
+    self._border_win_options
+  )
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
@@ -201,6 +206,14 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     bot = "═",
   })
 
+  -- Ensure the relevant contents and border win_options are set
+  self._border_win_options = border_win_options
+  self.content_win_options = content_win_options
+  -- Update border characters and title_ranges
+  self.contents, self.title_ranges = Border._create_lines(self.content_win_id, content_win_options, border_win_options)
+
+  vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
+
   local thickness = border_win_options.border_thickness
   local nvim_win_config = {
     anchor = content_win_options.anchor,
@@ -214,14 +227,6 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     noautocmd = content_win_options.noautocmd,
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }
-
-  -- Ensure the relevant contests and border win_options are set
-  self._border_win_options = border_win_options
-  self.content_win_options = content_win_options
-  -- Update border characters and title_ranges
-  self.contents, self.title_ranges = Border._create_lines(content_win_options, border_win_options)
-
-  vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   return nvim_win_config
 end
