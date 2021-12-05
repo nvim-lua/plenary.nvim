@@ -143,7 +143,7 @@ function Border._create_lines(content_win_id, content_win_options, border_win_op
           botright
         )
         for _, r in pairs(bot_ranges) do
-          table.insert(ranges, { content_win_options.height + 1, r[1], r[2] })
+          table.insert(ranges, { content_win_options.height + thickness.top, r[1], r[2] })
         end
         break
       end
