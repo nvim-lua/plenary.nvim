@@ -205,6 +205,22 @@ describe("Path", function()
       p._cwd = "/tmp/lua"
       assert.are.same("/tmp/lua/plenary/path.lua", p:normalize())
     end)
+
+    it("can normalize ~ when file is within home directory (traling slash)", function()
+      local home = "/home/test/"
+      local p = Path:new { home, "./test_file" }
+      p.path.home = home
+      p._cwd = "/tmp/lua"
+      assert.are.same("~/./test_file", p:normalize())
+    end)
+
+    it("can normalize ~ when file is within home directory (no trailing slash)", function()
+      local home = "/home/test"
+      local p = Path:new { home, "./test_file" }
+      p.path.home = home
+      p._cwd = "/tmp/lua"
+      assert.are.same("~//./test_file", p:normalize())
+    end)
   end)
 
   describe(":shorten", function()
