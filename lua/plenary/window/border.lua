@@ -214,6 +214,10 @@ function Border:__align_calc_config(content_win_options, border_win_options)
 
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
+  local b_zindex = border_win_options.zindex or content_win_options.zindex and content_win_options.zindex - 1 or 49
+  b_zindex = math.max(b_zindex, 1)
+  b_zindex = math.min(b_zindex, 32000)
+
   local thickness = border_win_options.border_thickness
   local nvim_win_config = {
     anchor = content_win_options.anchor,
@@ -223,7 +227,7 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     col = content_win_options.col - thickness.left,
     width = content_win_options.width + thickness.left + thickness.right,
     height = content_win_options.height + thickness.top + thickness.bot,
-    zindex = content_win_options.zindex or 50,
+    zindex = b_zindex,
     noautocmd = content_win_options.noautocmd,
     focusable = vim.F.if_nil(border_win_options.focusable, false),
   }

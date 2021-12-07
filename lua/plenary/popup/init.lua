@@ -378,6 +378,7 @@ function popup.create(what, vim_options)
 
   local border = nil
   if should_show_border then
+    border_options.zindex = vim_options.border_zindex
     border_options.focusable = vim_options.border_focusable
     border_options.highlight = vim_options.borderhighlight and string.format("Normal:%s", vim_options.borderhighlight)
     border_options.titlehighlight = vim_options.titlehighlight
