@@ -62,6 +62,7 @@ filetype._get_extension_parts = function(filename)
       return possibilities
     end
   end
+  return possibilities
 end
 
 filetype._parse_modeline = function(tail)
