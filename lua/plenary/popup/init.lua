@@ -28,9 +28,6 @@ popup._hidden = {}
 
 Popup.__lookup = {}
 
--- Keep track of popup borders, so we don't have to pass them between functions
-popup._borders = {}
-
 local function dict_default(options, key, default)
   if options[key] == nil then
     return default[key]
@@ -386,7 +383,6 @@ function Popup:create(what, vim_options)
     border_options.highlight = vim_options.borderhighlight and string.format("Normal:%s", vim_options.borderhighlight)
     border_options.titlehighlight = vim_options.titlehighlight
     obj.border = Border:new(obj.bufnr, obj.win_id, win_opts, border_options)
-    popup._borders[obj.win_id] = obj.border
   end
 
   if vim_options.highlight then
@@ -474,9 +470,8 @@ function Popup:move(vim_options)
   vim.api.nvim_win_set_config(self.win_id, win_opts)
 
   -- Update border window (if present)
-  local border = popup._borders[self.win_id]
-  if border ~= nil then
-    border:move(win_opts, border._border_win_options)
+  if self.border ~= nil then
+    self.border:move(win_opts, self.border._border_win_options)
   end
 end
 
