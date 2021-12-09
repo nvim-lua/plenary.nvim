@@ -43,9 +43,12 @@ M.block_on = function(async_function, timeout)
   return unpack(ret)
 end
 
-M.will_block = function(async_func)
+---@see M.block_on
+---@param async_function Future
+---@param timeout number
+M.will_block = function(async_function, timeout)
   return function()
-    M.block_on(async_func)
+    M.block_on(async_function, timeout)
   end
 end
 
