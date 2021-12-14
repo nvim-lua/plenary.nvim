@@ -27,7 +27,7 @@ describe("plenary.popup", function()
       highlight = "PopupColor1",
     })
 
-    eq("Normal:PopupColor1", vim.api.nvim_win_get_option(win_id, "winhl"))
+    eq("Normal:PopupColor1,EndOfBuffer:PopupColor1", vim.api.nvim_win_get_option(win_id, "winhl"))
   end)
 
   it("can create a border", function()
