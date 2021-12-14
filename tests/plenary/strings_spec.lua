@@ -71,11 +71,11 @@ describe("strings", function()
       { args = { "abcde", 5, nil, -1 }, expected = { single = "abcde", double = "abcde" } },
       { args = { "abcde", 4, nil, -1 }, expected = { single = "…cde", double = "…de" } },
       {
-        args = { "アイウエオ", 11, nil, 1 },
+        args = { "アイウエオ", 11, nil, -1 },
         expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       {
-        args = { "アイウエオ", 10, nil, 1 },
+        args = { "アイウエオ", 10, nil, -1 },
         expected = { single = "アイウエオ", double = "アイウエオ" },
       },
       {
@@ -89,11 +89,34 @@ describe("strings", function()
       { args = { "├─┤", 4, nil, -1 }, expected = { single = "├─┤", double = "…┤" } },
       { args = { "├─┤", 3, nil, -1 }, expected = { single = "├─┤", double = "…" } },
       { args = { "├─┤", 2, nil, -1 }, expected = { single = "…┤", double = "…" } },
+      -- truncations from the middle
+      { args = { "abcde", 6, nil, 0 }, expected = { single = "abcde", double = "abcde" } },
+      { args = { "abcde", 5, nil, 0 }, expected = { single = "abcde", double = "abcde" } },
+      { args = { "abcde", 4, nil, 0 }, expected = { single = "a…de", double = "a…e" } },
+      {
+        args = { "アイウエオ", 11, nil, 0 },
+        expected = { single = "アイウエオ", double = "アイウエオ" },
+      },
+      {
+        args = { "アイウエオ", 10, nil, 0 },
+        expected = { single = "アイウエオ", double = "アイウエオ" },
+      },
+      {
+        args = { "アイウエオ", 9, nil, 0 },
+        expected = { single = "アイ…エオ", double = "ア…エオ" },
+      },
+      { args = { "アイウエオ", 8, nil, 0 }, expected = { single = "ア…エオ", double = "ア…エオ" } },
+      { args = { "├─┤", 7, nil, 0 }, expected = { single = "├─┤", double = "├─┤" } },
+      { args = { "├─┤", 6, nil, 0 }, expected = { single = "├─┤", double = "├─┤" } },
+      { args = { "├─┤", 5, nil, 0 }, expected = { single = "├─┤", double = "…┤" } },
+      { args = { "├─┤", 4, nil, 0 }, expected = { single = "├─┤", double = "…┤" } },
+      { args = { "├─┤", 3, nil, 0 }, expected = { single = "├─┤", double = "…" } },
+      { args = { "├─┤", 2, nil, 0 }, expected = { single = "…┤", double = "…" } },
     } do
       for _, ambiwidth in ipairs { "single", "double" } do
         local msg = ("ambiwidth = %s, direction = %s, [%s, %d] -> %s"):format(
           ambiwidth,
-          (case.args[4] > 0) and "right" or "left",
+          (case.args[4] > 0) and "right" or (case.args[4] < 0) and "left" or "middle",
           case.args[1],
           case.args[2],
           case.expected[ambiwidth]
