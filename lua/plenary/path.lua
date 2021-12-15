@@ -500,20 +500,20 @@ function Path:rename(opts)
   return status
 end
 
---- Copy files or folders.
+--- Copy files or folders with defaults akin to GNU's `cp`.
 ---@param opts table: options to pass to toggling registered actions
 ---@field destination string|Path: target file path to copy to
----@field recursive bool: whether to copy folders recursively (default: true)
+---@field recursive bool: whether to copy folders recursively (default: false)
 ---@field override bool: whether to override files (default: true)
 ---@field interactive bool: confirm if copy would override; precedes `override` (default: false)
 ---@field respect_gitignore bool: skip folders ignored by all detected `gitignore`s (default: false)
 ---@field hidden bool: whether to add hidden files in recursively copying folders (default: true)
----@field parents bool: whether to create possibly non-existing parent dirs of `opts.destination` (default: true)
+---@field parents bool: whether to create possibly non-existing parent dirs of `opts.destination` (default: false)
 ---@field exists_ok bool: whether ok if `opts.destination` exists, if so folders are merged (default: true)
 ---@return table {[Path of destination]: bool} indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
   opts = opts or {}
-  opts.recursive = F.if_nil(opts.recursive, true, opts.recursive)
+  opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
   local dest = opts.destination
@@ -547,7 +547,7 @@ function Path:copy(opts)
   -- dir
   if opts.recursive then
     dest:mkdir {
-      parents = F.if_nil(opts.parents, true, opts.parents),
+      parents = F.if_nil(opts.parents, false, opts.parents),
       exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
     }
     local scan = require "plenary.scandir"
