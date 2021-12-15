@@ -429,11 +429,13 @@ function Path:mkdir(opts)
   local parents = F.if_nil(opts.parents, false, opts.parents)
   local exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok)
 
-  if not exists_ok and self:exists() then
+  local exists = self:exists()
+  if not exists_ok and exists then
     error("FileExistsError:" .. self:absolute())
   end
 
-  if not uv.fs_mkdir(self:_fs_filename(), mode) then
+  -- fs_mkdir returns nil if folder exists
+  if not uv.fs_mkdir(self:_fs_filename(), mode) and not exists then
     if parents then
       local dirs = self:_split()
       local processed = ""
