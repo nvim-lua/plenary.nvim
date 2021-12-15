@@ -470,9 +470,8 @@ describe("Path", function()
 
       local trg_dir = Path:new "trg"
       local status = xpcall(function()
-        src_dir:copy { destination = trg_dir, recursive = false, override = override, hidden = hidden }
+        src_dir:copy { destination = trg_dir, recursive = false }
       end, function()
-        return
       end)
       -- failed as intended
       assert(status == false)

@@ -506,12 +506,14 @@ end
 ---@field recursive bool: whether to copy folders recursively (default: true)
 ---@field override bool: whether to override files (default: true)
 ---@field interactive bool: confirm if copy would override; precedes `override` (default: false)
----@field respect_gitignore bool: skip folders ignored by all detected `gitignore`s (default: true)
+---@field respect_gitignore bool: skip folders ignored by all detected `gitignore`s (default: false)
 ---@field hidden bool: whether to add hidden files in recursively copying folders (default: true)
+---@field parents bool: whether to create possibly non-existing parent dirs of `opts.destination` (default: true)
+---@field exists_ok bool: whether ok if `opts.destination` exists, if so folders are merged (default: true)
 ---@return table {[Path of destination]: bool} indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
   opts = opts or {}
-  opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
+  opts.recursive = F.if_nil(opts.recursive, true, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
   local dest = opts.destination
@@ -528,7 +530,6 @@ function Path:copy(opts)
   -- success is true in case file is copied, false otherwise
   local success = {}
   if not self:is_dir() then
-    local flags = {}
     if opts.interactive and dest:exists() then
       vim.ui.select(
         { "Yes", "No" },
@@ -538,9 +539,8 @@ function Path:copy(opts)
         end
       )
     else
-      flags.excl = not opts.override
       -- nil: not overriden if `override = false`
-      success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), flags) or false
+      success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not opts.override }) or false
     end
     return success
   end
@@ -552,7 +552,7 @@ function Path:copy(opts)
     }
     local scan = require "plenary.scandir"
     local data = scan.scan_dir(self.filename, {
-      respect_gitignore = F.if_nil(opts.respect_gitignore, true, opts.respect_gitignore),
+      respect_gitignore = F.if_nil(opts.respect_gitignore, false, opts.respect_gitignore),
       hidden = F.if_nil(opts.hidden, true, opts.hidden),
       depth = 1,
       add_dirs = true,
