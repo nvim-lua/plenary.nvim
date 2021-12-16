@@ -225,7 +225,7 @@ mod.run = function(file)
     print(color_string("red", msg))
     print(HEADER)
     if is_headless then
-      os.exit(2)
+      return vim.cmd "2cq"
     else
       return
     end
@@ -234,7 +234,7 @@ mod.run = function(file)
   -- If nothing runs (empty file without top level describe)
   if not results.pass then
     if is_headless then
-      os.exit(0)
+      return vim.cmd "0cq"
     else
       return
     end
@@ -245,17 +245,17 @@ mod.run = function(file)
   if #results.fatal ~= 0 then
     print("We had an unexpected error: ", vim.inspect(results.fatal), vim.inspect(results))
     if is_headless then
-      os.exit(2)
+      return vim.cmd "2cq"
     end
   elseif #results.fail > 0 then
     print "Tests Failed. Exit: 1"
 
     if is_headless then
-      os.exit(1)
+      return vim.cmd "1cq"
     end
   else
     if is_headless then
-      os.exit(0)
+      return vim.cmd "0cq"
     end
   end
 end
