@@ -387,7 +387,7 @@ function Popup:create(what, vim_options)
 
   if vim_options.highlight then
     vim.api.nvim_win_set_option(
-      win_id,
+      obj.win_id,
       "winhl",
       string.format("Normal:%s,EndOfBuffer:%s", vim_options.highlight, vim_options.highlight)
     )
