@@ -227,6 +227,14 @@ describe("Path", function()
       p._cwd = "/tmp/lua"
       assert.are.same("~/test_file", p:normalize())
     end)
+
+    it("handles usernames with a dash at the end", function()
+      local home = "/home/mattr-"
+      local p = Path:new { home, "test_file" }
+      p.path.home = home
+      p._cwd = "/tmp/lua"
+      assert.are.same("~/test_file", p:normalize())
+    end)
   end)
 
   describe(":shorten", function()

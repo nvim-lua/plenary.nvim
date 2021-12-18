@@ -347,8 +347,12 @@ function Path:normalize(cwd)
   self:make_relative(cwd)
 
   -- Substitute home directory w/ "~"
-  local removed_path_sep = path.home:gsub(path.sep .. "$", "")
-  self.filename = self.filename:gsub("^" .. removed_path_sep, "~", 1)
+  -- string.gsub is not useful here because usernames with dashes at the end
+  -- will be seen as a regexp pattern rather than a raw string
+  start, end = string.find(self.filename, path.home, 1, true)
+  if start == 1 then
+    self.filename = "~" .. string.sub(self.filename, (end + 1), -1)
+  end
 
   return _normalize_path(self.filename, self._cwd)
 end
