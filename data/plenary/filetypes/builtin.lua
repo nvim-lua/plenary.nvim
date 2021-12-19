@@ -39,6 +39,7 @@ return {
     ['graphql'] = 'graphql',
     ['gql'] = 'graphql',
     ['rkt'] = 'racket',
+    ['rs'] = 'rust',
   },
   file_name = {
     ['cakefile'] = 'coffee',
