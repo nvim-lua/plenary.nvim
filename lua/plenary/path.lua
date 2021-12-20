@@ -351,10 +351,10 @@ function Path:normalize(cwd)
   -- will be seen as a regexp pattern rather than a raw string
   local start, finish = string.find(self.filename, path.home, 1, true)
   if start == 1 then
-    self.filename = "~" .. string.sub(self.filename, (finish + 1), -1)
+    self.filename = "~" .. path.sep .. string.sub(self.filename, (finish + 1), -1)
   end
 
-  return _normalize_path(self.filename, self._cwd)
+  return _normalize_path(clean(self.filename), self._cwd)
 end
 
 local function shorten_len(filename, len, exclude)
