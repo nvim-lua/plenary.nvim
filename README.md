@@ -288,6 +288,11 @@ Status: WIP
 
 See [popup documentation](./POPUP.md) for both progress tracking and implemented APIs.
 
+*For best results, such as increasing opacity of the floating window, put this in your nvim configuration*:
+```viml
+set termguicolors
+```
+
 ### plenary.window
 
 Window helper functions to wrap some of the more difficult cases. Particularly for floating windows.
