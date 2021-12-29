@@ -517,6 +517,8 @@ function Path:copy(opts)
   opts = opts or {}
   opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
+  opts.parents = F.if_nil(opts.parents, false, opts.parents)
+  opts.exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok)
 
   local dest = opts.destination
   -- handles `.`, `..`, `./`, and `../`
@@ -541,6 +543,12 @@ function Path:copy(opts)
         end
       )
     else
+      if opts.parents then
+        local parent = dest:parent()
+        if not parent:exists() then
+          parent:mkdir { parents = opts.parents, exists_ok = opts.exists_ok }
+        end
+      end
       -- nil: not overriden if `override = false`
       success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not opts.override }) or false
     end
@@ -549,8 +557,8 @@ function Path:copy(opts)
   -- dir
   if opts.recursive then
     dest:mkdir {
-      parents = F.if_nil(opts.parents, false, opts.parents),
-      exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
+      parents = opts.parents,
+      exists_ok = opts.exists_ok,
     }
     local scan = require "plenary.scandir"
     local data = scan.scan_dir(self.filename, {
