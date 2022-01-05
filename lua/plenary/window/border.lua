@@ -178,7 +178,8 @@ function Border:change_title(new_title, pos)
     return
   end
 
-  pos = pos or (self._border_win_options.title[1] and self._border_win_options.title[1].pos)
+  pos = pos
+    or (self._border_win_options.title and self._border_win_options.title[1] and self._border_win_options.title[1].pos)
   if pos == nil then
     self._border_win_options.title = new_title
   else
