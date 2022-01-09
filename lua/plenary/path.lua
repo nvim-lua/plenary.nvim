@@ -476,49 +476,41 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
+-- function Path:rename(opts)
+--   opts = opts or {}
+--   if not opts.new_name or opts.new_name == "" then
+--     error "Please provide the new name!"
+--   end
+--
+--   -- handles `.`, `..`, `./`, and `../`
+--   if opts.new_name:match "^%.%.?/?\\?.+" then
+--     opts.new_name = {
+--       uv.fs_realpath(opts.new_name:sub(1, 3)),
+--       opts.new_name:sub(4, #opts.new_name),
+--     }
+--   end
+--
+--   local new_path = Path:new(opts.new_name)
+--
+--   if new_path:exists() then
+--     error "File or directory already exists!"
+--   end
+--
+--   local status = uv.fs_rename(self:absolute(), new_path:absolute())
+--   self.filename = new_path.filename
+--
+--   return status
+-- end
+
 function Path:rename(opts)
   opts = opts or {}
   if not opts.new_name or opts.new_name == "" then
     error "Please provide the new name!"
   end
-
-  -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match "^%.%.?/?\\?.+" then
-    opts.new_name = {
-      uv.fs_realpath(opts.new_name:sub(1, 3)),
-      opts.new_name:sub(4, #opts.new_name),
-    }
-  end
-
-  local new_path = Path:new(opts.new_name)
-
-  if new_path:exists() then
-    error "File or directory already exists!"
-  end
-
-  local status = uv.fs_rename(self:absolute(), new_path:absolute())
-  self.filename = new_path.filename
-
-  return status
-end
-
-function Path:move(opts)
-  opts = opts or {}
   opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
-  local dest = opts.destination
-  -- handles `.`, `..`, `./`, and `../`
-  -- TODO: similar stuff repeated `copy` and `rename` - move into `new`?
-  if not Path.is_path(dest) then
-    if type(dest) == "string" and dest:match "^%.%.?/?\\?.+" then
-      dest = {
-        uv.fs_realpath(dest:sub(1, 3)),
-        dest:sub(4, #dest),
-      }
-    end
-    dest = Path:new(dest)
-  end
+  local dest = Path:new(opts.new_name)
 
   local success = {}
   if not self:is_dir() then
@@ -559,10 +551,10 @@ function Path:move(opts)
       local suffix = table.remove(entry_path:_split())
       local new_dest = dest:joinpath(suffix)
       -- clear destination as it might be Path table otherwise failing w/ extend
-      opts.destination = nil
-      local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
+      opts.new_name = nil
+      local new_opts = vim.tbl_deep_extend("force", opts, { new_name = new_dest })
       -- nil: not overriden if `override = false`
-      success[new_dest] = entry_path:move(new_opts) or false
+      success[new_dest] = entry_path:rename(new_opts) or false
     end
     self:rmdir()
     return success
