@@ -502,6 +502,76 @@ function Path:rename(opts)
   return status
 end
 
+function Path:move(opts)
+  opts = opts or {}
+  opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
+  opts.override = F.if_nil(opts.override, true, opts.override)
+
+  local dest = opts.destination
+  -- handles `.`, `..`, `./`, and `../`
+  -- TODO: similar stuff repeated `copy` and `rename` - move into `new`?
+  if not Path.is_path(dest) then
+    if type(dest) == "string" and dest:match "^%.%.?/?\\?.+" then
+      dest = {
+        uv.fs_realpath(dest:sub(1, 3)),
+        dest:sub(4, #dest),
+      }
+    end
+    dest = Path:new(dest)
+  end
+
+  local success = {}
+  if not self:is_dir() then
+    if opts.interactive and dest:exists() then
+      opts.override = vim.ui.input({
+        string.format("%s already exists. Overwrite? [y/N] ", dest.filename),
+      }, function(input)
+        return string.lower(input or "") == "y"
+      end)
+    end
+
+    if dest:exists() then
+      if opts.override then
+        dest:rm()
+      else
+        return success
+      end
+    end
+    success[dest] = uv.fs_rename(self:absolute(), dest:absolute()) or false
+    self.filename = dest.filename
+    return success
+  end
+
+  if opts.recursive then
+    dest:mkdir {
+      parents = F.if_nil(opts.parents, false, opts.parents),
+      exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
+    }
+    local scan = require "plenary.scandir"
+    local data = scan.scan_dir(self.filename, {
+      respect_gitignore = F.if_nil(opts.respect_gitignore, false, opts.respect_gitignore),
+      hidden = F.if_nil(opts.hidden, true, opts.hidden),
+      depth = 1,
+      add_dirs = true,
+    })
+    for _, entry in ipairs(data) do
+      local entry_path = Path:new(entry)
+      local suffix = table.remove(entry_path:_split())
+      local new_dest = dest:joinpath(suffix)
+      -- clear destination as it might be Path table otherwise failing w/ extend
+      opts.destination = nil
+      local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
+      -- nil: not overriden if `override = false`
+      success[new_dest] = entry_path:move(new_opts) or false
+    end
+    self:rmdir()
+    return success
+  else
+    error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
+  end
+
+end
+
 --- Copy files or folders with defaults akin to GNU's `cp`.
 ---@param opts table: options to pass to toggling registered actions
 ---@field destination string|Path: target file path to copy to

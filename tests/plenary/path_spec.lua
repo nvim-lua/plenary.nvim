@@ -568,6 +568,190 @@ describe("Path", function()
     end)
   end)
 
+  describe(":move", function()
+    it("can move file", function()
+      local p1 = Path:new "a_random_filename.rs"
+      local p2 = Path:new "a_random_filename.rs"
+      local dest = "not_a_random_filename.rs"
+      assert(pcall(p1.touch, p1))
+
+      assert(pcall(p1.move, p1, { destination = dest }))
+      assert.are.same(p1.filename, dest)
+      assert.False(p2:exists())
+      p1:rm()
+    end)
+
+    it("can move to parent dir", function()
+      local p1 = Path:new "a_random_filename.rs"
+      local p2 = Path:new "a_random_filename.rs"
+      assert(pcall(p1.touch, p1))
+
+      assert(pcall(p1.move, p1, { destination = "../not_a_random_filename.rs" }))
+      assert(pcall(p1.exists, p1))
+      assert.False(p2:exists())
+
+      p1:rm()
+    end)
+
+    it("cannot move an existing file if override false", function()
+      local orig = "a_random_filename.rs"
+      local dest = "not_a_random_filename.rs"
+      local p1 = Path:new(orig)
+      local p2 = Path:new(dest)
+      assert(pcall(p1.touch, p1))
+      assert(pcall(p2.touch, p2))
+
+      assert(pcall(p1.move, p1, { destination = dest, override = false }))
+      assert.are.same(p1.filename, orig)
+      assert.are.same(p2.filename, dest)
+
+      p1:rm()
+      p2:rm()
+    end)
+
+    it("fails when moving folders non-recursively", function()
+      local src_dir = Path:new "src"
+      src_dir:mkdir()
+      src_dir:joinpath("file1.lua"):touch()
+      local trg_dir = Path:new "trg"
+
+      -- error out as intended
+      assert.has.errors(function()
+        return src_dir:move { destination = trg_dir, recursive = false }
+      end, string.format(
+        "Warning: %s was not copied as `recursive=false`",
+        src_dir:absolute()
+      ))
+      src_dir:rm { recursive = true }
+    end)
+
+    describe("recursively", function()
+      local scan = require "plenary.scandir"
+      local scan_opts = {
+        hidden = true,
+        depth = 3,
+        add_dirs = true,
+      }
+
+      local src_dir, src_dirs, ovr_dir, ovr_dirs, oth_dir
+      local file_prefixes = { "file1", "file2", ".file3" }
+
+      local flatten
+      flatten = function(ret, t)
+        for _, v in pairs(t) do
+          if type(v) == "table" then
+            flatten(ret, v)
+          else
+            table.insert(ret, v)
+          end
+        end
+      end
+
+      local generate_children = function(files, dirs)
+        for _, file in ipairs(files) do
+          for level, dir in ipairs(dirs) do
+            local p = dir:joinpath(file .. "_" .. level .. ".lua")
+            p:touch { parents = true, exists_ok = true }
+          end
+        end
+      end
+
+      before_each(function()
+        -- vim.tbl_flatten doesn't work here as copy doesn't return a list
+
+        -- setup directories
+        src_dir = Path:new "src"
+        ovr_dir = Path:new "ovr"
+        oth_dir = Path:new "oth"
+        src_dir:mkdir()
+
+        -- set up sub directory paths for creation and testing
+        local sub_dirs = { "sub_dir1", "sub_dir1/sub_dir2" }
+        src_dirs = { src_dir }
+        ovr_dirs = { ovr_dir }
+        -- {src, trg}_dirs is a table with all directory levels by {src, trg}
+        for _, dir in ipairs(sub_dirs) do
+          table.insert(src_dirs, src_dir:joinpath(dir))
+          table.insert(ovr_dirs, ovr_dir:joinpath(dir))
+        end
+
+        -- generate {file}_{level}.lua on every directory level in src
+        -- src
+        -- ├── file1_1.lua
+        -- ├── file2_1.lua
+        -- ├── .file3_1.lua
+        -- └── sub_dir1
+        --     ├── file1_2.lua
+        --     ├── file2_2.lua
+        --     ├── .file3_2.lua
+        --     └── sub_dir2
+        --         ├── file1_3.lua
+        --         ├── file2_3.lua
+        --         └── .file3_3.lua
+        generate_children(file_prefixes, src_dirs)
+      end)
+
+      after_each(function()
+        if src_dir:exists() then
+          src_dir:rm { recursive = true }
+        end
+        if ovr_dir:exists() then
+          ovr_dir:rm { recursive = true }
+        end
+        if oth_dir:exists() then
+          oth_dir:rm { recursive = true }
+        end
+      end)
+
+      it("no override needed, hidden = true", function()
+        local success = src_dir:move { destination = oth_dir, recursive = true, hidden = true }
+        local file_ops = {}
+        flatten(file_ops, success)
+        assert.is.equal(#file_ops, 9)
+        assert.False(src_dir:exists())
+
+        local data = scan.scan_dir(oth_dir.filename, scan_opts)
+        assert.is.equal(#data, 11)
+      end)
+
+      it("no override needed, hidden = false", function()
+        local success = src_dir:move { destination = oth_dir, recursive = true, hidden = false }
+        local file_ops = {}
+        flatten(file_ops, success)
+        assert.is.equal(#file_ops, 6)
+        assert.True(src_dir:exists())
+
+        local src_data = scan.scan_dir(src_dir.filename, scan_opts)
+        local oth_data = scan.scan_dir(oth_dir.filename, scan_opts)
+        assert.is.equal(#src_data, 5)
+        assert.is.equal(#oth_data, 8)
+      end)
+
+      it("full overriding", function()
+        generate_children(file_prefixes, ovr_dirs)
+        local success = src_dir:move { destination = ovr_dir, recursive = true, override = true }
+        local file_ops = {}
+        flatten(file_ops, success)
+        assert.is.equal(#file_ops, 9)
+
+        local data = scan.scan_dir(ovr_dir.filename, scan_opts)
+        assert.is.equal(#data, 11)
+      end)
+
+      it("partial overriding while keeping non overlapping files", function()
+        table.insert(file_prefixes, 1, "keep")
+        generate_children(file_prefixes, ovr_dirs)
+        local success = src_dir:move { destination = ovr_dir, recursive = true, override = true }
+        local file_ops = {}
+        flatten(file_ops, success)
+        assert.is.equal(#file_ops, 9)
+
+        local data = scan.scan_dir(ovr_dir.filename, scan_opts)
+        assert.is.equal(#data, 14)
+      end)
+    end)
+  end)
+
   describe("parents", function()
     it("should extract the ancestors of the path", function()
       local p = Path:new(vim.loop.cwd())
