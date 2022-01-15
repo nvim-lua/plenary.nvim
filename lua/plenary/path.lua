@@ -535,7 +535,7 @@ end
 function Path:rename(opts)
   opts = opts or {}
   _check_path_empty(opts.new_name)
-  opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
+  opts.recursive = F.if_nil(opts.recursive, true, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
   local dest = Path:new(opts.new_name)
