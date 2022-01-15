@@ -391,12 +391,16 @@ describe("Path", function()
     end)
 
     it("can handle an invalid filename", function()
+      local error_msg = "Empty path input given. Please provide valid path."
       assert.has.errors(function()
         test_file:rename { new_name = "" }
-      end, "Please provide the new name!")
+      end, error_msg)
+      assert.has.errors(function()
+        test_file:rename { new_name = "  " }
+      end, error_msg)
       assert.has.errors(function()
         test_file:rename()
-      end, "Please provide the new name!")
+      end, error_msg)
       assert.is.equal(test_file.filename, test_name)
     end)
 
@@ -451,8 +455,8 @@ describe("Path", function()
       local src_dir, src_dirs, ovr_dir, ovr_dirs, oth_dir
       local file_prefixes = { "file1", "file2", ".file3" }
 
-      local flatten
-      flatten = function(ret, t)
+      -- vim.tbl_flatten doesn't work here as copy doesn't return a list
+      local function flatten(ret, t)
         for _, v in pairs(t) do
           if type(v) == "table" then
             flatten(ret, v)
@@ -472,8 +476,6 @@ describe("Path", function()
       end
 
       before_each(function()
-        -- vim.tbl_flatten doesn't work here as copy doesn't return a list
-
         -- setup directories
         src_dir = Path:new "src"
         ovr_dir = Path:new "ovr"
