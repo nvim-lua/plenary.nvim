@@ -44,6 +44,11 @@ path.root = (function()
   end
 end)()
 
+-- remove trailing slash from homedir if any
+if path.home:sub(-1) == path.sep then
+  path.home = path.home:sub(1,-2)
+end
+
 path.S_IF = S_IF
 
 local band = function(reg, value)
