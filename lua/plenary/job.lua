@@ -16,6 +16,7 @@ local F = require "plenary.functional"
 ---@field on_exit function        : (self, code: number, signal: number)
 ---@field maximum_results number  : stop processing results after this number
 ---@field writer Job|table|string : Job that writes to stdin of this job.
+---@field detached boolean        : Spawn the child in a detached state making it a process group leader
 ---@field enabled_recording boolean
 local Job = {}
 Job.__index = Job
@@ -129,6 +130,10 @@ function Job:new(o)
     obj.interactive = true
   else
     obj.interactive = o.interactive
+  end
+
+  if o.detached then
+    obj.detached = true
   end
 
   -- enable_handlers: Do you want to do ANYTHING with the stdout/stderr of the proc
@@ -270,6 +275,10 @@ function Job:_create_uv_options()
   end
   if self.env then
     options.env = self.env
+  end
+
+  if self.detached then
+    options.detached = true
   end
 
   return options
