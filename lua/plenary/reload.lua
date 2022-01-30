@@ -13,8 +13,9 @@ reload.reload_module = function(module_name, starts_with_only)
       return string.find(pack, module_name, 1, true)
     end
   else
+    local module_name_pattern = vim.pesc(module_name)
     matcher = function(pack)
-      return string.find(pack, "^" .. module_name)
+      return string.find(pack, "^" .. module_name_pattern)
     end
   end
 
