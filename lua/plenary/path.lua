@@ -397,7 +397,7 @@ local shorten = (function()
     local ffi = require "ffi"
     ffi.cdef [[
     typedef unsigned char char_u;
-    char_u *shorten_dir(char_u *str);
+    void shorten_dir(char_u *str);
     ]]
     return function(filename)
       if not filename or is_uri(filename) then
@@ -406,7 +406,8 @@ local shorten = (function()
 
       local c_str = ffi.new("char[?]", #filename + 1)
       ffi.copy(c_str, filename)
-      return ffi.string(ffi.C.shorten_dir(c_str))
+      ffi.C.shorten_dir(c_str)
+      return ffi.string(c_str)
     end
   end
   return function(filename)
