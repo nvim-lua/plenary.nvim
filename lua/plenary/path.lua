@@ -804,9 +804,11 @@ function Path:tail(lines)
     local read_chunk = assert(uv.fs_read(fd, chunk_size, real_index))
 
     local i = #read_chunk
+    local found_cr = 0
     while i > 0 do
       local char = read_chunk:sub(i, i)
       if char == "\n" then
+        found_cr = 1
         count = count + 1
         if count >= lines then
           break
@@ -814,6 +816,9 @@ function Path:tail(lines)
       end
       index = index - 1
       i = i - 1
+      if i == 0 and found_cr == 0 then
+        count = count + 1
+      end
     end
     data = read_chunk:sub(i + 1, #read_chunk) .. data
   end
