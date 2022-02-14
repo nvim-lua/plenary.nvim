@@ -78,7 +78,7 @@ end
 
 local is_absolute = function(filename, sep)
   if sep == "\\" then
-    return string.match(filename, "^[%a]:\\.*$")
+    return string.match(filename, "^[%a]:\\.*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
 end
