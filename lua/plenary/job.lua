@@ -427,7 +427,7 @@ function Job:_execute()
           self.stdin:write "\n"
         else
           self.stdin:write("\n", function()
-            self.stdin:close()
+            pcall(self.stdin.close, self.stdin)
           end)
         end
       end
