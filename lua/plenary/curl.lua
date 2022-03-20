@@ -191,23 +191,30 @@ parse.request = function(opts)
       opts.raw_body = b
     end
   end
-  return vim.tbl_flatten {
-    "-sSL",
-    opts.dump,
-    opts.compressed and "--compressed" or nil,
-    parse.method(opts.method),
-    parse.headers(opts.headers),
-    parse.accept_header(opts.accept),
-    parse.raw_body(opts.raw_body),
-    parse.data_body(opts.data),
-    parse.form(opts.form),
-    parse.file(opts.in_file),
-    parse.auth(opts.auth),
-    opts.raw,
-    opts.output and { "-o", opts.output } or nil,
-    parse.url(opts.url, opts.query),
-  },
-    opts
+  local result = { "-sSL", opts.dump }
+  local append = function(v)
+    if v then
+      table.insert(result, v)
+    end
+  end
+
+  if opts.compressed then
+    table.insert(result, "--compressed")
+  end
+  append(parse.method(opts.method))
+  append(parse.headers(opts.headers))
+  append(parse.accept_header(opts.accept))
+  append(parse.raw_body(opts.raw_body))
+  append(parse.data_body(opts.data))
+  append(parse.form(opts.form))
+  append(parse.file(opts.in_file))
+  append(parse.auth(opts.auth))
+  append(opts.raw)
+  if opts.output then
+    table.insert(result, { "-o", opts.output })
+  end
+  table.insert(result, parse.url(opts.url, opts.query))
+  return vim.tbl_flatten(result), opts
 end
 
 -- Parse response ------------------------------------------
