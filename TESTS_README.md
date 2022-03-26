@@ -65,7 +65,7 @@ describe("example", function()
   -- mocked instance of api to interact with
 
   describe("realistic_func", function()
-    it("Should make explected calls to api, fully mocked", function()
+    it("Should make expected calls to api, fully mocked", function()
       -- mock the vim.api
       local api = mock(vim.api, true)
 
