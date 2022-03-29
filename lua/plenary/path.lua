@@ -844,4 +844,36 @@ function Path:iter()
   end
 end
 
+function Path:readbyterange(offset, length)
+  self = check_self(self)
+
+  local fd = uv.fs_open(self:expand(), "r", 438)
+  if not fd then
+    return
+  end
+  local stat = assert(uv.fs_fstat(fd))
+  if stat.type ~= "file" then
+    uv.fs_close(fd)
+    return nil
+  end
+
+  if offset < 0 then
+    offset = stat.size + offset
+  end
+
+  data = ""
+  while #data < length do
+    local read_chunk = assert(uv.fs_read(fd, length - #data, offset))
+    if #read_chunk == 0 then
+      break
+    end
+    data = data .. read_chunk
+    offset = offset + #read_chunk
+  end
+
+  assert(uv.fs_close(fd))
+
+  return data
+end
+
 return Path
