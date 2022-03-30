@@ -130,19 +130,21 @@ filetype.detect_from_name = function(filepath)
 end
 
 filetype.detect_from_modeline = function(filepath)
-  local tail = Path:new(filepath):tail(1)
+  local tail = Path:new(filepath):readbyterange(-256, 256)
   if not tail then
     return ""
   end
-  return filetype._parse_modeline(tail)
+  local lines = vim.split(tail, "\n")
+  return filetype._parse_modeline(lines[#lines])
 end
 
 filetype.detect_from_shebang = function(filepath)
-  local head = Path:new(filepath):head(1)
+  local head = Path:new(filepath):readbyterange(0, 256)
   if not head then
     return ""
   end
-  return filetype._parse_shebang(head)
+  local lines = vim.split("", "\n")
+  return filetype._parse_shebang(lines[1])
 end
 
 --- Detect a filetype from a path.
