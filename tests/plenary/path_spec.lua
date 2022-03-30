@@ -684,6 +684,22 @@ SOFTWARE.]]
       assert.are.same(should, data)
     end)
   end)
+
+  describe("readbyterange", function()
+    it("should read bytes at given offset", function()
+      local p = Path:new "LICENSE"
+      local data = p:readbyterange(13, 10)
+      local should = "Copyright "
+      assert.are.same(should, data)
+    end)
+
+    it("supports negative offset", function()
+      local p = Path:new "LICENSE"
+      local data = p:readbyterange(-10, 10)
+      local should = "SOFTWARE.\n"
+      assert.are.same(should, data)
+    end)
+  end)
 end)
 
 -- function TestPath:testIsDir()
