@@ -143,7 +143,7 @@ filetype.detect_from_shebang = function(filepath)
   if not head then
     return ""
   end
-  local lines = vim.split("", "\n")
+  local lines = vim.split(head, "\n")
   return filetype._parse_shebang(lines[1])
 end
 
