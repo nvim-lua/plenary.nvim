@@ -135,7 +135,10 @@ filetype.detect_from_modeline = function(filepath)
     return ""
   end
   local lines = vim.split(tail, "\n")
-  return filetype._parse_modeline(lines[#lines])
+  local idx = lines[#lines] ~= "" and #lines or #lines - 1
+  if idx >= 1 then
+    return filetype._parse_modeline(lines[idx])
+  end
 end
 
 filetype.detect_from_shebang = function(filepath)
