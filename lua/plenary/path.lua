@@ -859,6 +859,11 @@ function Path:readbyterange(offset, length)
 
   if offset < 0 then
     offset = stat.size + offset
+    -- Windows fails if offset is < 0 even though offset is defined as signed
+    -- http://docs.libuv.org/en/v1.x/fs.html#c.uv_fs_read
+    if offset < 0 then
+      offset = 0
+    end
   end
 
   local data = ""
