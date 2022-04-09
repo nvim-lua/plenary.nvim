@@ -341,7 +341,8 @@ function Path:normalize(cwd)
   self:make_relative(cwd)
 
   -- Substitute home directory w/ "~"
-  self.filename = self.filename:gsub("^" .. path.home, "~" .. path.sep, 1)
+  local removed_path_sep = path.home:gsub(path.sep .. "$", "")
+  self.filename = self.filename:gsub("^" .. removed_path_sep, "~", 1)
 
   return _normalize_path(self.filename, self._cwd)
 end
