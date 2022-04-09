@@ -88,6 +88,12 @@ local function _normalize_path(filename, cwd)
     return filename
   end
 
+  -- handles redundant `./` in the middle
+  local redundant = path.sep.."."..path.sep
+  if filename:match(redundant) then
+    filename = filename:gsub(redundant, path.sep)
+  end
+
   local out_file = filename
 
   local has = string.find(filename, path.sep .. "..", 1, true) or string.find(filename, ".." .. path.sep, 1, true)
