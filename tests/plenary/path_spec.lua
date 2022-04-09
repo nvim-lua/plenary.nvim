@@ -211,7 +211,7 @@ describe("Path", function()
       local p = Path:new { home, "./test_file" }
       p.path.home = home
       p._cwd = "/tmp/lua"
-      assert.are.same("~/./test_file", p:normalize())
+      assert.are.same("~/test_file", p:normalize())
     end)
 
     it("can normalize ~ when file is within home directory (no trailing slash)", function()
@@ -219,7 +219,7 @@ describe("Path", function()
       local p = Path:new { home, "./test_file" }
       p.path.home = home
       p._cwd = "/tmp/lua"
-      assert.are.same("~//./test_file", p:normalize())
+      assert.are.same("~/test_file", p:normalize())
     end)
   end)
 

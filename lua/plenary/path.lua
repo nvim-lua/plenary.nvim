@@ -88,6 +88,12 @@ local function _normalize_path(filename, cwd)
     return filename
   end
 
+  -- handles redundant `./` in the middle
+  local redundant = path.sep .. "." .. path.sep
+  if filename:match(redundant) then
+    filename = filename:gsub(redundant, path.sep)
+  end
+
   local out_file = filename
 
   local has = string.find(filename, path.sep .. "..", 1, true) or string.find(filename, ".." .. path.sep, 1, true)
@@ -341,7 +347,8 @@ function Path:normalize(cwd)
   self:make_relative(cwd)
 
   -- Substitute home directory w/ "~"
-  self.filename = self.filename:gsub("^" .. path.home, "~" .. path.sep, 1)
+  local removed_path_sep = path.home:gsub(path.sep .. "$", "")
+  self.filename = self.filename:gsub("^" .. removed_path_sep, "~", 1)
 
   return _normalize_path(self.filename, self._cwd)
 end
