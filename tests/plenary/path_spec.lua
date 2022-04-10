@@ -168,6 +168,12 @@ describe("Path", function()
   end)
 
   describe(":normalize", function()
+    it("can take path that has one character directories", function()
+      local orig = "/home/j/./p//path.lua"
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, "/home/j/p/path.lua")
+    end)
+
     it("can take paths with double separators change them to single separators", function()
       local orig = "/lua//plenary/path.lua"
       local final = Path:new(orig):normalize()

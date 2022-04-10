@@ -89,7 +89,7 @@ local function _normalize_path(filename, cwd)
   end
 
   -- handles redundant `./` in the middle
-  local redundant = path.sep .. "." .. path.sep
+  local redundant = path.sep .. "%." .. path.sep
   if filename:match(redundant) then
     filename = filename:gsub(redundant, path.sep)
   end
