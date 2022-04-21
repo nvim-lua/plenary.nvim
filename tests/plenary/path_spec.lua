@@ -478,6 +478,49 @@ describe("Path", function()
       src_dir:rm { recursive = true }
     end)
 
+    it("self copies folders only once", function()
+      local scan = require "plenary.scandir"
+      -- create nested folder
+      local src_dir = Path:new "src"
+      src_dir:mkdir()
+      src_dir:joinpath("file1.lua"):touch()
+      local src_sub_dir = src_dir:joinpath "sub_dir"
+      src_sub_dir:mkdir()
+      src_sub_dir:joinpath("file2.lua"):touch()
+      -- src
+      -- ├── file1.lua
+      -- └── sub_dir
+      --     └── file2_2.lua
+
+      local trg_dir = src_dir:joinpath "src"
+      src_dir:copy { destination = trg_dir, recursive = true }
+      -- src/
+      -- ├── file1.lua
+      -- ├── src
+      -- │   ├── file1.lua
+      -- │   └── sub_dir
+      -- │       └── file2.lua
+      -- └── sub_dir
+      --     └── file2.lua
+      local src_dir_data = scan.scan_dir(src_dir:absolute(), { depth = 1, add_dirs = true })
+      local trg_dir_data = scan.scan_dir(trg_dir:absolute(), { depth = 1, add_dirs = true })
+      table.insert(trg_dir_data, trg_dir:absolute())
+      -- check that equal number of items
+      assert(#src_dir_data == #trg_dir_data)
+      -- insert file/folder stems into set
+      local path_set = {}
+      -- get suffixes of absolute paths in respective folders and check match by creating set
+      for _, value in ipairs(src_dir_data) do
+        value = table.remove(Path:new(value):_split())
+        path_set[value] = true
+      end
+      for _, value in ipairs(trg_dir_data) do
+        value = table.remove(Path:new(value):_split())
+        assert(path_set[value])
+      end
+      src_dir:rm { recursive = true }
+    end)
+
     it("can copy directories recursively", function()
       -- vim.tbl_flatten doesn't work here as copy doesn't return a list
       local flatten
