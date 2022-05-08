@@ -682,7 +682,11 @@ function Path:parents()
 end
 
 function Path:is_file()
-  local stat = uv.fs_stat(self:expand())
+  local status, expanded = pcall(function() self:expand() end)
+  if status == false then
+    return false
+  end
+  local stat = uv.fs_stat(expanded)
   if stat then
     return stat.type == "file" and true or nil
   end
