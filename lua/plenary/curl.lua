@@ -182,10 +182,14 @@ end
 parse.request = function(opts)
   if opts.body then
     local b = opts.body
+    local silent_is_file = function()
+      local status, result = pcall(P.is_file, P.new(b))
+      return status and result
+    end
     opts.body = nil
     if type(b) == "table" then
       opts.data = b
-    elseif P.is_file(P.new(b)) then
+    elseif silent_is_file() then
       opts.in_file = b
     elseif type(b) == "string" then
       opts.raw_body = b
