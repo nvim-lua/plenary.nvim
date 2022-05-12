@@ -32,6 +32,7 @@ return {
     ['jl'] = 'julia',
     ['coffee'] = 'coffee',
     ['_coffee'] = 'coffee',
+    ['cljd'] = 'clojure',
     ['nix'] = 'nix',
     ['erb'] = 'eruby',
     ['hbs'] = 'handlebars',
@@ -40,7 +41,7 @@ return {
     ['gql'] = 'graphql',
     ['rkt'] = 'racket',
     ['res'] = 'rescript',
-    ['resi'] = 'rescript'
+    ['resi'] = 'rescript',
   },
   file_name = {
     ['cakefile'] = 'coffee',

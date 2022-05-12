@@ -437,7 +437,6 @@ return {
     ['hic'] = [[clojure]],
     ['cljx'] = [[clojure]],
     ['cljs'] = [[clojure]],
-    ['cljd'] = [[clojure]],
     ['json'] = [[json]],
     ['cljc'] = [[clojure]],
     ['pfa'] = [[postscr]],
