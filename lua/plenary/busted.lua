@@ -31,7 +31,8 @@ end
 
 local is_headless = require("plenary.nvim_meta").is_headless
 
-local print = function(...)
+-- We are shadowing print so people can reliably print messages
+print = function(...)
   for _, v in ipairs { ... } do
     io.stdout:write(tostring(v))
     io.stdout:write "\t"
@@ -103,14 +104,10 @@ local PENDING = color_string("yellow", "Pending")
 local HEADER = string.rep("=", 40)
 
 mod.format_results = function(res)
-  local num_pass = #res.pass
-  local num_fail = #res.fail
-  local num_errs = #res.errs
-
   print ""
-  print(color_string("green", "Success: "), num_pass)
-  print(color_string("red", "Failed : "), num_fail)
-  print(color_string("red", "Errors : "), num_errs)
+  print(color_string("green", "Success: "), #res.pass)
+  print(color_string("red", "Failed : "), #res.fail)
+  print(color_string("red", "Errors : "), #res.errs)
   print(HEADER)
 end
 
@@ -118,13 +115,17 @@ mod.describe = function(desc, func)
   results.pass = results.pass or {}
   results.fail = results.fail or {}
   results.errs = results.errs or {}
-  results.fatal = results.fatal or {}
 
   describe = mod.inner_describe
-  local ok, msg = call_inner(desc, func)
+  local ok, msg, desc_stack = call_inner(desc, func)
   describe = mod.describe
 
-  table.insert(results.fatal, msg)
+  if not ok then
+    table.insert(results.errs, {
+      descriptions = desc_stack,
+      msg = msg,
+    })
+  end
 end
 
 mod.inner_describe = function(desc, func)
@@ -242,8 +243,8 @@ mod.run = function(file)
 
   mod.format_results(results)
 
-  if #results.fatal ~= 0 then
-    print("We had an unexpected error: ", vim.inspect(results.fatal), vim.inspect(results))
+  if #results.errs ~= 0 then
+    print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
     if is_headless then
       return vim.cmd "2cq"
     end
