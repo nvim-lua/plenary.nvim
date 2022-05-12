@@ -349,7 +349,11 @@ function Path:normalize(cwd)
   -- Substitute home directory w/ "~"
   -- string.gsub is not useful here because usernames with dashes at the end
   -- will be seen as a regexp pattern rather than a raw string
-  local start, finish = string.find(self.filename, path.home, 1, true)
+  local home = path.home
+  if string.sub(path.home, -1) ~= path.sep then
+    home = home .. path.sep
+  end
+  local start, finish = string.find(self.filename, home, 1, true)
   if start == 1 then
     self.filename = "~" .. path.sep .. string.sub(self.filename, (finish + 1), -1)
   end
