@@ -21,6 +21,7 @@ return {
   extension = {
     ['_coffee'] = 'coffee',
     ['coffee'] = 'coffee',
+    ['cljd'] = 'clojure',
     ['dart'] = 'dart',
     ['ex'] = 'elixir',
     ['exs'] = 'elixir',

@@ -29,15 +29,12 @@ M.block_on = function(async_function, timeout)
     ret = { ... }
   end)
 
-  local function check()
-    if stat == false then
-      error("Blocking on future failed " .. unpack(ret))
-    end
-    return stat == true
-  end
+  vim.wait(timeout or 2000, function()
+    return stat ~= nil
+  end, 20, false)
 
-  if not vim.wait(timeout or 2000, check, 20, false) then
-    error "Blocking on future timed out or was interrupted"
+  if stat == false then
+    error(string.format("Blocking on future timed out or was interrupted.\n%s", unpack(ret)))
   end
 
   return unpack(ret)

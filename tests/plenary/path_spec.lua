@@ -235,6 +235,12 @@ describe("Path", function()
       p._cwd = "/tmp/lua"
       assert.are.same("~/test_file", p:normalize())
     end)
+
+    it("handles filenames with the same prefix as the home directory", function()
+      local p = Path:new "/home/test.old/test_file"
+      p.path.home = "/home/test"
+      assert.are.same("/home/test.old/test_file", p:normalize())
+    end)
   end)
 
   describe(":shorten", function()
