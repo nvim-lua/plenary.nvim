@@ -158,10 +158,10 @@ function harness.test_directory(directory, opts)
 
   if headless then
     if failure then
-      os.exit(1)
+      return vim.cmd "1cq"
     end
 
-    os.exit(0)
+    return vim.cmd "0cq"
   end
 end
 

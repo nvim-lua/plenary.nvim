@@ -10,4 +10,12 @@ M.it = function(s, async_func)
   it(s, util.will_block(async_func, 60000)) -- TODO: use test timeout
 end
 
+M.before_each = function(async_func)
+  before_each(util.will_block(async_func))
+end
+
+M.after_each = function(async_func)
+  after_each(util.will_block(async_func))
+end
+
 return M

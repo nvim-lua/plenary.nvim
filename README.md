@@ -324,3 +324,12 @@ This will enable debuggin for the plugin.
 ### plenary.neorocks
 
 DELETED: Please use packer.nvim or other lua-rocks wrapper instead. This no longer exists.
+
+### FAQ
+
+1. Error: Too many open files
+- \*nix systems have a setting to configure the maximum amount of open file
+  handles. It can occur that the default value is pretty low and that you end
+  up getting this error after opening a couple of files. You can see the
+  current limit with `ulimit -n` and set it with `ulimit -n 4096`. (macos might
+  work different)

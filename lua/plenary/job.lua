@@ -16,6 +16,7 @@ local F = require "plenary.functional"
 ---@field on_exit function        : (self, code: number, signal: number)
 ---@field maximum_results number  : stop processing results after this number
 ---@field writer Job|table|string : Job that writes to stdin of this job.
+---@field detached boolean        : Spawn the child in a detached state making it a process group leader
 ---@field enabled_recording boolean
 local Job = {}
 Job.__index = Job
@@ -131,6 +132,10 @@ function Job:new(o)
     obj.interactive = o.interactive
   end
 
+  if o.detached then
+    obj.detached = true
+  end
+
   -- enable_handlers: Do you want to do ANYTHING with the stdout/stderr of the proc
   obj.enable_handlers = F.if_nil(o.enable_handlers, true, o.enable_handlers)
 
@@ -209,7 +214,7 @@ end
 
 --- Shutdown a job.
 function Job:shutdown(code, signal)
-  if not uv.is_active(self._shutdown_check) then
+  if self._shutdown_check and not uv.is_active(self._shutdown_check) then
     vim.wait(1000, function()
       return self:_pipes_are_closed(self) and self.is_shutdown
     end, 1, true)
@@ -270,6 +275,10 @@ function Job:_create_uv_options()
   end
   if self.env then
     options.env = self.env
+  end
+
+  if self.detached then
+    options.detached = true
   end
 
   return options
@@ -418,7 +427,7 @@ function Job:_execute()
           self.stdin:write "\n"
         else
           self.stdin:write("\n", function()
-            self.stdin:close()
+            pcall(self.stdin.close, self.stdin)
           end)
         end
       end
