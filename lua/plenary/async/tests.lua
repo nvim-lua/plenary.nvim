@@ -7,7 +7,7 @@ M.describe = function(s, async_func)
 end
 
 M.it = function(s, async_func)
-  it(s, util.will_block(async_func, 60000)) -- TODO: use test timeout
+  it(s, util.will_block(async_func, tonumber(vim.env.PLENARY_TEST_TIMEOUT)))
 end
 
 M.before_each = function(async_func)

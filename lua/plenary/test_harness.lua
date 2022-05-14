@@ -47,6 +47,8 @@ function harness.test_directory(directory, opts)
     timeout = 50000,
   }, opts or {})
 
+  vim.env.PLENARY_TEST_TIMEOUT = opts.timeout
+
   local res = {}
   if not headless then
     res = win_float.percentage_range_window(0.95, 0.70, opts.winopts)
