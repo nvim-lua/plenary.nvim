@@ -1,5 +1,6 @@
 return {
   extension = {
+    ['cls] = [[apexcode]],
     ['ncl'] = [[text]],
     ['ph'] = [[perl]],
     ['al'] = [[perl]],
