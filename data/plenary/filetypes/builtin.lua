@@ -46,6 +46,7 @@ return {
     ['resi'] = 'rescript',
     ['tsx'] = 'typescriptreact',
     ['plist'] = 'xml',
+    ['cls'] = 'apexcode',
   },
   file_name = {
     ['cakefile'] = 'coffee',
