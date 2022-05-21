@@ -165,7 +165,24 @@ local check_self = function(self)
   return self
 end
 
-Path.__index = Path
+Path.__index = function(t, k)
+  local raw = rawget(Path, k)
+  if raw then
+    return raw
+  end
+
+  if k == "_cwd" then
+    local cwd = uv.fs_realpath "."
+    t._cwd = cwd
+    return cwd
+  end
+
+  if k == "_absolute" then
+    local absolute = uv.fs_realpath(t.filename)
+    t._absolute = absolute
+    return absolute
+  end
+end
 
 -- TODO: Could use this to not have to call new... not sure
 -- Path.__call = Path:new
@@ -242,10 +259,6 @@ function Path:new(...)
     filename = path_string,
 
     _sep = sep,
-
-    -- Cached values
-    _absolute = uv.fs_realpath(path_string),
-    _cwd = uv.fs_realpath ".",
   }
 
   setmetatable(obj, Path)
