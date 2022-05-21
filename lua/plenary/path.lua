@@ -171,9 +171,9 @@ Path.__index = function(t, k)
   end
 
   if k == "_absolute" then
-    local cwd = uv.fs_realpath(t.filename)
-    t._cwd = cwd
-    return cwd
+    local absolute = uv.fs_realpath(t.filename)
+    t._absolute = absolute
+    return absolute
   end
 end
 
