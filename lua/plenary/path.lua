@@ -20,8 +20,13 @@ path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if jit then
+    local shellslash_exists, _ = pcall(function() local _ = vim.o.shellslash end)
+    local use_shellslash = false
+    if shellslash_exists then
+        use_shellslash = vim.o.shellslash
+    end
     local os = string.lower(jit.os)
-    if os == "linux" or os == "osx" or os == "bsd" or vim.o.shellslash then
+    if os == "linux" or os == "osx" or os == "bsd" or use_shellslash then
       return "/"
     else
       return "\\"
