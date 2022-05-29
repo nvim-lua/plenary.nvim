@@ -20,7 +20,7 @@ path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if jit then
-    local shellslash_exists, _ = pcall(function() local _ = vim.o.shellslash end)
+    local shellslash_exists = vim.fn.exists("+shellslash") ~= 0
     local use_shellslash = false
     if shellslash_exists then
         use_shellslash = vim.o.shellslash
