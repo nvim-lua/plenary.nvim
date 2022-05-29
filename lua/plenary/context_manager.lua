@@ -13,7 +13,7 @@ function context_manager.with(obj, callable)
     local ok, context = coroutine.resume(obj)
     assert(ok, "Should have yielded in coroutine.")
 
-    local result = callable(context)
+    local succeeded, result = pcall(callable, context)
 
     local done, _ = coroutine.resume(obj)
     assert(done, "Should be done")
@@ -21,6 +21,7 @@ function context_manager.with(obj, callable)
     local no_other = not coroutine.resume(obj)
     assert(no_other, "Should not yield anymore, otherwise that would make things complicated")
 
+    assert(succeeded, result)
     return result
   else
     assert(obj.enter)
@@ -28,9 +29,10 @@ function context_manager.with(obj, callable)
 
     -- TODO: Callable can be string for vimL function or a lua callable
     local context = obj:enter()
-    local result = callable(context)
+    local succeeded, result = pcall(callable, context)
     obj:exit()
 
+    assert(succeeded, result)
     return result
   end
 end
