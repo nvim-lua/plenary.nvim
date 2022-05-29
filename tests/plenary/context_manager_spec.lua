@@ -1,6 +1,6 @@
-local context_manager = require("plenary.context_manager")
-local debug_utils = require("plenary.debug_utils")
-local Path = require("plenary.path")
+local context_manager = require "plenary.context_manager"
+local debug_utils = require "plenary.debug_utils"
+local Path = require "plenary.path"
 
 local with = context_manager.with
 local open = context_manager.open
@@ -16,14 +16,12 @@ describe("context_manager", function()
         return self.result
       end,
 
-      exit = function()
-      end,
+      exit = function() end,
     }
 
     local result = with(obj_manager, function(obj)
       return obj
     end)
-
 
     assert.are.same(10, result)
     assert.are.same(obj_manager.result, result)
@@ -49,14 +47,11 @@ describe("context_manager", function()
       coroutine.yield(10)
     end
 
-    assert.has.error_match(
-      function()
-        with(co, function(obj)
-          return obj
-        end)
-      end,
-      "Should not yield anymore, otherwise that would make things complicated"
-    )
+    assert.has.error_match(function()
+      with(co, function(obj)
+        return obj
+      end)
+    end, "Should not yield anymore, otherwise that would make things complicated")
   end)
 
   it("reads from files with open", function()
@@ -90,15 +85,11 @@ describe("context_manager", function()
       end,
     }
 
-    assert.has.error_match(
-      function()
-        with(obj_manager, function(obj)
-          assert(false, "failed in callback")
-        end)
-      end,
-      "failed in callback"
-    )
-
+    assert.has.error_match(function()
+      with(obj_manager, function(obj)
+        assert(false, "failed in callback")
+      end)
+    end, "failed in callback")
 
     assert.is["true"](entered)
     assert.is["true"](exited)
@@ -114,14 +105,11 @@ describe("context_manager", function()
       exited = true
     end
 
-    assert.has.error_match(
-      function()
-        with(co, function(obj)
-          assert(false, "failed in callback")
-        end)
-      end,
-      "failed in callback"
-    )
+    assert.has.error_match(function()
+      with(co, function(obj)
+        assert(false, "failed in callback")
+      end)
+    end, "failed in callback")
 
     assert.is["true"](entered)
     assert.is["true"](exited)
@@ -140,14 +128,11 @@ describe("context_manager", function()
     }
 
     local ran_callback = false
-    assert.has.error_match(
-      function()
-        with(obj_manager, function(obj)
-          ran_callback = true
-        end)
-      end,
-      "failed in enter"
-    )
+    assert.has.error_match(function()
+      with(obj_manager, function(obj)
+        ran_callback = true
+      end)
+    end, "failed in enter")
 
     assert.is["false"](ran_callback)
     assert.is["false"](exited)
@@ -163,14 +148,11 @@ describe("context_manager", function()
     end
 
     local ran_callback = false
-    assert.has.error_match(
-      function()
-        with(co, function(obj)
-          ran_callback = true
-        end)
-      end,
-      "Should have yielded in coroutine."
-    )
+    assert.has.error_match(function()
+      with(co, function(obj)
+        ran_callback = true
+      end)
+    end, "Should have yielded in coroutine.")
 
     assert.is["false"](ran_callback)
     assert.is["false"](exited)
@@ -189,14 +171,11 @@ describe("context_manager", function()
     }
 
     local ran_callback = false
-    assert.has.error_match(
-      function()
-        with(obj_manager, function(obj)
-          ran_callback = true
-        end)
-      end,
-      "failed in exit"
-    )
+    assert.has.error_match(function()
+      with(obj_manager, function(obj)
+        ran_callback = true
+      end)
+    end, "failed in exit")
 
     assert.is["true"](entered)
     assert.is["true"](ran_callback)
@@ -212,14 +191,11 @@ describe("context_manager", function()
     end
 
     local ran_callback = false
-    assert.has.error_match(
-      function()
-        with(co, function(obj)
-          ran_callback = true
-        end)
-      end,
-      "Should be done"
-    )
+    assert.has.error_match(function()
+      with(co, function(obj)
+        ran_callback = true
+      end)
+    end, "Should be done")
 
     assert.is["true"](entered)
     assert.is["true"](ran_callback)
