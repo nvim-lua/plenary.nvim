@@ -8,6 +8,7 @@ local function get_trace(element, level, msg)
     info.traceback = info.traceback:sub(1, index)
     return info
   end
+
   level = level or 3
 
   local thisdir = dirname(debug.getinfo(1, "Sl").source, ":h")
@@ -170,7 +171,20 @@ local run_each = function(tbl)
   end
 end
 
+local matches_filter = function(desc)
+  if not _PlenaryBustedOpts.filter then
+    return true
+  end
+
+  local desc_stack = table.concat(current_description, " ") .. desc
+  return desc_stack:match(_PlenaryBustedOpts.filter)
+end
+
 mod.it = function(desc, func)
+  if not matches_filter(desc) then
+    return
+  end
+
   run_each(current_before_each)
   local ok, msg, desc_stack = call_inner(desc, func)
   run_each(current_after_each)
@@ -199,12 +213,17 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
+  if not matches_filter(desc) then
+    return
+  end
+
   local curr_stack = vim.deepcopy(current_description)
   table.insert(curr_stack, desc)
   print(PENDING, "||", table.concat(curr_stack, " "))
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
+_PlenaryBustedOpts = {} -- TODO: check if this should be here?
 
 describe = mod.describe
 it = mod.it
@@ -214,7 +233,9 @@ after_each = mod.after_each
 clear = mod.clear
 assert = require "luassert"
 
-mod.run = function(file)
+mod.run = function(file, opts)
+  _PlenaryBustedOpts = vim.tbl_deep_extend("force", {}, opts or {})
+
   print("\n" .. HEADER)
   print("Testing: ", file)
 
