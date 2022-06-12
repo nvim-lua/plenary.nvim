@@ -1,3 +1,5 @@
+local busted_opts
+
 local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
@@ -172,12 +174,12 @@ local run_each = function(tbl)
 end
 
 local matches_filter = function(desc)
-  if not _PlenaryBustedOpts.filter then
+  if not busted_opts.filter then
     return true
   end
 
   local desc_stack = table.concat(current_description, " ") .. desc
-  return desc_stack:match(_PlenaryBustedOpts.filter)
+  return desc_stack:match(busted_opts.filter)
 end
 
 mod.it = function(desc, func)
@@ -223,7 +225,6 @@ mod.pending = function(desc, func)
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
-_PlenaryBustedOpts = {} -- TODO: check if this should be here?
 
 describe = mod.describe
 it = mod.it
@@ -234,7 +235,7 @@ clear = mod.clear
 assert = require "luassert"
 
 mod.run = function(file, opts)
-  _PlenaryBustedOpts = vim.tbl_deep_extend("force", {}, opts or {})
+  busted_opts = vim.F.if_nil(opts, {}, opts)
 
   print("\n" .. HEADER)
   print("Testing: ", file)
