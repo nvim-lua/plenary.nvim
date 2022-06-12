@@ -1,4 +1,14 @@
 local util = {}
+local arglist_mt = {}
+
+-- have pack/unpack both respect the 'n' field
+local _unpack = table.unpack or unpack
+local unpack = function(t, i, j) return _unpack(t, i or 1, j or t.n or #t) end
+local pack = function(...) return { n = select("#", ...), ... } end
+util.pack = pack
+util.unpack = unpack
+
+
 function util.deepcompare(t1,t2,ignore_mt,cycles,thresh1,thresh2)
   local ty1 = type(t1)
   local ty2 = type(t2)
@@ -58,6 +68,7 @@ end
 function util.shallowcopy(t)
   if type(t) ~= "table" then return t end
   local copy = {}
+  setmetatable(copy, getmetatable(t))
   for k,v in next, t do
     copy[k] = v
   end
@@ -91,6 +102,7 @@ end
 -- @return the copy of the arguments
 function util.copyargs(args)
   local copy = {}
+  setmetatable(copy, getmetatable(args))
   local match = require 'luassert.match'
   local spy = require 'luassert.spy'
   for k,v in pairs(args) do
@@ -100,42 +112,90 @@ function util.copyargs(args)
 end
 
 -----------------------------------------------
--- Finds matching arguments in a saved list of arguments
--- @param argslist list of arguments from which to search
--- @param args the arguments of which to find a match
--- @return the matching arguments if a match is found, otherwise nil
-function util.matchargs(argslist, args)
-  local function matches(t1, t2, t1refs)
-    local match = require 'luassert.match'
-    for k1,v1 in pairs(t1) do
-      local v2 = t2[k1]
-      if match.is_matcher(v1) then
-        if not v1(v2) then return false end
-      elseif match.is_matcher(v2) then
-        if match.is_ref_matcher(v2) then v1 = t1refs[k1] end
-        if not v2(v1) then return false end
-      elseif (v2 == nil or not util.deepcompare(v1,v2)) then
+-- Clear an arguments or return values list from a table
+-- @param arglist the table to clear of arguments or return values and their count
+-- @return No return values
+function util.cleararglist(arglist)
+  for idx = arglist.n, 1, -1 do
+    util.tremove(arglist, idx)
+  end
+  arglist.n = nil
+end
+
+-----------------------------------------------
+-- Test specs against an arglist in deepcopy and refs flavours.
+-- @param args deepcopy arglist
+-- @param argsrefs refs arglist
+-- @param specs arguments/return values to match against args/argsrefs
+-- @return true if specs match args/argsrefs, false otherwise
+local function matcharg(args, argrefs, specs)
+  local match = require 'luassert.match'
+  for idx, argval in pairs(args) do
+    local spec = specs[idx]
+    if match.is_matcher(spec) then
+      if match.is_ref_matcher(spec) then
+        argval = argrefs[idx]
+      end
+      if not spec(argval) then
+        return false
+      end
+    elseif (spec == nil or not util.deepcompare(argval, spec)) then
+      return false
+    end
+  end
+
+  for idx, spec in pairs(specs) do
+    -- only check whether each element has an args counterpart,
+    -- actual comparison has been done in first loop above
+    local argval = args[idx]
+    if argval == nil then
+      -- no args counterpart, so try to compare using matcher
+      if match.is_matcher(spec) then
+        if not spec(argval) then
+          return false
+        end
+      else
         return false
       end
     end
-    for k2,v2 in pairs(t2) do
-      -- only check wether each element has a t1 counterpart, actual comparison
-      -- has been done in first loop above
-      local v1 = t1[k2]
-      if v1 == nil then
-        -- no t1 counterpart, so try to compare using matcher
-        if match.is_matcher(v2) then
-          if not v2(v1) then return false end
-        else
-          return false
-        end
-      end
-    end
-    return true
   end
-  for k,v in ipairs(argslist) do
-    if matches(v.vals, args, v.refs) then
-      return v
+  return true
+end
+
+-----------------------------------------------
+-- Find matching arguments/return values in a saved list of
+-- arguments/returned values.
+-- @param invocations_list list of arguments/returned values to search (list of lists)
+-- @param specs arguments/return values to match against argslist
+-- @return the last matching arguments/returned values if a match is found, otherwise nil
+function util.matchargs(invocations_list, specs)
+  -- Search the arguments/returned values last to first to give the
+  -- most helpful answer possible. In the cases where you can place
+  -- your assertions between calls to check this gives you the best
+  -- information if no calls match. In the cases where you can't do
+  -- that there is no good way to predict what would work best.
+  assert(not util.is_arglist(invocations_list), "expected a list of arglist-object, got an arglist")
+  for ii = #invocations_list, 1, -1 do
+    local val = invocations_list[ii]
+    if matcharg(val.vals, val.refs, specs) then
+      return val
+    end
+  end
+  return nil
+end
+
+-----------------------------------------------
+-- Find matching oncall for an actual call.
+-- @param oncalls list of oncalls to search
+-- @param args actual call argslist to match against
+-- @return the first matching oncall if a match is found, otherwise nil
+function util.matchoncalls(oncalls, args)
+  for _, callspecs in ipairs(oncalls) do
+    -- This lookup is done immediately on *args* passing into the stub
+    -- so pass *args* as both *args* and *argsref* without copying
+    -- either.
+    if matcharg(args, args, callspecs.vals) then
+      return callspecs
     end
   end
   return nil
@@ -281,6 +341,21 @@ function util.extract_keys(nspace, tokens)
   end
 
   return keys
+end
+
+-----------------------------------------------
+-- store argument list for return values of a function in a table.
+-- The table will get a metatable to identify it as an arglist
+function util.make_arglist(...)
+  local arglist = { ... }
+  arglist.n = select('#', ...) -- add values count for trailing nils
+  return setmetatable(arglist, arglist_mt)
+end
+
+-----------------------------------------------
+-- check a table to be an arglist type.
+function util.is_arglist(object)
+  return getmetatable(object) == arglist_mt
 end
 
 return util

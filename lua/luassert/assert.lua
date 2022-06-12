@@ -1,7 +1,7 @@
 local s = require 'say'
 local astate = require 'luassert.state'
 local util = require 'luassert.util'
-local unpack = require 'luassert.compatibility'.unpack
+local unpack = util.unpack
 local obj   -- the returned module table
 local level_mt = {}
 
@@ -39,8 +39,7 @@ local __state_meta = {
         end
       end
 
-      local arguments = {...}
-      arguments.n = select('#', ...) -- add argument count for trailing nils
+      local arguments = util.make_arglist(...)
       local val, retargs = assertion.callback(self, arguments, util.errorlevel())
 
       if not val == self.mod then
@@ -57,8 +56,7 @@ local __state_meta = {
       end
       return ...
     else
-      local arguments = {...}
-      arguments.n = select('#', ...)
+      local arguments = util.make_arglist(...)
       self.tokens = {}
 
       for _, key in ipairs(keys) do
@@ -135,25 +133,25 @@ obj = {
   set_parameter = function(self, name, value)
     astate.set_parameter(name, value)
   end,
-  
+
   get_parameter = function(self, name)
     return astate.get_parameter(name)
-  end,  
-  
+  end,
+
   add_spy = function(self, spy)
     astate.add_spy(spy)
   end,
-  
+
   snapshot = function(self)
     return astate.snapshot()
   end,
-  
+
   level = function(self, level)
     return setmetatable({
         level = level
       }, level_mt)
   end,
-  
+
   -- returns the level if a level-value, otherwise nil
   get_level = function(self, level)
     if getmetatable(level) ~= level_mt then

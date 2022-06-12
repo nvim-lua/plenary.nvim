@@ -142,11 +142,15 @@ local function same(state, arguments, level)
 end
 
 local function truthy(state, arguments, level)
+  local argcnt = arguments.n
+  assert(argcnt > 0, s("assertion.internal.argtolittle", { "truthy", 1, tostring(argcnt) }), level)
   set_failure_message(state, arguments[2])
   return arguments[1] ~= false and arguments[1] ~= nil
 end
 
 local function falsy(state, arguments, level)
+  local argcnt = arguments.n
+  assert(argcnt > 0, s("assertion.internal.argtolittle", { "falsy", 1, tostring(argcnt) }), level)
   return not truthy(state, arguments, level)
 end
 

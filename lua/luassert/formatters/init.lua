@@ -1,5 +1,7 @@
 -- module will not return anything, only register formatters with the main assert engine
 local assert = require('luassert.assert')
+local match = require('luassert.match')
+local util = require('luassert.util')
 
 local colors = setmetatable({
   none = function(c) return c end
@@ -201,6 +203,35 @@ local function fmt_thread(arg)
   end
 end
 
+local function fmt_matcher(arg)
+  if not match.is_matcher(arg) then
+    return
+  end
+  local not_inverted = {
+    [true] = "is.",
+    [false] = "no.",
+  }
+  local args = {}
+  for idx = 1, arg.arguments.n do
+    table.insert(args, assert:format({ arg.arguments[idx], n = 1, })[1])
+  end
+  return string.format("(matcher) %s%s(%s)",
+                       not_inverted[arg.mod],
+                       tostring(arg.name),
+                       table.concat(args, ", "))
+end
+
+local function fmt_arglist(arglist)
+  if not util.is_arglist(arglist) then
+    return
+  end
+  local formatted_vals = {}
+  for idx = 1, arglist.n do
+    table.insert(formatted_vals, assert:format({ arglist[idx], n = 1, })[1])
+  end
+  return "(values list) (" .. table.concat(formatted_vals, ", ") .. ")"
+end
+
 assert:add_formatter(fmt_string)
 assert:add_formatter(fmt_number)
 assert:add_formatter(fmt_boolean)
@@ -209,6 +240,8 @@ assert:add_formatter(fmt_table)
 assert:add_formatter(fmt_function)
 assert:add_formatter(fmt_userdata)
 assert:add_formatter(fmt_thread)
+assert:add_formatter(fmt_matcher)
+assert:add_formatter(fmt_arglist)
 -- Set default table display depth for table formatter
 assert:set_parameter("TableFormatLevel", 3)
 assert:set_parameter("TableFormatShowRecursion", false)
