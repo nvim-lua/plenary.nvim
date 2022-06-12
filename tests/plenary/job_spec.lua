@@ -95,9 +95,9 @@ describe("Job", function()
     it("should return last line when there is ending newline", function()
       local results = {}
       local job = Job:new {
-        command = "echo",
+        command = "printf",
 
-        args = { "-e", "test1\ntest2" },
+        args = { "test1\ntest2\n" },
 
         on_stdout = function(_, data)
           table.insert(results, data)
@@ -113,9 +113,9 @@ describe("Job", function()
     pending("should return last line when there is no ending newline", function()
       local results = {}
       local job = Job:new {
-        command = "echo",
+        command = "printf",
 
-        args = { "-en", "test1\ntest2" },
+        args = { "test1\ntest2" },
 
         on_stdout = function(_, data)
           table.insert(results, data)
@@ -277,11 +277,12 @@ describe("Job", function()
     end)
 
     it("should match larger systemlist", function()
-      local results = vim.fn.systemlist "find"
+      local results = vim.fn.systemlist "find ."
       local stdout_results = {}
 
       local job = Job:new {
         command = "find",
+        args = { "." },
 
         on_stdout = function(_, line)
           table.insert(stdout_results, line)
