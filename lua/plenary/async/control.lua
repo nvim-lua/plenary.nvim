@@ -33,7 +33,8 @@ function Condvar:notify_all()
   end
 
   for i = 1, len do
-    -- table.remove will ensure that indexes are correct and make "ipairs" safe, which is not the case for "self.handles[i] = nil"
+    -- table.remove will ensure that indexes are correct and make "ipairs" safe,
+    -- which is not the case for "self.handles[i] = nil"
     table.remove(self.handles, i)
   end
 end
@@ -93,8 +94,7 @@ Semaphore.acquire = a.wrap(function(self, callback)
 
     if self.permits > 0 and #self.handles > 0 then
       self.permits = self.permits - 1
-      local callback = table.remove(self.handles)
-      callback(self_permit)
+      table.remove(self.handles)(self_permit)
     end
   end
 

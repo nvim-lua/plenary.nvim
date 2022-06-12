@@ -67,7 +67,6 @@ function M.json_strip_comments(jsonString, options)
           result = result .. slice(jsonString, offset, i - 1)
           offset = i
           insideComment = singleComment
-          i = i + 1
           skip = true
         elseif insideComment == singleComment and currentCharacter .. nextCharacter == "\r\n" then
           i = i + 1
@@ -83,7 +82,6 @@ function M.json_strip_comments(jsonString, options)
           result = result .. slice(jsonString, offset, i - 1)
           offset = i
           insideComment = multiComment
-          i = i + 1
           skip = true
         elseif insideComment == multiComment and currentCharacter .. nextCharacter == "*/" then
           i = i + 1

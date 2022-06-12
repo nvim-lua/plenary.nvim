@@ -1,6 +1,6 @@
 local M = {}
 
-Deque = {}
+local Deque = {}
 Deque.__index = Deque
 
 ---@class Deque

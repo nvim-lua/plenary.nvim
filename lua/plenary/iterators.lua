@@ -25,7 +25,8 @@ Iterator.__index = Iterator
 ---If not called without param or state, will just generate with the starting state
 ---This is useful because the original luafun will also return param and state in addition to the iterator as a multival
 ---This can cause problems because when using iterators as expressions the multivals can bleed
----For example i.iter { 1, 2, i.iter { 3, 4 } } will not work because the inner iterator returns a multival thus polluting the list with internal values
+---For example i.iter { 1, 2, i.iter { 3, 4 } } will not work because the inner iterator returns a multival thus
+---polluting the list with internal values.
 ---So instead we do not return param and state as multivals when doing wrap
 ---This causes the first loop iteration to call param and state with nil because we didn't return them as multivals
 ---We have to use or to check for nil and default to interal starting state and param
@@ -77,11 +78,10 @@ local nil_gen = function(_param, _state)
   return nil
 end
 
-local ipairs_gen = ipairs {}
-
 local pairs_gen = pairs {}
 
 local map_gen = function(map, key)
+  local value
   key, value = pairs_gen(map, key)
   return key, key, value
 end
@@ -379,7 +379,7 @@ exports.lines = lines
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
-local map_gen = function(param, state)
+local map_gen2 = function(param, state)
   local gen_x, param_x, fun = param[1], param[2], param[3]
   return call_if_not_empty(fun, gen_x(param_x, state))
 end
@@ -388,7 +388,7 @@ end
 ---@param fun function: The function to map with. Will be called on each element
 ---@return Iterator
 function Iterator:map(fun)
-  return wrap(map_gen, { self.gen, self.param, fun }, self.state)
+  return wrap(map_gen2, { self.gen, self.param, fun }, self.state)
 end
 
 local flatten_gen1
@@ -588,7 +588,8 @@ chain_gen_r1 = function(param, state)
   return chain_gen_r2(param, state, gen_x(param_x, state_x))
 end
 
----Make an iterator that returns elements from the first iterator until it is exhausted, then proceeds to the next iterator,
+---Make an iterator that returns elements from the first iterator until it is exhausted,
+---then proceeds to the next iterator,
 ---until all of the iterators are exhausted.
 ---Used for treating consecutive iterators as a single iterator.
 ---Infinity iterators are supported, but are not recommended.
@@ -603,7 +604,7 @@ local chain = function(...)
 
   local param = { [3 * n] = 0 }
 
-  local i, gen_x, param_x, state_x
+  local gen_x, param_x, state_x
   for i = 1, n, 1 do
     local elem = select(i, ...)
     gen_x, param_x, state_x = unwrap(elem)
@@ -651,7 +652,7 @@ local zip = function(...)
   local param = { [2 * n] = 0 }
   local state = { [n] = 0 }
 
-  local i, gen_x, param_x, state_x
+  local gen_x, param_x, state_x
   for i = 1, n, 1 do
     local it = select(n - i + 1, ...)
     gen_x, param_x, state_x = rawiter(it)

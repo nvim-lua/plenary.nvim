@@ -24,8 +24,8 @@ M.block_on = function(async_function, timeout)
 
   local stat, ret
 
-  a.run(async_function, function(_stat, ...)
-    stat = _stat
+  a.run(async_function, function(stat_, ...)
+    stat = stat_
     ret = { ... }
   end)
 

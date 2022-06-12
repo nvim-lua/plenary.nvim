@@ -244,8 +244,8 @@ function popup.create(what, vim_options)
   if vim_options.moved then
     if vim_options.moved == "any" then
       vim.lsp.util.close_preview_autocmd({ "CursorMoved", "CursorMovedI" }, win_id)
-    elseif vim_options.moved == "word" then
-      -- TODO: Handle word, WORD, expr, and the range functions... which seem hard?
+      -- elseif vim_options.moved == "word" then
+      --   TODO: Handle word, WORD, expr, and the range functions... which seem hard?
     end
   else
     local silent = false

@@ -12,7 +12,7 @@ local p = require'plenary.profile.p'
 function profile.start(out, opts)
     out = out or "profile.log"
     opts = opts or {}
-    popts = "10,i1,s,m0"
+    local popts = "10,i1,s,m0"
     if opts.flame then popts = popts .. ",G" end
     p.start(popts, out)
 end
