@@ -84,6 +84,101 @@ describe("channel", function()
     end)
   end)
 
+  describe("mpsc", function()
+    a.it("should wait multiple recv before any send", function()
+      local sender, receiver = channel.mpsc()
+
+      local expected_count = 10
+
+      a.run(function()
+        for i = 1, expected_count do
+          a.util.sleep(250)
+          sender.send(i)
+        end
+      end)
+
+      local receive_count = 0
+      while receive_count < expected_count do
+        receive_count = receive_count + 1
+        local i = receiver.recv()
+        eq(receive_count, i)
+      end
+    end)
+
+    a.it("should queues multiple sends before any read", function()
+      local sender, receiver = channel.mpsc()
+
+      local counter = 0
+
+      a.run(function()
+        counter = counter + 1
+        sender.send(10)
+
+        counter = counter + 1
+        sender.send(20)
+      end)
+
+      a.util.sleep(1000)
+
+      eq(10, receiver.recv())
+      eq(20, receiver.recv())
+      eq(2, counter)
+    end)
+
+    a.it("should queues multiple sends from multiple producers before any read", function()
+      local sender, receiver = channel.mpsc()
+
+      local counter = 0
+
+      a.run(function()
+        counter = counter + 1
+        sender.send(10)
+
+        counter = counter + 1
+        sender.send(20)
+      end)
+
+      a.run(function()
+        counter = counter + 1
+        sender.send(30)
+
+        counter = counter + 1
+        sender.send(40)
+      end)
+
+      a.util.sleep(1000)
+
+      local read_counter = 0
+      a.util.block_on(function()
+        for _ = 1, 4 do
+          receiver.recv()
+          read_counter = read_counter + 1
+        end
+      end, 1000)
+      eq(4, counter)
+      eq(4, read_counter)
+    end)
+
+    a.it("should read only the last value", function()
+      local sender, receiver = channel.mpsc()
+
+      local counter = 0
+
+      a.run(function()
+        counter = counter + 1
+        sender.send(10)
+
+        counter = counter + 1
+        sender.send(20)
+      end)
+
+      a.util.sleep(1000)
+
+      eq(20, receiver.last())
+      eq(2, counter)
+    end)
+  end)
+
   describe("counter", function()
     a.it("should work", function()
       local tx, rx = channel.counter()

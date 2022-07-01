@@ -21,9 +21,20 @@ end, 2)
 
 ---notify everyone that is waiting on this Condvar
 function Condvar:notify_all()
+  local len = #self.handles
   for i, callback in ipairs(self.handles) do
+    if i > len then
+      -- this means that more handles were added while we were notifying
+      -- if we don't break we can get starvation notifying as soon as new handles are added
+      break
+    end
+
     callback()
-    self.handles[i] = nil
+  end
+
+  for i = 1, len do
+    -- table.remove will ensure that indexes are correct and make "ipairs" safe, which is not the case for "self.handles[i] = nil"
+    table.remove(self.handles, i)
   end
 end
 
@@ -207,7 +218,7 @@ M.channel.mpsc = function()
     if deque:is_empty() then
       condvar:wait()
     end
-    local val = deque:popright()
+    local val = deque:popleft()
     deque:clear()
     return unpack(val or {})
   end
