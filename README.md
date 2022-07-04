@@ -97,6 +97,52 @@ end
 
 Please use `plenary.async` instead. This was version 1 and is just here for compatibility reasons.
 
+### plenary.async.control.channel.oneshot
+
+Creates a oneshot channel. It can only send data one time.
+
+The sender is not async while the receiver is.
+
+Example:
+
+```lua
+local a = require'plenary.async'
+local tx, rx = a.control.channel.oneshot()
+
+a.run(function()
+    local ret = long_running_fn()
+    tx(ret)
+end)
+
+local ret = rx()
+```
+
+### plenary.async.control.channel.mpsc
+
+Creates a multiple producer single consumer channel.
+
+Example:
+
+```lua
+local a = require'plenary.async'
+local sender, receiver = a.control.channel.mpsc()
+
+a.run(function()
+  sender.send(10)
+  sender.send(20)
+end)
+
+a.run(function()
+  sender.send(30)
+  sender.send(40)
+end)
+
+for _ = 1, 4 do
+  local value = receiver.recv()
+  print('received:', value)
+end
+```
+
 ### plenary.job
 
 A Lua module to interact with system processes. Pass in your `command`, the desired `args`, `env` and `cwd`.
