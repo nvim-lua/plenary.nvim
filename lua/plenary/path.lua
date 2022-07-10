@@ -204,7 +204,7 @@ Path.__div = function(self, other)
 end
 
 Path.__tostring = function(self)
-  return self.filename
+  return clean(self.filename)
 end
 
 -- TODO: See where we concat the table, and maybe we could make this work.
