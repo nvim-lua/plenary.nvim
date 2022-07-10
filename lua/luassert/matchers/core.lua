@@ -60,7 +60,6 @@ local function matches(state, arguments, level)
   local pattern = arguments[1]
   local init = arguments[2]
   local plain = arguments[3]
-  local stringtype = "string or object convertible to a string"
   assert(type(pattern) == "string", s("assertion.internal.badargtype", { 1, "matches", "string", type(arguments[1]) }), level)
   assert(init == nil or tonumber(init), s("assertion.internal.badargtype", { 2, "matches", "number", type(arguments[2]) }), level)
 
