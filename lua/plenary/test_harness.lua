@@ -131,8 +131,8 @@ function harness.test_directory(directory, opts)
     if opts.sequential then
       log.debug("... Sequential wait for job number", i)
       Job.join(j, opts.timeout)
-      log.debug("... Completed job number", i)
-      if j.code ~= 0 then
+      log.debug("... Completed job number", i, j.code, j.signal)
+      if j.code ~= 0 or j.signal ~= 0 then
         failure = true
         if not opts.keep_going then
           break
