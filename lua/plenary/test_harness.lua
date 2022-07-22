@@ -130,13 +130,18 @@ function harness.test_directory(directory, opts)
     j:start()
     if opts.sequential then
       log.debug("... Sequential wait for job number", i)
-      Job.join(j, opts.timeout)
-      log.debug("... Completed job number", i, j.code, j.signal)
-      if j.code ~= 0 or j.signal ~= 0 then
+      if not Job.join(j, opts.timeout) then
+        log.debug("... Timed out job number", i)
         failure = true
-        if not opts.keep_going then
-          break
-        end
+        pcall(function()
+          j.handle:kill(15) -- SIGTERM
+        end)
+      else
+        log.debug("... Completed job number", i, j.code, j.signal)
+        failure = j.code ~= 0 or j.signal ~= 0
+      end
+      if failure and not opts.keep_going then
+        break
       end
     end
   end
