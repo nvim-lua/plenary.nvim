@@ -135,6 +135,10 @@ log.new = function(config, standalone)
 
     -- Output to log file
     if config.use_file then
+      local outfile_parent_path = require("plenary.path"):new(outfile):parent()
+      if not outfile_parent_path:exists() then
+        outfile_parent_path:mkdir { parent = true }
+      end
       local fp = assert(io.open(outfile, "a"))
       local str = string.format("[%-6s%s] %s: %s\n", nameupper, os.date(), lineinfo, msg)
       fp:write(str)
