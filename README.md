@@ -12,8 +12,16 @@ At the moment, it is very much in pre-alpha :smile: Expect changes to the way so
 
 ## Installation
 
+Using [plug](https://github.com/junegunn/vim-plug):
+
 ```vim
 Plug 'nvim-lua/plenary.nvim'
+```
+
+Using [packer](https://github.com/wbthomason/packer.nvim):
+
+```
+use "nvim-lua/plenary.nvim"
 ```
 
 ## Modules
