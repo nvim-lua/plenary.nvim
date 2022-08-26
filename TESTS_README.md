@@ -32,6 +32,15 @@ end)
 
 The test **some test** checks that a functions output is as expected based on the input. The second test **some other test** checks that the variable **bounter** is reset for each test (as defined in the before_each block).
 
+# Running tests
+
+Run the test using `:PlenaryBustedTest <file>`. 
+
+```vimscript
+" Run the test in the current buffer
+:PlenaryBustedTest %
+```
+
 # mocking with luassert
 
 Plenary.nvim comes bundled with [luassert](https://github.com/Olivine-Labs/luassert) a library that's built to extend the built-int assertions... but it also comes with stubs, mocks and spies!
