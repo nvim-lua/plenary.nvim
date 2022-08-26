@@ -12,8 +12,16 @@ At the moment, it is very much in pre-alpha :smile: Expect changes to the way so
 
 ## Installation
 
+Using [plug](https://github.com/junegunn/vim-plug):
+
 ```vim
 Plug 'nvim-lua/plenary.nvim'
+```
+
+Using [packer](https://github.com/wbthomason/packer.nvim):
+
+```
+use "nvim-lua/plenary.nvim"
 ```
 
 ## Modules
@@ -92,6 +100,7 @@ end
 - [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 - [vgit.nvim](https://github.com/tanvirtin/vgit.nvim)
 - [neogit](https://github.com/TimUntersberger/neogit)
+- [neo-tree.nvim](https://github.com/nvim-neo-tree/neo-tree.nvim)
 
 ### plenary.async_lib
 
