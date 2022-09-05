@@ -130,43 +130,63 @@ filetype.detect_from_name = function(filepath)
 end
 
 filetype.detect_from_modeline = function(filepath)
-  local tail = Path:new(filepath):readbyterange(-256, 256)
-  if not tail then
-    return ""
-  end
-  local lines = vim.split(tail, "\n")
-  local idx = lines[#lines] ~= "" and #lines or #lines - 1
-  if idx >= 1 then
-    return filetype._parse_modeline(lines[idx])
+  if not filepath then
+    local tail = vim.api.nvim_buf_get_lines(0, -2, -1, false)
+    if #tail == 0 then
+      return ""
+    end
+    tail = tail[1]
+    return filetype._parse_modeline(tail)
+  else
+    local tail = Path:new(filepath):readbyterange(-256, 256)
+    if not tail then
+      return ""
+    end
+    local lines = vim.split(tail, "\n")
+    local idx = lines[#lines] ~= "" and #lines or #lines - 1
+    if idx >= 1 then
+      return filetype._parse_modeline(lines[idx])
+    end
   end
 end
 
 filetype.detect_from_shebang = function(filepath)
-  local head = Path:new(filepath):readbyterange(0, 256)
-  if not head then
-    return ""
+  local head = ""
+  if not filepath then
+    head = vim.api.nvim_buf_get_lines(0, 0, 1, false)
+    if #head == 0 then
+      return ""
+    end
+    head = head[1]
+  else
+    local _head = Path:new(filepath):readbyterange(0, 256)
+    if not head then
+      return ""
+    end
+    head = vim.split(head, "\n")[1]
   end
-  local lines = vim.split(head, "\n")
-  return filetype._parse_shebang(lines[1])
+  return filetype._parse_shebang(head)
 end
 
---- Detect a filetype from a path.
+--- Detect a filetype from a path or buffer.
 ---
+---@param filepath: Optional string of filename
 ---@param opts table: Table with optional keys
 ---     - fs_access (bool, default=true): Should check a file if it exists
 filetype.detect = function(filepath, opts)
   opts = opts or {}
   opts.fs_access = opts.fs_access or true
 
-  local match = filetype.detect_from_name(filepath)
-  if match ~= "" then
-    return match
+  if filepath then
+    local match = filetype.detect_from_name(filepath)
+    if match ~= "" then
+      return match
+    end
+
+    match = filetype.detect_from_extension(filepath)
   end
-
-  match = filetype.detect_from_extension(filepath)
-
-  if opts.fs_access and Path:new(filepath):exists() then
-    if match == "" then
+  if not filepath or (opts.fs_access and Path:new(filepath):exists()) then
+    if match == "" or not filepath then
       match = filetype.detect_from_shebang(filepath)
       if match ~= "" then
         return match
