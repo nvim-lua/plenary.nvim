@@ -159,11 +159,11 @@ filetype.detect_from_shebang = function(filepath)
     end
     head = head[1]
   else
-    local _head = Path:new(filepath):readbyterange(0, 256)
+    head = Path:new(filepath):readbyterange(0, 256)
     if not head then
       return ""
     end
-    head = vim.split(_head, "\n")[1]
+    head = vim.split(head, "\n")[1]
   end
   return filetype._parse_shebang(head)
 end
