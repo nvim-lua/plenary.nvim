@@ -129,6 +129,27 @@ filetype.detect_from_name = function(filepath)
   return ""
 end
 
+-- filetype.detect_from_modeline = function(filepath)
+--   local tail = Path:new(filepath):readbyterange(-256, 256)
+--   if not tail then
+--     return ""
+--   end
+--   local lines = vim.split(tail, "\n")
+--   local idx = lines[#lines] ~= "" and #lines or #lines - 1
+--   if idx >= 1 then
+--     return filetype._parse_modeline(lines[idx])
+--   end
+-- end
+
+-- filetype.detect_from_shebang = function(filepath)
+--   local head = Path:new(filepath):readbyterange(0, 256)
+--   if not head then
+--     return ""
+--   end
+--   local lines = vim.split(head, "\n")
+--   return filetype._parse_shebang(lines[1])
+-- end
+
 filetype.detect_from_modeline = function(filepath)
   if not filepath then
     local tail = vim.api.nvim_buf_get_lines(0, -2, -1, false)
@@ -177,12 +198,12 @@ filetype.detect = function(filepath, opts)
   opts = opts or {}
   opts.fs_access = opts.fs_access or true
 
+  local match = ""
   if filepath then
-    local match = filetype.detect_from_name(filepath)
+    match = filetype.detect_from_name(filepath)
     if match ~= "" then
       return match
     end
-
     match = filetype.detect_from_extension(filepath)
   end
   if not filepath or (opts.fs_access and Path:new(filepath):exists()) then
