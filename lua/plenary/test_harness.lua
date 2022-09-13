@@ -138,7 +138,7 @@ function harness.test_directory(directory, opts)
         end)
       else
         log.debug("... Completed job number", i, j.code, j.signal)
-        failure = j.code ~= 0 or j.signal ~= 0
+        failure = failure or j.code ~= 0 or j.signal ~= 0
       end
       if failure and not opts.keep_going then
         break
