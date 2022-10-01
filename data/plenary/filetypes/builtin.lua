@@ -48,6 +48,7 @@ return {
     ['tres'] = 'gdresource',
     ['tscn'] = 'gdresource',
     ['tsx'] = 'typescriptreact',
+    ['sol'] = 'solidity',
   },
   file_name = {
     ['cakefile'] = 'coffee',
