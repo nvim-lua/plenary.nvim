@@ -515,30 +515,93 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
+local function _check_path_empty(input_path)
+  if input_path == nil or (type(input_path) == "string" and string.match(input_path, "^%s*$")) then
+    error "Empty path input given. Please provide valid path."
+  end
+end
+
+function Path:_get_override_input(dest_path, opts)
+  if opts.interactive and dest_path:exists() then
+    vim.ui.input(
+      { prompt = string.format("%s already exists. Overwrite with %s? [y/N] ", dest_path.filename, self.filename) },
+      function(input)
+        opts.override = string.lower(input or "") == "y"
+      end
+    )
+  end
+  return opts.override
+end
+
+function Path:_do_recursion(dest_path, opts, field, callback)
+  local success = {}
+  dest_path:mkdir {
+    parents = F.if_nil(opts.parents, false, opts.parents),
+    exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
+  }
+  local scan = require "plenary.scandir"
+  local data = scan.scan_dir(self.filename, {
+    respect_gitignore = F.if_nil(opts.respect_gitignore, false, opts.respect_gitignore),
+    hidden = F.if_nil(opts.hidden, true, opts.hidden),
+    depth = 1,
+    add_dirs = true,
+  })
+  for _, entry in ipairs(data) do
+    local entry_path = Path:new(entry)
+    local suffix = table.remove(entry_path:_split())
+    local new_dest = dest_path:joinpath(suffix)
+    -- clear destination as it might be Path table otherwise failing w/ extend
+    opts[field] = nil
+    local new_opts = vim.tbl_deep_extend("force", opts, { [field] = new_dest })
+    -- nil: not overriden if `override = false`
+    _, success[new_dest] = pcall(callback, entry_path, new_opts)
+  end
+  return success
+end
+
+--- Rename/move files or folders with defaults akin to GNU's `mv`.
+---@class Path
+---@param opts table: options to pass to toggling registered actions
+---@field new_name string|Path: target file path to rename/move to
+---@field recursive boolean: whether to rename/move folders recursively (default: true)
+---@field override boolean: whether to override files (default: true)
+---@field interactive boolean: confirm if rename/move would override; precedes `override` (default: false)
+---@field respect_gitignore boolean: skip folders ignored by all detected `gitignore`s (default: false)
+---@field hidden boolean: whether to add hidden files in recursively renaming/moving folders (default: true)
+---@field parents boolean: whether to create possibly non-existing parent dirs of `opts.destination` (default: false)
+---@field exists_ok boolean: whether ok if `opts.destination` exists, if so folders are merged (default: true)
+---@return table {[Path of destination]: bool} indicating success of rename/move; nested tables constitute sub dirs
 function Path:rename(opts)
   opts = opts or {}
-  if not opts.new_name or opts.new_name == "" then
-    error "Please provide the new name!"
+  _check_path_empty(opts.new_name)
+  opts.recursive = F.if_nil(opts.recursive, true, opts.recursive)
+  opts.override = F.if_nil(opts.override, true, opts.override)
+
+  local dest = Path:new(opts.new_name)
+
+  local success = {}
+  if not self:is_dir() then
+    opts.override = self:_get_override_input(dest, opts)
+
+    if dest:exists() then
+      if opts.override then
+        dest:rm()
+      else
+        return success
+      end
+    end
+    success[dest] = uv.fs_rename(self:absolute(), dest:absolute()) or false
+    self.filename = dest.filename
+    return success
   end
 
-  -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match "^%.%.?/?\\?.+" then
-    opts.new_name = {
-      uv.fs_realpath(opts.new_name:sub(1, 3)),
-      opts.new_name:sub(4, #opts.new_name),
-    }
+  if opts.recursive then
+    success = self:_do_recursion(dest, opts, "new_name", Path.rename)
+    self:rmdir()
+    return success
+  else
+    error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
   end
-
-  local new_path = Path:new(opts.new_name)
-
-  if new_path:exists() then
-    error "File or directory already exists!"
-  end
-
-  local status = uv.fs_rename(self:absolute(), new_path:absolute())
-  self.filename = new_path.filename
-
-  return status
 end
 
 --- Copy files or folders with defaults akin to GNU's `cp`.
@@ -553,62 +616,23 @@ end
 ---@field exists_ok bool: whether ok if `opts.destination` exists, if so folders are merged (default: true)
 ---@return table {[Path of destination]: bool} indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
-  opts = opts or {}
+  _check_path_empty(opts.destination)
   opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
-  local dest = opts.destination
-  -- handles `.`, `..`, `./`, and `../`
-  if not Path.is_path(dest) then
-    if type(dest) == "string" and dest:match "^%.%.?/?\\?.+" then
-      dest = {
-        uv.fs_realpath(dest:sub(1, 3)),
-        dest:sub(4, #dest),
-      }
-    end
-    dest = Path:new(dest)
-  end
+  local dest = Path:new(opts.destination)
+
   -- success is true in case file is copied, false otherwise
   local success = {}
   if not self:is_dir() then
-    if opts.interactive and dest:exists() then
-      vim.ui.select(
-        { "Yes", "No" },
-        { prompt = string.format("Overwrite existing %s?", dest:absolute()) },
-        function(_, idx)
-          success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not (idx == 1) }) or false
-        end
-      )
-    else
-      -- nil: not overriden if `override = false`
-      success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not opts.override }) or false
-    end
+    opts.override = self:_get_override_input(dest, opts)
+    -- nil: not overriden if `override = false`
+    success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not opts.override }) or false
     return success
   end
   -- dir
   if opts.recursive then
-    dest:mkdir {
-      parents = F.if_nil(opts.parents, false, opts.parents),
-      exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
-    }
-    local scan = require "plenary.scandir"
-    local data = scan.scan_dir(self.filename, {
-      respect_gitignore = F.if_nil(opts.respect_gitignore, false, opts.respect_gitignore),
-      hidden = F.if_nil(opts.hidden, true, opts.hidden),
-      depth = 1,
-      add_dirs = true,
-    })
-    for _, entry in ipairs(data) do
-      local entry_path = Path:new(entry)
-      local suffix = table.remove(entry_path:_split())
-      local new_dest = dest:joinpath(suffix)
-      -- clear destination as it might be Path table otherwise failing w/ extend
-      opts.destination = nil
-      local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
-      -- nil: not overriden if `override = false`
-      success[new_dest] = entry_path:copy(new_opts) or false
-    end
-    return success
+    return self:_do_recursion(dest, opts, "destination", Path.copy)
   else
     error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
   end
