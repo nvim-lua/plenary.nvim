@@ -34,11 +34,11 @@ s:set("assertion.called_at_most.positive", "Expected to be called at most %s tim
 s:set("assertion.called_more_than.positive", "Expected to be called more than %s time(s), but was called %s time(s)")
 s:set("assertion.called_less_than.positive", "Expected to be called less than %s time(s), but was called %s time(s)")
 
-s:set("assertion.called_with.positive", "Function was not called with the arguments")
-s:set("assertion.called_with.negative", "Function was called with the arguments")
+s:set("assertion.called_with.positive", "Function was never called with matching arguments.\nCalled with (last call if any):\n%s\nExpected:\n%s")
+s:set("assertion.called_with.negative", "Function was called with matching arguments at least once.\nCalled with (last matching call):\n%s\nDid not expect:\n%s")
 
-s:set("assertion.returned_with.positive", "Function was not returned with the arguments")
-s:set("assertion.returned_with.negative", "Function was returned with the arguments")
+s:set("assertion.returned_with.positive", "Function never returned matching arguments.\nReturned (last call if any):\n%s\nExpected:\n%s")
+s:set("assertion.returned_with.negative", "Function returned matching arguments at least once.\nReturned (last matching call):\n%s\nDid not expect:\n%s")
 
 s:set("assertion.returned_arguments.positive", "Expected to be called with %s argument(s), but was called with %s")
 s:set("assertion.returned_arguments.negative", "Expected not to be called with %s argument(s), but was called with %s")

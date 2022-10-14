@@ -238,7 +238,9 @@ local function error_matches(state, arguments, level)
   end
 
   -- err_actual must be (convertible to) a string
-  if util.hastostring(err_actual) then
+  if util.hastostring(err_actual) or
+     type(err_actual) == "number" or
+     type(err_actual) == "boolean" then
     err_actual = tostring(err_actual)
     retargs[1] = err_actual
   end
