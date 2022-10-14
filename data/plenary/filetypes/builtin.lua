@@ -41,6 +41,7 @@ return {
     ['nix'] = 'nix',
     ['plist'] = 'xml',
     ['purs'] = 'purescript',
+    ['r'] = 'r',
     ['res'] = 'rescript',
     ['resi'] = 'rescript',
     ['rkt'] = 'racket',
