@@ -1,9 +1,10 @@
 local path = require("plenary.path").path
+local S = require "plenary.system"
 
 local M = {}
 
 M.strdisplaywidth = (function()
-  if jit and path.sep ~= [[\]] then
+  if jit and not S.is_windows() then
     local ffi = require "ffi"
     ffi.cdef [[
       typedef unsigned char char_u;
@@ -29,7 +30,7 @@ M.strdisplaywidth = (function()
 end)()
 
 M.strcharpart = (function()
-  if jit and path.sep ~= [[\]] then
+  if jit and not S.is_windows() then
     local ffi = require "ffi"
     ffi.cdef [[
       typedef unsigned char char_u;

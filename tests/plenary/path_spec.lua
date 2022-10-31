@@ -1,5 +1,6 @@
 local Path = require "plenary.path"
 local path = Path.path
+local System = require "plenary.system"
 
 describe("Path", function()
   it("should find valid files", function()
@@ -104,7 +105,7 @@ describe("Path", function()
     end)
 
     it("can take absolute paths and make them relative to a given path", function()
-      local root = path.sep == "\\" and "c:\\" or "/"
+      local root = System.is_windows() and "c:\\" or "/"
       local r = Path:new { root, "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. p.filename
@@ -120,7 +121,7 @@ describe("Path", function()
     end)
 
     it("can take double separator absolute paths and make them relative to a given path", function()
-      local root = path.sep == "\\" and "c:\\" or "/"
+      local root = System.is_windows() and "c:\\" or "/"
       local r = Path:new { root, "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. path.sep .. p.filename
@@ -129,7 +130,7 @@ describe("Path", function()
     end)
 
     it("can take absolute paths and make them relative to a given path with trailing separator", function()
-      local root = path.sep == "\\" and "c:\\" or "/"
+      local root = System.is_windows() and "c:\\" or "/"
       local r = Path:new { root, "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. p.filename
@@ -138,7 +139,7 @@ describe("Path", function()
     end)
 
     it("can take absolute paths and make them relative to the root directory", function()
-      local root = path.sep == "\\" and "c:\\" or "/"
+      local root = System.is_windows() and "c:\\" or "/"
       local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
       local absolute = root .. p.filename
       local relative = Path:new(absolute):make_relative(root)
@@ -146,7 +147,7 @@ describe("Path", function()
     end)
 
     it("can take absolute paths and make them relative to themselves", function()
-      local root = path.sep == "\\" and "c:\\" or "/"
+      local root = System.is_windows() and "c:\\" or "/"
       local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
       local relative = Path:new(p.filename):make_relative(p.filename)
       assert.are.same(relative, ".")

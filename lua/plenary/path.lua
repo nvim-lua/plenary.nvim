@@ -7,6 +7,7 @@ local bit = require "plenary.bit"
 local uv = vim.loop
 
 local F = require "plenary.functional"
+local S = require "plenary.system"
 
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
@@ -20,13 +21,7 @@ path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if jit then
-    local shellslash_exists = vim.fn.exists("+shellslash") ~= 0
-    local use_shellslash = false
-    if shellslash_exists then
-        use_shellslash = vim.o.shellslash
-    end
-    local os = string.lower(jit.os)
-    if os ~= "windows" or use_shellslash then
+    if not S.is_windows() or S.uses_shellslash() then
       return "/"
     else
       return "\\"
@@ -37,7 +32,7 @@ path.sep = (function()
 end)()
 
 path.root = (function()
-  if path.sep == "/" then
+  if not S.is_windows() or S.uses_shellslash then
     return function()
       return "/"
     end
@@ -60,7 +55,7 @@ local concat_paths = function(...)
 end
 
 local function is_root(pathname)
-  if path.sep == "\\" then
+  if S.is_windows() then
     return string.match(pathname, "^[A-Z]:\\?$")
   end
   return pathname == "/"
@@ -82,7 +77,7 @@ local is_uri = function(filename)
 end
 
 local is_absolute = function(filename, sep)
-  if sep == "\\" then
+  if S.is_windows() then
     return string.match(filename, "^[%a]:\\.*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
@@ -108,7 +103,7 @@ local function _normalize_path(filename, cwd)
     local split_without_disk_name = function(filename_local)
       local parts = _split_by_separator(filename_local)
       -- Remove disk name part on Windows
-      if path.sep == "\\" and is_abs then
+      if S.is_windows() and is_abs then
         table.remove(parts, 1)
       end
       return parts
@@ -436,7 +431,7 @@ local function shorten_len(filename, len, exclude)
 end
 
 local shorten = (function()
-  if jit and path.sep ~= "\\" then
+  if jit and not S.is_windows() then
     local ffi = require "ffi"
     ffi.cdef [[
     typedef unsigned char char_u;
