@@ -2,7 +2,7 @@ local system = {}
 
 function system.is_windows()
     -- The shellslash option is not able to change this variable
-    if package.config.sub(1,1) == "\\" then
+    if package.config:sub(1,1) == "\\" then
         return true
     end
 
