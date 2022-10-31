@@ -26,7 +26,7 @@ path.sep = (function()
         use_shellslash = vim.o.shellslash
     end
     local os = string.lower(jit.os)
-    if os == "linux" or os == "osx" or os == "bsd" or use_shellslash then
+    if os ~= "windows" or use_shellslash then
       return "/"
     else
       return "\\"
@@ -83,7 +83,7 @@ end
 
 local is_absolute = function(filename, sep)
   if sep == "\\" then
-    return string.match(filename, "^[A-Z]:\\.*$")
+    return string.match(filename, "^[%a]:\\.*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
 end
@@ -104,8 +104,17 @@ local function _normalize_path(filename, cwd)
   local has = string.find(filename, path.sep .. "..", 1, true) or string.find(filename, ".." .. path.sep, 1, true)
 
   if has then
-    local parts = _split_by_separator(filename)
+    local is_abs = is_absolute(filename, path.sep)
+    local split_without_disk_name = function(filename_local)
+      local parts = _split_by_separator(filename_local)
+      -- Remove disk name part on Windows
+      if path.sep == "\\" and is_abs then
+        table.remove(parts, 1)
+      end
+      return parts
+    end
 
+    local parts = split_without_disk_name(filename)
     local idx = 1
     local initial_up_count = 0
 
@@ -126,7 +135,7 @@ local function _normalize_path(filename, cwd)
     until idx > #parts
 
     local prefix = ""
-    if is_absolute(filename, path.sep) or #_split_by_separator(cwd) == initial_up_count then
+    if is_abs or #split_without_disk_name(cwd) == initial_up_count then
       prefix = path.root(filename)
     end
 
@@ -200,7 +209,7 @@ Path.__div = function(self, other)
 end
 
 Path.__tostring = function(self)
-  return self.filename
+  return clean(self.filename)
 end
 
 -- TODO: See where we concat the table, and maybe we could make this work.

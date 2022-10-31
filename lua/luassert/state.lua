@@ -30,7 +30,7 @@ state.revert = function(self)
     end
   end
   if getmetatable(self) ~= state_mt then error("Value provided is not a valid snapshot", 2) end
-  
+
   if self.next then
     self.next:revert()
   end
@@ -52,7 +52,6 @@ end
 -- Creates a new snapshot.
 -- @return snapshot table
 state.snapshot = function()
-  local s = current
   local new = setmetatable ({
     formatters = {},
     parameters = {},

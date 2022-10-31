@@ -6,6 +6,10 @@ local f = require "plenary.functional"
 
 local M = {}
 
+local function is_callable(fn)
+  return type(fn) == "function" or type(getmetatable(fn)["__call"]) == "function"
+end
+
 ---because we can't store varargs
 local function callback_or_next(step, thread, callback, ...)
   local stat = f.first(...)
@@ -22,7 +26,8 @@ local function callback_or_next(step, thread, callback, ...)
   else
     local returned_function = f.second(...)
     local nargs = f.third(...)
-    assert(type(returned_function) == "function", "type error :: expected func")
+
+    assert(is_callable(returned_function), "type error :: expected func")
     returned_function(vararg.rotate(nargs, step, select(4, ...)))
   end
 end
@@ -31,7 +36,7 @@ end
 ---@param async_function Future: the future to execute
 ---@param callback function: the callback to call when done
 local execute = function(async_function, callback, ...)
-  assert(type(async_function) == "function", "type error :: expected func")
+  assert(is_callable(async_function), "type error :: expected func")
 
   local thread = co.create(async_function)
 
@@ -69,7 +74,7 @@ end
 ---@param argc number: The number of arguments of func. Must be included.
 ---@return function: Returns an async function
 M.wrap = function(func, argc)
-  if type(func) ~= "function" then
+  if not is_callable(func) then
     traceback_error("type error :: expected func, got " .. type(func))
   end
 
