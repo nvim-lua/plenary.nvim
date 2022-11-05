@@ -27,6 +27,7 @@ return {
     ['erb'] = 'eruby',
     ['ex'] = 'elixir',
     ['exs'] = 'elixir',
+    ['fish'] = 'fish',
     ['fnl'] = 'fennel',
     ['gd'] = 'gdscript',
     ['gql'] = 'graphql',
