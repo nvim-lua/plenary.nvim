@@ -34,11 +34,21 @@ The test **some test** checks that a functions output is as expected based on th
 
 # Running tests
 
-Run the test using `:PlenaryBustedTest <file>`. 
+Run the test using `:PlenaryBustedFile <file>`. 
 
 ```vimscript
 " Run the test in the current buffer
-:PlenaryBustedTest %
+:PlenaryBustedFile %
+" Run all tests in the directory "tests/plenary/"
+:PlenaryBustedDirectory tests/plenary/
+```
+
+Or you can run tests in headless mode to see output in terminal:
+
+```bash
+# run all tests in terminal
+cd plenary.nvim
+nvim --headless -c 'PlenaryBustedDirectory tests'
 ```
 
 # mocking with luassert
