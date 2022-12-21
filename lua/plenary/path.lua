@@ -331,7 +331,7 @@ function Path:expand()
     if val then
       expanded = string.gsub(string.gsub(self.filename, rep, val), "%$", "")
     else
-      expanded = nil
+      expanded = self.filename
     end
   else
     expanded = self.filename
