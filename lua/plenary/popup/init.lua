@@ -422,7 +422,7 @@ function popup.create(what, vim_options)
       bufnr,
       "n",
       "<CR>",
-      '<cmd>lua require"popup".execute_callback(' .. bufnr .. ")<CR>",
+      '<cmd>lua require"plenary.popup".execute_callback(' .. bufnr .. ")<CR>",
       { noremap = true }
     )
   end
