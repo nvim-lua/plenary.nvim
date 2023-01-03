@@ -3,3 +3,6 @@ test:
 
 generate_filetypes:
 	nvim --headless -c 'luafile scripts/update_filetypes_from_github.lua' -c 'qa!'
+
+luarocks_upload:
+	bash ./scripts/luarocks-upload.sh
