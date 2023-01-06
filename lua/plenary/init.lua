@@ -1,9 +1,3 @@
-PLENARY_DEBUG = PLENARY_DEBUG == nil and true or PLENARY_DEBUG
-
-if PLENARY_DEBUG then
-  require("plenary.reload").reload_module "plenary"
-end
-
 -- Lazy load everything into plenary.
 local plenary = setmetatable({}, {
   __index = function(t, k)

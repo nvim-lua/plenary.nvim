@@ -183,7 +183,7 @@ mod.it = function(desc, func)
   -- TODO: We should figure out how to determine whether
   -- and assert failed or whether it was an error...
 
-  local to_insert, printed
+  local to_insert
   if not ok then
     to_insert = results.fail
     test_result.msg = msg

@@ -221,7 +221,7 @@ function Path:new(...)
 
   if type(self) == "string" then
     table.insert(args, 1, self)
-    self = Path
+    self = Path -- luacheck: ignore
   end
 
   local path_input
@@ -576,7 +576,7 @@ function Path:copy(opts)
         { "Yes", "No" },
         { prompt = string.format("Overwrite existing %s?", dest:absolute()) },
         function(_, idx)
-          success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not (idx == 1) }) or false
+          success[dest] = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = idx ~= 1 }) or false
         end
       )
     else

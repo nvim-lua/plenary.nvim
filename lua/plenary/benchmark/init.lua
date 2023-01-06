@@ -1,4 +1,3 @@
-local B = {}
 local stat = require "plenary.benchmark.stat"
 
 local get_stats = function(results)

@@ -213,7 +213,6 @@ function M.extract(n, field, width) -- Lua5.2 inspired
   width = width or 1
   return band(rshift(n, field), 2^width-1)
 end
-local extract = M.extract
 
 function M.replace(n, v, field, width) -- Lua5.2 inspired
   width = width or 1
@@ -222,7 +221,6 @@ function M.replace(n, v, field, width) -- Lua5.2 inspired
   local mask = bnot(lshift(mask1, field))
   return band(n, mask) + lshift(v, field)
 end
-local replace = M.replace
 
 function M.bswap(x)  -- BitOp style
   local a = band(x, 0xff); x = rshift(x, 8)

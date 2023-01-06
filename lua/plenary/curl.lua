@@ -25,7 +25,7 @@ author = github.com/tami5
 ]]
 --
 
-local util, parse, request = {}, {}, nil
+local util, parse = {}, {}
 
 -- Helpers --------------------------------------------------
 -------------------------------------------------------------
@@ -239,7 +239,7 @@ parse.response = function(lines, dump_path, code)
   }
 end
 
-request = function(specs)
+local request = function(specs)
   local response = {}
   local args, opts = parse.request(vim.tbl_extend("force", {
     compressed = true,
