@@ -5,8 +5,9 @@ on:
       - 'v*'
 jobs:
   luarocks-upload:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v3
       - uses: leafo/gh-actions-lua@v9
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install dkjson
