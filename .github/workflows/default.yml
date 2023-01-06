@@ -3,57 +3,49 @@ name: default
 on: [push, pull_request]
 
 jobs:
-  x64-ubuntu:
-    name: X64-ubuntu
-    runs-on: ubuntu-20.04
+  run_tests:
+    name: unit tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            rev: nightly/nvim-linux64.tar.gz
+          - os: ubuntu-22.04
+            rev: v0.7.2/nvim-linux64.tar.gz
+          - os: ubuntu-22.04
+            rev: v0.8.2/nvim-linux64.tar.gz
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: date +%F > todays-date
       - name: Restore cache for today's nightly.
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: _neovim
-          key: ${{ runner.os }}-x64-${{ hashFiles('todays-date') }}
-
-      - name: Run tests
-        run: |
-          curl -OL https://raw.githubusercontent.com/norcalli/bot-ci/master/scripts/github-actions-setup.sh
-          source github-actions-setup.sh nightly-x64
-          make test
-
-  appimage-ubuntu:
-    name: Appimage-ubuntu
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - run: date +%F > todays-date
-      - name: Restore cache for today's nightly.
-        uses: actions/cache@v2
-        with:
-          path: build
-          key: ${{ runner.os }}-appimage-${{ hashFiles('todays-date') }}
-
+          key: ${{ runner.os }}-${{ matrix.rev }}-${{ hashFiles('todays-date') }}
       - name: Prepare
         run: |
-          test -d build || {
-            mkdir -p build
-            wget https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
-            chmod +x nvim.appimage
-            mv nvim.appimage ./build/nvim
+          test -d _neovim || {
+            mkdir -p _neovim
+            curl -sL "https://github.com/neovim/neovim/releases/download/${{ matrix.rev }}" | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
           }
 
       - name: Run tests
         run: |
-            export PATH="${PWD}/build/:${PATH}"
-            make test
+          export PATH="${PWD}/_neovim/bin:${PATH}"
+          export VIM="${PWD}/_neovim/share/nvim/runtime"
+          nvim --version
+          make test
 
   stylua:
     name: stylua
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: JohnnyMorganz/stylua-action@v1
+      - uses: actions/checkout@v3
+      - uses: JohnnyMorganz/stylua-action@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
           # CLI arguments
           args: --color always --check .
