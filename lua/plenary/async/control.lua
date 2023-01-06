@@ -74,7 +74,7 @@ end
 ---async function, blocks until a permit can be acquired
 ---example:
 ---local semaphore = Semaphore.new(1024)
----local permit = await(semaphore:acquire())
+---local permit = semaphore:acquire()
 ---permit:forget()
 ---when a permit can be acquired returns it
 ---call permit:forget() to forget the permit
@@ -176,14 +176,14 @@ M.channel.counter = function()
 
   Receiver.recv = function()
     if counter == 0 then
-      await(condvar:wait())
+      condvar:wait()
     end
     counter = counter - 1
   end
 
   Receiver.last = function()
     if counter == 0 then
-      await(condvar:wait())
+      condvar:wait()
     end
     counter = 0
   end
