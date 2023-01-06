@@ -16,3 +16,5 @@ jobs:
         env: 
           LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: make luarocks_upload
+      - name: Install release
+        run: make test_luarocks_install 
