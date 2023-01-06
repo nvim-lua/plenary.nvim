@@ -42,7 +42,7 @@ local __state_meta = {
       local arguments = util.make_arglist(...)
       local val, retargs = assertion.callback(self, arguments, util.errorlevel())
 
-      if not val == self.mod then
+      if (not val) == self.mod then
         local message = assertion.positive_message
         if not self.mod then
           message = assertion.negative_message

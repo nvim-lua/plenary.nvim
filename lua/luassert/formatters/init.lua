@@ -3,22 +3,28 @@ local assert = require('luassert.assert')
 local match = require('luassert.match')
 local util = require('luassert.util')
 
-local colors = setmetatable({
-  none = function(c) return c end
-},{ __index = function(self, key)
+local isatty, colors do
   local ok, term = pcall(require, 'term')
-  local isatty = io.type(io.stdout) == 'file' and ok and term.isatty(io.stdout)
-  if not ok or not isatty or not term.colors then
-    return function(c) return c end
-  end
-  return function(c)
-    for token in key:gmatch("[^%.]+") do
-      c = term.colors[token](c)
+  isatty = io.type(io.stdout) == 'file' and ok and term.isatty(io.stdout)
+  if not isatty then
+    local isWindows = package.config:sub(1,1) == '\\'
+    if isWindows and os.getenv("ANSICON") then
+      isatty = true
     end
-    return c
   end
+
+  colors = setmetatable({
+    none = function(c) return c end
+  },{ __index = function(self, key)
+    return function(c)
+      for token in key:gmatch("[^%.]+") do
+        c = term.colors[token](c)
+      end
+      return c
+    end
+  end
+  })
 end
-})
 
 local function fmt_string(arg)
   if type(arg) == "string" then
@@ -122,7 +128,7 @@ local function fmt_table(arg, fmtargs)
   local tmax = assert:get_parameter("TableFormatLevel")
   local showrec = assert:get_parameter("TableFormatShowRecursion")
   local errchar = assert:get_parameter("TableErrorHighlightCharacter") or ""
-  local errcolor = assert:get_parameter("TableErrorHighlightColor") or "none"
+  local errcolor = assert:get_parameter("TableErrorHighlightColor")
   local crumbs = fmtargs and fmtargs.crumbs or {}
   local cache = {}
   local type_desc
@@ -246,4 +252,4 @@ assert:add_formatter(fmt_arglist)
 assert:set_parameter("TableFormatLevel", 3)
 assert:set_parameter("TableFormatShowRecursion", false)
 assert:set_parameter("TableErrorHighlightCharacter", "*")
-assert:set_parameter("TableErrorHighlightColor", "none")
+assert:set_parameter("TableErrorHighlightColor", isatty and "red" or "none")
