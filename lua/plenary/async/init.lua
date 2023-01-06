@@ -28,9 +28,6 @@ local exports = setmetatable(require "plenary.async.async", {
 
 exports.tests.add_globals = function()
   a = exports
-  async = exports.async
-  await = exports.await
-  await_all = exports.await_all
 
   -- must prefix with a or stack overflow, plenary.test harness already added it
   a.describe = exports.tests.describe
@@ -44,9 +41,6 @@ exports.tests.add_to_env = function()
   local env = getfenv(2)
 
   env.a = exports
-  env.async = exports.async
-  env.await = exports.await
-  env.await_all = exports.await_all
 
   -- must prefix with a or stack overflow, plenary.test harness already added it
   env.a.describe = exports.tests.describe

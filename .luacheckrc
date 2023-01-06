@@ -47,9 +47,6 @@ files = {
   ["lua/plenary/async/init.lua"] = {
     globals = {
       "a",
-      "async",
-      "await",
-      "await_all",
     },
   },
   ["lua/plenary/async/tests.lua"] = {
