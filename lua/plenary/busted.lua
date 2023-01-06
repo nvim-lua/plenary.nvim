@@ -218,9 +218,9 @@ mod.run = function(file)
   print("\n" .. HEADER)
   print("Testing: ", file)
 
-  local ok, msg = pcall(dofile, file)
+  local loaded, msg = loadfile(file)
 
-  if not ok then
+  if not loaded then
     print(HEADER)
     print "FAILED TO LOAD FILE"
     print(color_string("red", msg))
@@ -232,33 +232,37 @@ mod.run = function(file)
     end
   end
 
-  -- If nothing runs (empty file without top level describe)
-  if not results.pass then
-    if is_headless then
-      return vim.cmd "0cq"
+  coroutine.wrap(function()
+    loaded()
+
+    -- If nothing runs (empty file without top level describe)
+    if not results.pass then
+      if is_headless then
+        return vim.cmd "0cq"
+      else
+        return
+      end
+    end
+
+    mod.format_results(results)
+
+    if #results.errs ~= 0 then
+      print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
+      if is_headless then
+        return vim.cmd "2cq"
+      end
+    elseif #results.fail > 0 then
+      print "Tests Failed. Exit: 1"
+
+      if is_headless then
+        return vim.cmd "1cq"
+      end
     else
-      return
+      if is_headless then
+        return vim.cmd "0cq"
+      end
     end
-  end
-
-  mod.format_results(results)
-
-  if #results.errs ~= 0 then
-    print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
-    if is_headless then
-      return vim.cmd "2cq"
-    end
-  elseif #results.fail > 0 then
-    print "Tests Failed. Exit: 1"
-
-    if is_headless then
-      return vim.cmd "1cq"
-    end
-  else
-    if is_headless then
-      return vim.cmd "0cq"
-    end
-  end
+  end)()
 end
 
 return mod
