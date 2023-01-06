@@ -13,4 +13,6 @@ jobs:
       - name: Install dkjson
         run: luarocks install dkjson
       - name: Luarocks Upload
+        env: 
+          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
         run: make luarocks_upload
