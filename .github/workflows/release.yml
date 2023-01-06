@@ -1,0 +1,15 @@
+name: "release"
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  luarocks-upload:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: leafo/gh-actions-lua@v9
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: Install dkjson
+        run: luarocks install dkjson
+      - name: Luarocks Upload
+        run: make luarocks_upload
