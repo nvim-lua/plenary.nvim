@@ -1,5 +1,7 @@
 local Job = require "plenary.job"
 
+RUN_INSIDE_COROUTINE = true
+
 local Timing = {}
 
 function Timing:log(name)
