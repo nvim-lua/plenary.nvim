@@ -135,19 +135,3 @@ To test this in your `~/.config/nvim` configuration, try the suggested file stru
 lua/example/module.lua
 lua/spec/example/module_spec.lua
 ```
-
-# Asynchronous testing
-
-Tests run in a coroutine, which can be yielded and resumed. This can be used to
-test code that uses asynchronous Neovim functionalities. For example, this can
-be done inside a test:
-
-```lua
-local co = coroutine.running()
-vim.defer_fn(function()
-  coroutine.resume(co)
-end, 1000)
---The test will reach here immediately.
-coroutine.yield()
---The test will only reach here after one second, when the deferred function runs.
-```
