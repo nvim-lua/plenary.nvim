@@ -229,6 +229,7 @@ Where the first argument is the directory you'd like to test. It will search for
 the pattern `*_spec.lua` and execute them in separate neovim instances.
 
 The second argument is a Lua option table with the following fields:
+- `nvim_cmd`: specify the command to launch this neovim instance (defaults to `vim.v.progpath`)
 - `minimal_init`: specify an init.vim to use for this instance, uses `--noplugin`
 - `minimal`: uses `--noplugin` without an init script (overrides `minimal_init`)
 - `sequential`: whether to run tests sequentially (default is to run in parallel)
