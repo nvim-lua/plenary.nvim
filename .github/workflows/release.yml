@@ -9,6 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: leafo/gh-actions-lua@v9
+        with:
+          luaVersion: "luajit-2.1.0-beta3"
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install dkjson
         run: luarocks install dkjson
