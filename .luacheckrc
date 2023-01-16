@@ -53,6 +53,7 @@ files = {
     globals = {
       "describe",
       "it",
+      "pending",
       "before_each",
       "after_each",
     },
