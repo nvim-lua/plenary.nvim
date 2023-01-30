@@ -21,6 +21,7 @@ return {
   extension = {
     ['_coffee'] = 'coffee',
     ['astro'] = 'astro',
+    ['cts'] = 'typescript',
     ['cljd'] = 'clojure',
     ['coffee'] = 'coffee',
     ['dart'] = 'dart',
@@ -39,6 +40,7 @@ return {
     ['jl'] = 'julia',
     ['jsx'] = 'javascriptreact',
     ['kt'] = 'kotlin',
+    ['mts'] = 'typescript',
     ['nix'] = 'nix',
     ['plist'] = 'xml',
     ['purs'] = 'purescript',
