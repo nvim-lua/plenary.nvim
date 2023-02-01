@@ -31,7 +31,7 @@ end
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
-  local directory = table.remove(split_string, 1)
+  local directory = vim.fn.expand(table.remove(split_string, 1))
 
   local opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
 
