@@ -7,6 +7,8 @@ local win_float = require "plenary.window.float"
 
 local headless = require("plenary.nvim_meta").is_headless
 
+local plenary_dir = vim.fn.fnamemodify(debug.getinfo(1).source:match "@?(.*[/\\])", ":p:h:h:h")
+
 local harness = {}
 
 local print_output = vim.schedule_wrap(function(_, ...)
@@ -40,6 +42,8 @@ end
 
 function harness.test_directory(directory, opts)
   print "Starting..."
+  local minimal = not opts or not opts.init or opts.minimal or opts.minimal_init
+
   opts = vim.tbl_deep_extend("force", {
     nvim_cmd = vim.v.progpath,
     winopts = { winblend = 3 },
@@ -83,17 +87,22 @@ function harness.test_directory(directory, opts)
     local args = {
       "--headless",
       "-c",
-      string.format('lua require("plenary.busted").run("%s")', p:absolute():gsub("\\", "\\\\")),
+      "set rtp+=.," .. vim.fn.escape(plenary_dir, " ") .. " | runtime plugin/plenary.vim",
     }
 
-    if opts.minimal ~= nil then
-      table.insert(args, "--noplugin")
-    elseif opts.minimal_init ~= nil then
-      table.insert(args, "--noplugin")
-
+    if minimal then
+      table.insert(args, "--clean")
+      if opts.minimal_init then
+        table.insert(args, "-u")
+        table.insert(args, opts.minimal_init)
+      end
+    elseif opts.init ~= nil then
       table.insert(args, "-u")
-      table.insert(args, opts.minimal_init)
+      table.insert(args, opts.init)
     end
+
+    table.insert(args, "-c")
+    table.insert(args, string.format('lua require("plenary.busted").run("%s")', p:absolute():gsub("\\", "\\\\")))
 
     local job = Job:new {
       command = opts.nvim_cmd,

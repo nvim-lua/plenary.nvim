@@ -1,0 +1,110 @@
+*plenary-test*
+
+
+Supports (simple) busted-style testing. It implements a mock-ed busted
+interface, that will allow you to run simple busted style tests in separate
+neovim instances.
+
+
+
+USAGE                                                     *plenary-test-usage*
+==============================================================================
+
+To run the current spec file in a floating window, you can use the keymap
+`<Plug>PlenaryTestFile`. For example:
+>
+  nmap <leader>t <Plug>PlenaryTestFile
+<
+In this case, the test is run with a minimal configuration, that includes in
+its runtimepath only plenary.nvim and the current working directory.
+
+To run a whole directory from the command line, you could do something like:
+>
+  nvim --headless -c "PlenaryBustedDirectory tests/plenary/ { <options> }"
+
+Where the first argument is the directory you'd like to test. It will search
+for files with the pattern `*_spec.lua` and execute them in separate neovim
+instances.
+
+The second argument is a Lua option table with the following fields:
+
+  `nvim_cmd`      specify the command to launch this neovim instance (defaults
+                to `vim.v.progpath`).
+  `init`          specify an init.vim to use for this instance, if not given
+                a minimal configuration is used.
+  `minimal_init`  as for `init`, but also run the neovim instance with
+                `--clean`.
+  `sequential`    whether to run tests sequentially (default is to run in
+                parallel).
+  `keep_going`    if `sequential`, whether to continue on test failure (default
+                true).
+  `timeout`       controls the maximum time allotted to each job in parallel or
+                sequential operation (defaults to 50,000 milliseconds).
+
+Unless `init` is given, the neovim instance is run with the `--clean`
+argument.
+
+The exit code is 0 for success and 1 for fail, so you can use it easily in
+a `Makefile`.
+
+
+
+SUPPORTED BUSTED ITEMS                                   *plenary-test-busted*
+==============================================================================
+
+So far, the only supported busted items are:
+
+- `describe`
+- `it`
+- `pending`
+- `before_each`
+- `after_each`
+- `clear`
+- `assert.*` etc. (from luassert, which is bundled)
+
+We used to support `luaunit` and original `busted` but it turns out it was way
+too hard and not worthwhile for the difficulty of getting them setup,
+particularly on other platforms or in CI. Now, we have a dep free (or at
+least, no other installation steps necessary) `busted` implementation that can
+be used more easily.
+
+Please take a look at the new APIs and make any issues for things that aren't
+clear.
+
+
+
+COMMANDS                                               *plenary-test-commands*
+==============================================================================
+
+*:PlenaryBustedFile* {path}
+
+  Run a test on a single `_spec.lua` file.
+
+
+*:PlenaryBustedDirectory* {path} {options}
+
+  Run tests for all `*_spec.lua` files in the given path.
+
+  {options} is a table, see |plenary-test-usage|.
+
+
+
+
+PLUGS                                                     *plenary-test-plugs*
+==============================================================================
+
+<Plug>PlenaryTestFile
+
+  Can be used to run a test on a single file, with a minimal configuration.
+
+
+
+
+LICENSE                                                 *plenary-test-license*
+==============================================================================
+
+MIT license
+
+
+==============================================================================
+vim:tw=78:ft=help:norl:et:ts=2:sw=2:fen:fdl=0:
