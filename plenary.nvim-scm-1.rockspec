@@ -19,15 +19,8 @@ dependencies = {
 }
 
 source = {
-   url = 'http://github.com/nvim-lua/plenary.nvim/archive/v' .. _MODREV .. '.zip',
-   dir = 'plenary.nvim-' .. _MODREV,
+   url = 'git://github.com/nvim-lua/plenary.nvim',
 }
-
-if _MODREV == 'scm' then
-   source = {
-      url = 'git://github.com/nvim-lua/plenary.nvim',
-   }
-end
 
 build = {
    type = 'builtin',

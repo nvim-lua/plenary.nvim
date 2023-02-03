@@ -1,0 +1,40 @@
+local git_tag = '$git_tag'
+local modrev = '$modrev'
+local specrev = '-1'
+
+local repo_url = '$repo_url'
+
+rockspec_format = '3.0'
+package = '$package'
+version = modrev .. specrev
+
+description = {
+  summary = '$summary',
+  detailed = $detailed_description,
+  labels = $labels,
+  homepage = '$homepage',
+  $license
+}
+
+dependencies = {
+   'lua >= 5.1, < 5.4',
+   'luassert'
+}
+
+source = {
+  url = repo_url .. '/archive/' .. git_tag .. '.zip',
+  dir = '$repo_name-' .. modrev,
+}
+
+build = {
+   type = 'builtin',
+   copy_directories = {
+     'data',
+     'plugin'
+   }
+}
+
+test = {
+  type = 'command',
+  command = 'make test'
+}
