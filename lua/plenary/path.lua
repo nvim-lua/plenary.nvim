@@ -16,8 +16,13 @@ local S_IF = {
 }
 
 local path = {}
+
+---User specific home path 
+---@type string
 path.home = vim.loop.os_homedir()
 
+---Platform specific direcotry separator.
+---@type string
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
@@ -31,6 +36,10 @@ path.sep = (function()
   end
 end)()
 
+
+---Platform specific root path.
+---@type fun(): string
+---@public
 path.root = (function()
   if path.sep == "/" then
     return function()
@@ -44,16 +53,23 @@ path.root = (function()
   end
 end)()
 
+---@type { [string]: integer }
 path.S_IF = S_IF
 
 local band = function(reg, value)
   return bit.band(reg, value) == reg
 end
 
-local concat_paths = function(...)
+---Concats pathes listed in vararg.
+---@vararg string
+---@return string
+local function concat_paths(...)
   return table.concat({ ... }, path.sep)
 end
 
+---Checks whether ginen path is the root.
+---@param pathname string
+---@return boolean
 local function is_root(pathname)
   if path.sep == "\\" then
     return string.match(pathname, "^[A-Z]:\\?$")
@@ -72,17 +88,33 @@ local _split_by_separator = (function()
   end
 end)()
 
-local is_uri = function(filename)
+
+---Checks whether filename is uri.
+---@param filename string
+---@return boolean
+local function is_uri(filename)
   return string.match(filename, "^%w+://") ~= nil
 end
 
-local is_absolute = function(filename, sep)
+---Checks is path if absolute.
+---TODO: Seems like sep can be inlined to path.sep value.
+---
+---@param filename string
+---@param sep string
+---@return boolean
+---@package
+local function is_absolute(filename, sep)
   if sep == "\\" then
     return string.match(filename, "^[%a]:\\.*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
 end
 
+---Normalizes path in filename relative to cwd.
+---@param filename string
+---@param cwd string
+---@return string
+---@package
 local function _normalize_path(filename, cwd)
   if is_uri(filename) then
     return filename
@@ -161,7 +193,9 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
----@class Path
+---@alias Path plenary.Path this is backward compatability alias for new plenary.Path.
+
+---@class plenary.Path
 local Path = {
   path = path,
 }
