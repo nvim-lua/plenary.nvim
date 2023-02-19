@@ -119,12 +119,14 @@ filetype.detect_from_extension = function(filepath)
 end
 
 filetype.detect_from_name = function(filepath)
-  filepath = filepath:lower()
-  local split_path = vim.split(filepath, os_sep, true)
-  local fname = split_path[#split_path]
-  local match = filetype_table.file_name[fname]
-  if match then
-    return match
+  if filepath then
+    filepath = filepath:lower()
+    local split_path = vim.split(filepath, os_sep, true)
+    local fname = split_path[#split_path]
+    local match = filetype_table.file_name[fname]
+    if match then
+      return match
+    end
   end
   return ""
 end
