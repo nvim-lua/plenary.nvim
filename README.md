@@ -12,6 +12,8 @@ At the moment, it is very much in pre-alpha :smile: Expect changes to the way so
 
 ## Installation
 
+[![LuaRocks](https://img.shields.io/luarocks/v/Conni2461/plenary.nvim?logo=lua&color=purple)](https://luarocks.org/modules/Conni2461/plenary.nvim)
+
 Using [plug](https://github.com/junegunn/vim-plug):
 
 ```vim
