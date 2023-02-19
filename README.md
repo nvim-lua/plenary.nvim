@@ -187,7 +187,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
 
 ```lua
-local scan = require'plenary.scandir`
+local scan = require'plenary.scandir'
 scan.scan_dir('.', { hidden = true, depth = 2 })
 ```
 
