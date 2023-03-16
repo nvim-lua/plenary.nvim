@@ -251,10 +251,14 @@ local request = function(specs)
     return args
   end
 
-  local job = J:new {
+  local job_opts = {
     command = "curl",
     args = args,
-    on_exit = function(j, code)
+  }
+  if opts.stream then
+    job_opts.on_stdout = opts.stream
+  else
+    job_opts.on_exit = function(j, code)
       if code ~= 0 then
         error(
           string.format(
@@ -272,10 +276,11 @@ local request = function(specs)
       else
         response = output
       end
-    end,
-  }
+    end
+  end
+  local job = J:new(job_opts)
 
-  if opts.callback then
+  if opts.callback or opts.stream then
     return job:start()
   else
     job:sync(10000)
