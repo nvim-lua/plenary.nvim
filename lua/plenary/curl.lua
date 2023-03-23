@@ -11,6 +11,7 @@ all curl methods accepts
   raw     = "any additonal curl args, it must be an array/list." (array)
   dry_run = "whether to return the args to be ran through curl." (boolean)
   output  = "where to download something." (filepath)
+  timeout = "request timeout in mseconds" (number)
 
 and returns table:
 
@@ -278,7 +279,8 @@ local request = function(specs)
   if opts.callback then
     return job:start()
   else
-    job:sync(10000)
+    local timeout = opts.timeout or 10000
+    job:sync(timeout)
     return response
   end
 end
