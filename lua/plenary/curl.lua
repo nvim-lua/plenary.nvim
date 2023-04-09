@@ -257,13 +257,7 @@ local request = function(specs)
     on_exit = function(j, code)
       if code ~= 0 then
         local stderr = vim.inspect(j:stderr_result())
-        local message = string.format(
-          "%s %s - curl error exit_code=%s stderr=%s",
-          opts.method,
-          opts.url,
-          code,
-          stderr
-        )
+        local message = string.format("%s %s - curl error exit_code=%s stderr=%s", opts.method, opts.url, code, stderr)
         if opts.on_error then
           return opts.on_error {
             message = message,
