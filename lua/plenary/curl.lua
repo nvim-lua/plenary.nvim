@@ -261,15 +261,17 @@ local request = function(specs)
   else
     job_opts.on_exit = function(j, code)
       if code ~= 0 then
-        error(
-          string.format(
-            "%s %s - curl error exit_code=%s stderr=%s",
-            opts.method,
-            opts.url,
-            code,
-            vim.inspect(j:stderr_result())
-          )
-        )
+        local stderr = vim.inspect(j:stderr_result())
+        local message = string.format("%s %s - curl error exit_code=%s stderr=%s", opts.method, opts.url, code, stderr)
+        if opts.on_error then
+          return opts.on_error {
+            message = message,
+            stderr = stderr,
+            exit = code,
+          }
+        else
+          error(message)
+        end
       end
       local output = parse.response(j:result(), opts.dump[2], code)
       if opts.callback then
