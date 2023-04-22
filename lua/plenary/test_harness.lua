@@ -30,6 +30,8 @@ local get_nvim_output = function(job_id)
 end
 
 function harness.test_directory_command(command)
+  -- TODO: this is broken if we pass mutliple args!
+  -- figure out if there is a way to call vim commands with lua tables as args.
   local split_string = vim.split(command, " ")
   local directory = vim.fn.expand(table.remove(split_string, 1))
 
@@ -79,11 +81,20 @@ function harness.test_directory(directory, opts)
 
   local failure = false
 
+  local busted_opts = {}
+  if opts.filter then
+    busted_opts.filter = opts.filter
+  end
+
   local jobs = vim.tbl_map(function(p)
     local args = {
       "--headless",
       "-c",
-      string.format('lua require("plenary.busted").run("%s")', p:absolute()),
+      string.format(
+        'lua require("plenary.busted").run("%s", %s)',
+        p:absolute(),
+        vim.inspect(busted_opts) -- TODO: find better way to do this!
+      ),
     }
 
     if opts.minimal ~= nil then

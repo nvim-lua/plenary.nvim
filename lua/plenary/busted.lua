@@ -1,3 +1,5 @@
+local busted_opts
+
 local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
@@ -8,6 +10,7 @@ local function get_trace(element, level, msg)
     info.traceback = info.traceback:sub(1, index)
     return info
   end
+
   level = level or 3
 
   local thisdir = dirname(debug.getinfo(1, "Sl").source, ":h")
@@ -170,7 +173,20 @@ local run_each = function(tbl)
   end
 end
 
+local matches_filter = function(desc)
+  if not busted_opts.filter then
+    return true
+  end
+
+  local desc_stack = table.concat(current_description, " ") .. desc
+  return desc_stack:match(busted_opts.filter)
+end
+
 mod.it = function(desc, func)
+  if not matches_filter(desc) then
+    return
+  end
+
   run_each(current_before_each)
   local ok, msg, desc_stack = call_inner(desc, func)
   run_each(current_after_each)
@@ -199,6 +215,10 @@ mod.it = function(desc, func)
 end
 
 mod.pending = function(desc, func)
+  if not matches_filter(desc) then
+    return
+  end
+
   local curr_stack = vim.deepcopy(current_description)
   table.insert(curr_stack, desc)
   print(PENDING, "||", table.concat(curr_stack, " "))
@@ -214,7 +234,9 @@ after_each = mod.after_each
 clear = mod.clear
 assert = require "luassert"
 
-mod.run = function(file)
+mod.run = function(file, opts)
+  busted_opts = vim.F.if_nil(opts, {}, opts)
+
   print("\n" .. HEADER)
   print("Testing: ", file)
 
