@@ -284,7 +284,8 @@ local request = function(specs)
   local job = J:new(job_opts)
 
   if opts.callback or opts.stream then
-    return job:start()
+    job:start()
+    return job
   else
     local timeout = opts.timeout or 10000
     job:sync(timeout)
