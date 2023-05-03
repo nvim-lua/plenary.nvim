@@ -542,15 +542,6 @@ function Path:rename(opts)
   -- uses stat)
   assert(self_lstat, ("%s: %s"):format(errmsg, self.filename))
 
-  -- BUG
-  -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match "^%.%.?/?\\?.+" then
-    opts.new_name = {
-      uv.fs_realpath(opts.new_name:sub(1, 3)),
-      opts.new_name:sub(4),
-    }
-  end
-
   local new_path = Path:new(opts.new_name)
   new_lstat, errmsg = uv.fs_lstat(new_path.filename)
 
