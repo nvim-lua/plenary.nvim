@@ -566,10 +566,9 @@ function Path:rename(opts)
   -- occurred (see rename(2)), and this is not an error...we're not changing
   -- `self.filename` if it didn't.
   if not uv.fs_lstat(self.filename) then
-    self.filename = new_path.filename
+    self = Path:new(new_path.filename)
   end
 
-  -- TODO: Python returns a brand new instance here, should we do the same?
   return self
 end
 
