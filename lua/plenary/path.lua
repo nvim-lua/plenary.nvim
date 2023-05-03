@@ -515,10 +515,10 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
----Rename this file or directory to the given path (`opts.new_name`), and
----return a new Path instance pointing to it. Relative paths are interpreted
----relative to the current working directory. The rename is aborted if the new
----path already exists.
+---Rename this file or directory to the provided path (`opts.new_name`),
+---returning a new Path instance upon success.  The rename is aborted if the
+---new path already exists. Relative paths are interpreted relative to the
+---current working directory.
 ---@generic T: Path
 ---@param opts { new_name: Path|string }
 ---@return T
@@ -545,25 +545,26 @@ function Path:rename(opts)
   local new_path = Path:new(opts.new_name)
   new_lstat, errmsg = uv.fs_lstat(new_path.filename)
 
-  -- This allows changing only case (e.g. fname -> Fname) on case-insensitive
-  -- file systems, otherwise throwing if `new_name` exists as a different file.
+  -- The following allows changing only case (e.g. fname -> Fname) on
+  -- case-insensitive file systems, otherwise throwing if `new_name` exists as
+  -- a different file.
   --
-  -- NOTE: to elaborate, `uv.fs_rename()` wont/shouldn't do anything if old
+  -- NOTE: To elaborate, `uv.fs_rename()` won't/shouldn't do anything if old
   -- and new both exist and are both hard links to the same file (inode),
   -- however, it appears to still allow you to change the case of a filename
-  -- on case-insensitive file systems (e.g. if `new_name` doesn't _actually_
+  -- on case-insensitive file systems (i.e. if `new_name` doesn't _actually_
   -- exist as a separate file but would otherwise appear to via an lstat call;
-  -- if it does actually exist (in which case the fs must be case-sensitive)
-  -- idk 100% what happens b/c it needs to be tested on a case-sensitive fs,
-  -- but it should simply result in a successful no-op according to rename(2)
-  -- docs, at least on Linux anyway)
+  -- if it does actually exist — in which case the fs must be case-sensitive —
+  -- idk for certain what happens b/c it needs to be tested on a case-sensitive
+  -- fs, but it should simply result in a successful no-op according to the
+  -- `rename(2)` docs, at least on Linux anyway).
   assert(not new_lstat or (self_lstat.ino == new_lstat.ino), "File or directory already exists!")
 
   status, errmsg = uv.fs_rename(self:absolute(), new_path:absolute())
   assert(status, ("%s: Rename failed!"):format(errmsg))
 
   -- NOTE: `uv.fs_rename()` _can_ return success even if no rename actually
-  -- occurred (see rename(2)), and this is not an error...we're not changing
+  -- occurred (see rename(2)), and this is not an error. So we're not changing
   -- `self.filename` if it didn't.
   if not uv.fs_lstat(self.filename) then
     self = Path:new(new_path.filename)
