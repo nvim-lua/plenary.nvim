@@ -1,4 +1,5 @@
 -- log.lua
+-- Does only support logging source files.
 --
 -- Inspired by rxi/log.lua
 -- Modified by tjdevries and can be found at github.com/tjdevries/vlog.nvim
@@ -49,6 +50,23 @@ local default_config = {
 
   -- Can limit the number of decimals displayed for floats.
   float_precision = 0.01,
+
+  -- Adjust content as needed, but must keep function parameters to be filled
+  -- by library code.
+  ---@param is_console boolean If output is for console or log file.
+  ---@param mode_name string Level configuration 'modes' field 'name'
+  ---@param src_path string Path to source file given by debug.info.source
+  ---@param src_line integer Line into source file given by debug.info.currentline
+  ---@param msg string Message, which is later on escaped, if needed.
+  fmt_msg = function(is_console, mode_name, src_path, src_line, msg)
+    local nameupper = mode_name:upper()
+    local lineinfo = src_path .. ":" .. src_line
+    if is_console then
+      return string.format("[%-6s%s] %s: %s", nameupper, os.date "%H:%M:%S", lineinfo, msg)
+    else
+      return string.format("[%-6s%s] %s: %s\n", nameupper, os.date(), lineinfo, msg)
+    end
+  end,
 }
 
 -- {{{ NO NEED TO CHANGE
@@ -105,16 +123,14 @@ log.new = function(config, standalone)
     if level < levels[config.level] then
       return
     end
-    local nameupper = level_config.name:upper()
-
     local msg = message_maker(...)
     local info = debug.getinfo(config.info_level or 2, "Sl")
-    local lineinfo = info.short_src .. ":" .. info.currentline
-
+    local src_path = info.source:sub(2)
+    local src_line = info.currentline
     -- Output to console
     if config.use_console then
       local log_to_console = function()
-        local console_string = string.format("[%-6s%s] %s: %s", nameupper, os.date "%H:%M:%S", lineinfo, msg)
+        local console_string = config.fmt_msg(true, level_config.name, src_path, src_line, msg)
 
         if config.highlights and level_config.hl then
           vim.cmd(string.format("echohl %s", level_config.hl))
@@ -148,13 +164,14 @@ log.new = function(config, standalone)
         outfile_parent_path:mkdir { parents = true }
       end
       local fp = assert(io.open(outfile, "a"))
-      local str = string.format("[%-6s%s] %s: %s\n", nameupper, os.date(), lineinfo, msg)
+      local str = config.fmt_msg(false, level_config.name, src_path, src_line, msg)
       fp:write(str)
       fp:close()
     end
 
     -- Output to quickfix
     if config.use_quickfix then
+      local nameupper = level_config.name:upper()
       local formatted_msg = string.format("[%s] %s", nameupper, msg)
       local qf_entry = {
         -- remove the @ getinfo adds to the file path
