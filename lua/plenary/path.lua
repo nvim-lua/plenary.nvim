@@ -534,8 +534,17 @@ function Path:rename(opts)
   -- The behavior here may differ, as an error will be thrown regardless.
 
   local self_lstat, new_lstat, status, errmsg
+  vim.validate { opts = { opts, "t" } }
+  vim.validate {
+    ["opts.new_name"] = {
+      opts.new_name,
+      function(val)
+        return Path.is_path(val) or (type(val) == "string" and val ~= "")
+      end,
+      "string or Path object",
+    },
+  }
   opts = opts or {}
-  assert(opts.new_name and opts.new_name ~= "", "Please provide the new name!")
   self_lstat, errmsg = uv.fs_lstat(self.filename)
 
   -- Cannot rename a non-existing path (lstat is needed here, `Path:exists()`
@@ -544,6 +553,10 @@ function Path:rename(opts)
 
   local new_path = Path:new(opts.new_name)
   new_lstat, errmsg = uv.fs_lstat(new_path.filename)
+  local same_inode = false
+  if new_lstat then
+    same_inode = self_lstat.ino == new_lstat.ino and self_lstat.dev == new_lstat.dev and self_lstat.gen == new_lstat.gen
+  end
 
   -- The following allows changing only case (e.g. fname -> Fname) on
   -- case-insensitive file systems, otherwise throwing if `new_name` exists as
@@ -558,19 +571,14 @@ function Path:rename(opts)
   -- idk for certain what happens b/c it needs to be tested on a case-sensitive
   -- fs, but it should simply result in a successful no-op according to the
   -- `rename(2)` docs, at least on Linux anyway).
-  assert(not new_lstat or (self_lstat.ino == new_lstat.ino), "File or directory already exists!")
+  assert(not new_lstat or same_inode, "File or directory already exists!")
 
-  status, errmsg = uv.fs_rename(self:absolute(), new_path:absolute())
+  status, errmsg = uv.fs_rename(tostring(self), tostring(new_path))
   assert(status, ("%s: Rename failed!"):format(errmsg))
 
   -- NOTE: `uv.fs_rename()` _can_ return success even if no rename actually
-  -- occurred (see rename(2)), and this is not an error. So we're not changing
-  -- `self.filename` if it didn't.
-  if not uv.fs_lstat(self.filename) then
-    self = Path:new(new_path.filename)
-  end
-
-  return self
+  -- occurred (see rename(2)), and this is not an error.
+  return Path:new(new_path)
 end
 
 --- Copy files or folders with defaults akin to GNU's `cp`.

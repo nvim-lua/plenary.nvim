@@ -415,7 +415,6 @@ describe("Path", function()
     end)
   end)
 
-  -- TODO: tests new behavior, allows rename to self
   describe("rename", function()
     local env = new_env()
     after_each(env.cleanup)
@@ -497,7 +496,7 @@ describe("Path", function()
     -- BUG: introduced in f71ee45 (#90)
     it("should consider bad symlink as existing, and throw", function()
       local before, after, non_existing = env.new_path { touch = true }, env.new_path(), env.new_path()
-      vim.loop.fs_symlink(non_existing.filename, after.filename)
+      assert(vim.loop.fs_symlink(non_existing.filename, after.filename))
       assert.is.True(not not vim.loop.fs_lstat(after.filename))
       assert.errors(function()
         before:rename { new_name = after }
@@ -511,9 +510,38 @@ describe("Path", function()
       assert.is.False(before:exists())
       assert.is.True(after:exists())
       assert.is.True(Path.is_path(new))
+      assert.is.True(new:exists())
       assert.are.equal(before.filename, before_filename)
-      assert.are.Not.equal(new, after)
-      assert.are.Not.equal(new, before)
+      assert.are.equal(after.filename, new.filename)
+    end)
+
+    it("should allow changing only case of filename, regardless of fs case-sensitivity", function()
+      local before = env.new_path { filename = ".__some_file" }
+      assert.is.False(before:exists())
+      before:touch()
+      local before_filename_realpath = assert(vim.loop.fs_realpath(before.filename))
+      local after = env.new_path { filename = before.filename:upper() }
+      assert.does.Not.error(function()
+        before:rename { new_name = after }
+      end)
+      assert.are.equal(
+        before_filename_realpath:sub(1, #before_filename_realpath - #before.filename) .. after.filename,
+        assert(vim.loop.fs_realpath(after.filename))
+      )
+    end)
+
+    it("rename to hardlink of the same file should be a successful no-op", function()
+      local before, after = env.new_path { touch = true }, env.new_path {}
+      assert(vim.loop.fs_link(before.filename, after.filename))
+      assert.is.True(after:exists())
+      local new
+      assert.does.Not.error(function()
+        new = before:rename { new_name = after }
+      end)
+      assert.is.True(before:exists())
+      assert.is.True(after:exists())
+      assert.is.True(Path.is_path(new))
+      assert.are.equal(new.filename, after.filename)
     end)
   end)
 
