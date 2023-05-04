@@ -1,6 +1,7 @@
 local Path = require "plenary.path"
 local path = Path.path
 
+-- NOTE: breaking this could break tests
 local function new_env()
   local env, trash = {}, {}
 
@@ -414,14 +415,20 @@ describe("Path", function()
     end)
   end)
 
-  -- TODO: tests for bugs, and new behavior, allows rename to self
+  -- TODO: tests new behavior, allows rename to self
   describe("rename", function()
     local env = new_env()
     after_each(env.cleanup)
 
     it("can rename a file", function()
       local before, after = env.new_path { touch = true }, env.new_path()
+      -- Can pass another Path object
       before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
+      before, after = env.new_path { touch = true }, env.new_path()
+      -- Also works with string
+      before:rename { new_name = after.filename }
       assert.is.False(before:exists())
       assert.is.True(after:exists())
     end)
@@ -440,12 +447,19 @@ describe("Path", function()
       assert.is.True(before:exists())
     end)
 
+    it("should throw if old name doesn't exist", function()
+      local before, after = env.new_path { touch = false }, env.new_path { touch = false }
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
+    end)
+
     it("can move to parent dir", function()
       local before, after = env.new_path { filename = "random_file" }, env.new_path { filename = "../random_file" }
       assert.is.False(before:exists())
+      assert.is.False(after:exists())
       before:touch()
       assert.is.True(before:exists())
-      assert.is.False(after:exists())
       before:rename { new_name = after }
       assert.is.False(before:exists())
       assert.is.True(after:exists())
@@ -456,6 +470,50 @@ describe("Path", function()
       assert.errors(function()
         before:rename { new_name = after }
       end)
+    end)
+
+    it("shouldn't throw on rename to same filename", function()
+      local before = env.new_path { touch = true }
+      assert.does.Not.error(function()
+        before:rename { new_name = before }
+      end)
+    end)
+
+    -- BUG: introduced in f71ee45 (#90)
+    it("should handle . or .. or ./ or ../ prefix", function()
+      for _, pre in ipairs { ".", "..", "./", "../" } do
+        local before, after =
+          env.new_path { filename = "random_file" }, env.new_path { filename = pre .. "random_file2" }
+        assert.is.False(before:exists())
+        assert.is.False(after:exists())
+        before:touch()
+        assert.is.True(before:exists())
+        before:rename { new_name = after }
+        assert.is.False(before:exists())
+        assert.is.True(after:exists())
+      end
+    end)
+
+    -- BUG: introduced in f71ee45 (#90)
+    it("should consider bad symlink as existing, and throw", function()
+      local before, after, non_existing = env.new_path { touch = true }, env.new_path(), env.new_path()
+      vim.loop.fs_symlink(non_existing.filename, after.filename)
+      assert.is.True(not not vim.loop.fs_lstat(after.filename))
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
+    end)
+
+    it("should return result as new Path instance with the new filename", function()
+      local before, after = env.new_path { touch = true }, env.new_path()
+      local before_filename = before.filename
+      local new = before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
+      assert.is.True(Path.is_path(new))
+      assert.are.equal(before.filename, before_filename)
+      assert.are.Not.equal(new, after)
+      assert.are.Not.equal(new, before)
     end)
   end)
 
