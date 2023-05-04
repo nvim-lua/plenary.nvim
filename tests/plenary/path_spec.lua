@@ -1,6 +1,31 @@
 local Path = require "plenary.path"
 local path = Path.path
 
+local function new_env()
+  local env, trash = {}, {}
+
+  function env.new_path(opts)
+    opts = opts or {}
+    local ret = Path:new(opts.filename or vim.fn.tempname())
+    if opts.touch then
+      ret:touch()
+      assert(ret:exists())
+    end
+    table.insert(trash, ret)
+    return ret
+  end
+
+  function env.cleanup()
+    for _, v in ipairs(trash) do
+      if type((v or {}).rm) == "function" then
+        pcall(v.rm, v)
+      end
+    end
+  end
+
+  return env
+end
+
 describe("Path", function()
   it("should find valid files", function()
     local p = Path:new "README.md"
@@ -389,54 +414,48 @@ describe("Path", function()
     end)
   end)
 
+  -- TODO: tests for bugs, and new behavior, allows rename to self
   describe("rename", function()
+    local env = new_env()
+    after_each(env.cleanup)
+
     it("can rename a file", function()
-      local p = Path:new "a_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      assert(pcall(p.rename, p, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same("not_a_random_filename.lua", p.filename)
-
-      p:rm()
+      local before, after = env.new_path { touch = true }, env.new_path()
+      before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
     end)
 
-    it("can handle an invalid filename", function()
-      local p = Path:new "some_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      assert(not pcall(p.rename, p, { new_name = "" }))
-      assert(not pcall(p.rename, p))
-      assert.are.same("some_random_filename.lua", p.filename)
-
-      p:rm()
+    it("should throw on invalid args", function()
+      local before = env.new_path { touch = true }
+      assert.errors(function()
+        before:rename { new_name = "" }
+      end)
+      assert.errors(function()
+        before:rename {}
+      end)
+      assert.errors(function()
+        before:rename()
+      end)
+      assert.is.True(before:exists())
     end)
 
     it("can move to parent dir", function()
-      local p = Path:new "some_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      assert(pcall(p.rename, p, { new_name = "../some_random_filename.lua" }))
-      assert.are.same(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
-
-      p:rm()
+      local before, after = env.new_path { filename = "random_file" }, env.new_path { filename = "../random_file" }
+      assert.is.False(before:exists())
+      before:touch()
+      assert.is.True(before:exists())
+      assert.is.False(after:exists())
+      before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
     end)
 
-    it("cannot rename to an existing filename", function()
-      local p1 = Path:new "a_random_filename.lua"
-      local p2 = Path:new "not_a_random_filename.lua"
-      assert(pcall(p1.touch, p1))
-      assert(pcall(p2.touch, p2))
-      assert(p1:exists())
-      assert(p2:exists())
-
-      assert(not pcall(p1.rename, p1, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same(p1.filename, "a_random_filename.lua")
-
-      p1:rm()
-      p2:rm()
+    it("should throw on rename to existing filename", function()
+      local before, after = env.new_path { touch = true }, env.new_path { touch = true }
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
     end)
   end)
 
