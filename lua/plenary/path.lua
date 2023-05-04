@@ -592,11 +592,14 @@ function Path:copy(opts)
   local dest = opts.destination
   -- handles `.`, `..`, `./`, and `../`
   if not Path.is_path(dest) then
-    if type(dest) == "string" and dest:match "^%.%.?/?\\?.+" then
-      dest = {
-        uv.fs_realpath(dest:sub(1, 3)),
-        dest:sub(4, #dest),
-      }
+    if type(dest) == "string" then
+      local m = dest:match "^%.%.?/?\\?.+"
+      if m then
+        dest = {
+          uv.fs_realpath(dest:sub(1, #m)),
+          dest:sub(#m + 1),
+        }
+      end
     end
     dest = Path:new(dest)
   end
