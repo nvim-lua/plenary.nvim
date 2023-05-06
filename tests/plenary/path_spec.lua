@@ -1,10 +1,14 @@
 local Path = require "plenary.path"
 local path = Path.path
 
--- NOTE: breaking this could break tests
+---Construct a temporary environment which keeps track of which Paths have
+---been created for easier cleanup. Use `new_path()` to construct a Path.
 local function new_env()
   local env, trash = {}, {}
 
+  ---Create and return a new Path instance with a non-existing temporary filename,
+  ---or `opts.filename` if provided. The temporary filename will be an absolute path.
+  ---Pass `opts.touch` to create the file as well.
   function env.new_path(opts)
     opts = opts or {}
     local ret = Path:new(opts.filename or vim.fn.tempname())
@@ -16,6 +20,8 @@ local function new_env()
     return ret
   end
 
+  ---Remove from the filesystem all paths created by `new_path()`. A
+  ---reference to this function may be passed directly to `after_each()`.
   function env.cleanup()
     for _, v in ipairs(trash) do
       if type((v or {}).rm) == "function" then
