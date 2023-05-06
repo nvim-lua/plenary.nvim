@@ -9,6 +9,11 @@ local headless = require("plenary.nvim_meta").is_headless
 
 local harness = {}
 
+local function script_path()
+  local str = debug.getinfo(2, "S").source:sub(2)
+  return str:match "(.*/)"
+end
+
 local print_output = vim.schedule_wrap(function(_, ...)
   for _, v in ipairs { ... } do
     io.stdout:write(tostring(v))
@@ -29,24 +34,38 @@ local get_nvim_output = function(job_id)
   end)
 end
 
-function harness.test_directory_command(command)
+function harness.test_directory_command(...)
+  return harness.test_path_command(...)
+end
+
+function harness.test_directory(...)
+  return harness.test_path(...)
+end
+
+function harness.test_path_command(command)
   local split_string = vim.split(command, " ")
-  local directory = vim.fn.expand(table.remove(split_string, 1))
+  local path = vim.fn.expand(table.remove(split_string, 1))
 
   local opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
 
-  return harness.test_directory(directory, opts)
+  return harness.test_path(path, opts)
 end
 
-function harness.test_directory(directory, opts)
-  print "Starting..."
+function harness.test_path(path, opts)
   opts = vim.tbl_deep_extend("force", {
     nvim_cmd = vim.v.progpath,
     winopts = { winblend = 3 },
     sequential = false,
     keep_going = true,
     timeout = 50000,
+    debug = false,
   }, opts or {})
+
+  local output_compact = opts.output_format == "compact"
+
+  if not output_compact then
+    print "Starting..."
+  end
 
   vim.env.PLENARY_TEST_TIMEOUT = opts.timeout
 
@@ -73,17 +92,23 @@ function harness.test_directory(directory, opts)
 
   local outputter = headless and print_output or get_nvim_output(res.job_id)
 
-  local paths = harness._find_files_to_run(directory)
+  local paths = vim.fn.isdirectory(path) == 1 and harness._find_files_to_run(path) or { Path.new(path) }
 
   local path_len = #paths
 
   local failure = false
 
+  local run_opts = {
+    output_format = opts.output_format or "default",
+  }
+
   local jobs = vim.tbl_map(function(p)
     local args = {
       "--headless",
       "-c",
-      string.format('lua require("plenary.busted").run("%s")', p:absolute()),
+      string.format('let &runtimepath="%s,".&runtimepath', vim.fn.fnamemodify(script_path(), ":p:h:h:h")),
+      "-c",
+      string.format('lua require("plenary.busted").run("%s", [[%s]])', p:absolute(), vim.json.encode(run_opts)),
     }
 
     if opts.minimal ~= nil then
@@ -125,9 +150,15 @@ function harness.test_directory(directory, opts)
     return job
   end, paths)
 
-  log.debug "Running..."
+  if not output_compact then
+    log.debug "Running..."
+  end
+
   for i, j in ipairs(jobs) do
-    outputter(res.bufnr, "Scheduling: " .. j.nvim_busted_path)
+    if not output_compact then
+      outputter(res.bufnr, "Scheduling: " .. j.nvim_busted_path)
+    end
+
     j:start()
     if opts.sequential then
       log.debug("... Sequential wait for job number", i)

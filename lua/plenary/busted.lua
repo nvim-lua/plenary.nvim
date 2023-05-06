@@ -1,3 +1,51 @@
+local opts = {}
+local is_headless = require("plenary.nvim_meta").is_headless
+local output_compact = false
+local generic_marker = "▪"
+local pass_marker = generic_marker or "●"
+local fail_marker = generic_marker or "●"
+local pending_marker = generic_marker or "●"
+
+local mod = {}
+
+local results = {}
+local current_description = {}
+local current_before_each = {}
+local current_after_each = {}
+
+local color_table = {
+  magenta = 35,
+  blue = 34,
+  yellow = 33,
+  green = 32,
+  red = 31,
+}
+
+-- We are shadowing print so people can reliably print messages
+print = function(...)
+  for _, v in ipairs { ... } do
+    io.stdout:write(tostring(v))
+    io.stdout:write "\t"
+  end
+
+  io.stdout:write "\r\n"
+end
+
+print_append = function(...)
+  for _, v in ipairs { ... } do
+    io.stdout:write(tostring(v))
+  end
+end
+
+local indent = function(msg, spaces)
+  if spaces == nil then
+    spaces = 4
+  end
+
+  local prefix = string.rep(" ", spaces)
+  return prefix .. msg:gsub("\n", "\n" .. prefix)
+end
+
 local dirname = function(p)
   return vim.fn.fnamemodify(p, ":h")
 end
@@ -29,25 +77,6 @@ local function get_trace(element, level, msg)
   return file and file.getTrace(file.name, info) or trimTrace(info)
 end
 
-local is_headless = require("plenary.nvim_meta").is_headless
-
--- We are shadowing print so people can reliably print messages
-print = function(...)
-  for _, v in ipairs { ... } do
-    io.stdout:write(tostring(v))
-    io.stdout:write "\t"
-  end
-
-  io.stdout:write "\r\n"
-end
-
-local mod = {}
-
-local results = {}
-local current_description = {}
-local current_before_each = {}
-local current_after_each = {}
-
 local add_description = function(desc)
   table.insert(current_description, desc)
 
@@ -74,20 +103,18 @@ local call_inner = function(desc, func)
   local ok, msg = xpcall(func, function(msg)
     -- debug.traceback
     -- return vim.inspect(get_trace(nil, 3, msg))
-    local trace = get_trace(nil, 3, msg)
-    return trace.message .. "\n" .. trace.traceback
+    if output_compact then
+      return msg
+    else
+      local trace = get_trace(nil, 3, msg)
+      return trace.message .. "\n" .. trace.traceback
+    end
   end)
   clear_last_each()
   pop_description()
 
   return ok, msg, desc_stack
 end
-
-local color_table = {
-  yellow = 33,
-  green = 32,
-  red = 31,
-}
 
 local color_string = function(color, str)
   if not is_headless then
@@ -104,17 +131,51 @@ local PENDING = color_string("yellow", "Pending")
 local HEADER = string.rep("=", 40)
 
 mod.format_results = function(res)
-  print ""
-  print(color_string("green", "Success: "), #res.pass)
-  print(color_string("red", "Failed : "), #res.fail)
-  print(color_string("red", "Errors : "), #res.errs)
-  print(HEADER)
+  if output_compact then
+    print(
+      string.format(
+        "\n%s: %d / %s: %d / %s: %d / %s: %d",
+        color_string("green", "pass"),
+        #res.pass,
+        color_string("magenta", "pending"),
+        #res.pending,
+        color_string("red", "fail"),
+        #res.fail,
+        color_string("red", "error"),
+        #res.errs
+      )
+    )
+    print ""
+    for _, pending in ipairs(res.pending) do
+      local path = table.concat(pending.descriptions, " » ")
+
+      print(string.format("%s: %s", color_string("magenta", "pending"), path))
+    end
+    for _, fail in ipairs(res.fail) do
+      local path = table.concat(fail.descriptions, " » ")
+
+      print ""
+      print(string.format("%s: %s", color_string("red", "fail"), path))
+      print(indent(fail.msg, 2))
+    end
+
+    if #res.pending > 0 or #res.fail > 0 then
+      print ""
+    end
+  else
+    print ""
+    print(color_string("green", "Success: "), #res.pass)
+    print(color_string("red", "Failed : "), #res.fail)
+    print(color_string("red", "Errors : "), #res.errs)
+    print(HEADER)
+  end
 end
 
 mod.describe = function(desc, func)
   results.pass = results.pass or {}
   results.fail = results.fail or {}
   results.errs = results.errs or {}
+  results.pending = results.pending or {}
 
   describe = mod.inner_describe
   local ok, msg, desc_stack = call_inner(desc, func)
@@ -151,15 +212,6 @@ mod.clear = function()
   vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 end
 
-local indent = function(msg, spaces)
-  if spaces == nil then
-    spaces = 4
-  end
-
-  local prefix = string.rep(" ", spaces)
-  return prefix .. msg:gsub("\n", "\n" .. prefix)
-end
-
 local run_each = function(tbl)
   for _, v in pairs(tbl) do
     for _, w in ipairs(v) do
@@ -188,11 +240,19 @@ mod.it = function(desc, func)
     to_insert = results.fail
     test_result.msg = msg
 
-    print(FAIL, "||", table.concat(test_result.descriptions, " "))
-    print(indent(msg, 12))
+    if output_compact then
+      print_append(color_string("red", fail_marker))
+    else
+      print(FAIL, "||", table.concat(test_result.descriptions, " "))
+      print(indent(msg, 12))
+    end
   else
     to_insert = results.pass
-    print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+    if output_compact then
+      print_append(color_string("green", pass_marker))
+    else
+      print(SUCCESS, "||", table.concat(test_result.descriptions, " "))
+    end
   end
 
   table.insert(to_insert, test_result)
@@ -201,7 +261,13 @@ end
 mod.pending = function(desc, func)
   local curr_stack = vim.deepcopy(current_description)
   table.insert(curr_stack, desc)
-  print(PENDING, "||", table.concat(curr_stack, " "))
+  table.insert(results.pending, { descriptions = curr_stack, msg = nil })
+
+  if output_compact then
+    print_append(color_string("magenta", pending_marker))
+  else
+    print(PENDING, "||", table.concat(curr_stack, " "))
+  end
 end
 
 _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
@@ -214,17 +280,34 @@ after_each = mod.after_each
 clear = mod.clear
 assert = require "luassert"
 
-mod.run = function(file)
-  print("\n" .. HEADER)
-  print("Testing: ", file)
+mod.run = function(input_file, input_opts_json)
+  local file = input_file
+
+  if type(input_opts_json) == "string" then
+    opts = vim.json.decode(input_opts_json)
+    output_compact = opts.output_format == "compact"
+  end
+
+  if output_compact then
+    print ""
+    print(string.format("%s: %s", color_string("blue", "test"), file))
+  else
+    print("\n" .. HEADER)
+    print("Testing: ", file)
+  end
 
   local loaded, msg = loadfile(file)
 
   if not loaded then
-    print(HEADER)
-    print "FAILED TO LOAD FILE"
-    print(color_string("red", msg))
-    print(HEADER)
+    if output_compact then
+      print(string.format("%s: %s", color_string("red", "fatal"), msg))
+    else
+      print(HEADER)
+      print "FAILED TO LOAD FILE"
+      print(color_string("red", msg))
+      print(HEADER)
+    end
+
     if is_headless then
       return vim.cmd "2cq"
     else
@@ -247,12 +330,17 @@ mod.run = function(file)
     mod.format_results(results)
 
     if #results.errs ~= 0 then
-      print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
+      if output_compact then
+        print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
+      end
+
       if is_headless then
         return vim.cmd "2cq"
       end
     elseif #results.fail > 0 then
-      print "Tests Failed. Exit: 1"
+      if output_compact then
+        print "Tests Failed. Exit: 1"
+      end
 
       if is_headless then
         return vim.cmd "1cq"

@@ -11,6 +11,14 @@ describe("busted specs", function()
     end)
   end)
 
+  it("fails", function()
+    assert.is_false(true)
+  end)
+
+  it("fails", function()
+    assert.is_false(true)
+  end)
+
   it("should not nest", function()
     assert(true)
   end)
