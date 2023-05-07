@@ -289,8 +289,10 @@ mod.run = function(input_file, input_opts_json)
   end
 
   if output_compact then
+    local trimmed = vim.fn.fnamemodify(file, ":.")
+
     print ""
-    print(string.format("%s: %s", color_string("blue", "test"), file))
+    print(string.format("%s: %s", color_string("blue", "test"), trimmed))
   else
     print("\n" .. HEADER)
     print("Testing: ", file)
