@@ -484,7 +484,6 @@ describe("Path", function()
       end)
     end)
 
-    -- BUG: introduced in f71ee45 (#90)
     it("should handle . or .. or ./ or ../ prefix", function()
       for _, pre in ipairs { ".", "..", "./", "../" } do
         local before, after =
@@ -499,7 +498,6 @@ describe("Path", function()
       end
     end)
 
-    -- BUG: introduced in f71ee45 (#90)
     it("should consider bad symlink as existing, and throw", function()
       local before, after, non_existing = env.new_path { touch = true }, env.new_path(), env.new_path()
       assert(vim.loop.fs_symlink(non_existing.filename, after.filename))
