@@ -152,9 +152,7 @@ function harness.test_path(path, opts)
 
   print ""
 
-  if not output_compact then
-    log.debug "Running..."
-  end
+  log.debug "Running..."
 
   for i, j in ipairs(jobs) do
     if not output_compact then
@@ -215,31 +213,6 @@ function harness._find_files_to_run(directory)
   }
 
   return vim.tbl_map(Path.new, finder:sync())
-end
-
-function harness._run_path(test_type, directory)
-  local paths = harness._find_files_to_run(directory)
-
-  local bufnr = 0
-  local win_id = 0
-
-  for _, p in pairs(paths) do
-    print " "
-    print("Loading Tests For: ", p:absolute(), "\n")
-
-    local ok, _ = pcall(function()
-      dofile(p:absolute())
-    end)
-
-    if not ok then
-      print "Failed to load file"
-    end
-  end
-
-  harness:run(test_type, bufnr, win_id)
-  vim.cmd "qa!"
-
-  return paths
 end
 
 return harness
