@@ -238,6 +238,7 @@ The second argument is a Lua option table with the following fields:
 - `keep_going`: if `sequential`, whether to continue on test failure (default true)
 - `timeout`: controls the maximum time allotted to each job in parallel or
   sequential operation (defaults to 50,000 milliseconds)
+- `output_format`: configure output format, possible values are `'default'` and `'compact'`
 
 The exit code is 0 when success and 1 when fail, so you can use it easily in a `Makefile`!
 
