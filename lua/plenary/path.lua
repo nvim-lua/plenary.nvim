@@ -519,9 +519,8 @@ end
 ---returning a new Path instance upon success.  The rename is aborted if the
 ---new path already exists. Relative paths are interpreted relative to the
 ---current working directory.
----@generic T: Path
----@param opts { new_name: Path|string }
----@return T
+---@param opts { new_name: Path|string } options table containing the new name
+---@return Path # Path representing the new name
 function Path:rename(opts)
   -- TODO: For reference, Python's `Path.rename()` actually says/does this:
   --
