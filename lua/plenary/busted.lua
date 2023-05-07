@@ -58,7 +58,7 @@ local function get_trace(element, level, msg)
   end
   level = level or 3
 
-  local thisdir = dirname(debug.getinfo(1, "Sl").source, ":h")
+  local thisdir = dirname(debug.getinfo(1, "Sl").source)
   local info = debug.getinfo(level, "Sl")
   while
     info.what == "C"
