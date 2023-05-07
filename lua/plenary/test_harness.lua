@@ -150,6 +150,8 @@ function harness.test_path(path, opts)
     return job
   end, paths)
 
+  print ""
+
   if not output_compact then
     log.debug "Running..."
   end
@@ -196,6 +198,8 @@ function harness.test_path(path, opts)
   vim.wait(100)
 
   if headless then
+    print " \n"
+
     if failure then
       return vim.cmd "1cq"
     end

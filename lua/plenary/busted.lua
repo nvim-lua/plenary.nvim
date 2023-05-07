@@ -141,16 +141,21 @@ mod.format_results = function(res)
         #res.pending,
         color_string("red", "fail"),
         #res.fail,
-        color_string("red", "error"),
+        color_string("yellow", "fatal"),
         #res.errs
       )
     )
-    print ""
+
+    if #res.pending > 0 or #res.fail > 0 or #res.errs > 0 then
+      print ""
+    end
+
     for _, pending in ipairs(res.pending) do
       local path = table.concat(pending.descriptions, " » ")
 
       print(string.format("%s: %s", color_string("magenta", "pending"), path))
     end
+
     for _, fail in ipairs(res.fail) do
       local path = table.concat(fail.descriptions, " » ")
 
@@ -159,8 +164,12 @@ mod.format_results = function(res)
       print(indent(fail.msg, 2))
     end
 
-    if #res.pending > 0 or #res.fail > 0 then
+    for _, error in ipairs(res.errs) do
+      local path = table.concat(error.descriptions, " » ")
+
       print ""
+      print(string.format("%s: %s", color_string("yellow", "fatal"), path))
+      print(indent(error.msg, 2))
     end
   else
     print ""
@@ -332,16 +341,16 @@ mod.run = function(input_file, input_opts_json)
     mod.format_results(results)
 
     if #results.errs ~= 0 then
-      if output_compact then
-        print("We had an unexpected error: ", vim.inspect(results.errs), vim.inspect(results))
+      if not output_compact then
+        print "\nFatal errors. Exit: 2"
       end
 
       if is_headless then
         return vim.cmd "2cq"
       end
     elseif #results.fail > 0 then
-      if output_compact then
-        print "Tests Failed. Exit: 1"
+      if not output_compact then
+        print "\nTests Failed. Exit: 1"
       end
 
       if is_headless then
