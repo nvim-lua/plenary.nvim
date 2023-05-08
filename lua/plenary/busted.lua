@@ -9,6 +9,7 @@ local pending_marker = generic_marker or "●"
 local mod = {}
 
 local results = {}
+local current_prints = {}
 local current_description = {}
 local current_before_each = {}
 local current_after_each = {}
@@ -23,12 +24,18 @@ local color_table = {
 
 -- We are shadowing print so people can reliably print messages
 print = function(...)
-  for _, v in ipairs { ... } do
-    io.stdout:write(tostring(v))
-    io.stdout:write "\t"
-  end
+  local container = current_prints[#current_prints]
 
-  io.stdout:write "\r\n"
+  if container then
+    container[#container + 1] = { ... }
+  else
+    for _, v in ipairs { ... } do
+      io.stdout:write(tostring(v))
+      io.stdout:write "\t"
+    end
+
+    io.stdout:write "\r\n"
+  end
 end
 
 print_append = function(...)
@@ -97,8 +104,22 @@ local clear_last_each = function()
   current_after_each[current_description[#current_description]] = nil
 end
 
-local call_inner = function(desc, func)
+local push_print_capture = function(tbl)
+  current_prints[#current_prints + 1] = tbl
+end
+
+local pop_print_capture = function()
+  current_prints[#current_prints] = nil
+end
+
+local call_inner = function(desc, func, capture_prints)
   local desc_stack = add_description(desc)
+  local prints = {}
+
+  if capture_prints then
+    push_print_capture(prints)
+  end
+
   add_new_each()
   local ok, msg = xpcall(func, function(msg)
     -- debug.traceback
@@ -110,10 +131,15 @@ local call_inner = function(desc, func)
       return trace.message .. "\n" .. trace.traceback
     end
   end)
+
+  if capture_prints then
+    pop_print_capture()
+  end
+
   clear_last_each()
   pop_description()
 
-  return ok, msg, desc_stack
+  return ok, msg, desc_stack, prints
 end
 
 local color_string = function(color, str)
@@ -162,6 +188,12 @@ mod.format_results = function(res)
       print ""
       print(string.format("%s: %s", color_string("red", "fail"), path))
       print(indent(fail.msg, 2))
+
+      for _, print_params in ipairs(fail.prints) do
+        print ""
+        print(string.format("%s:", color_string("blue", "print")))
+        print(indent(table.concat(print_params, "\t"), 2))
+      end
     end
 
     for _, error in ipairs(res.errs) do
@@ -233,11 +265,12 @@ end
 
 mod.it = function(desc, func)
   run_each(current_before_each)
-  local ok, msg, desc_stack = call_inner(desc, func)
+  local ok, msg, desc_stack, prints = call_inner(desc, func, output_compact)
   run_each(current_after_each)
 
   local test_result = {
     descriptions = desc_stack,
+    prints = prints,
     msg = nil,
   }
 
