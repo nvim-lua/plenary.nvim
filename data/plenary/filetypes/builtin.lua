@@ -52,6 +52,7 @@ return {
     ['tres'] = 'gdresource',
     ['tscn'] = 'gdresource',
     ['tsx'] = 'typescriptreact',
+    ['smithy'] = [[smithy]],
     ['sol'] = 'solidity',
     ['dtsi'] = 'dts',
   },
