@@ -211,10 +211,9 @@ end
 
 --- Shutdown a job.
 function Job:shutdown(code, signal)
-  if self._shutdown_check and not uv.is_active(self._shutdown_check) then
-    vim.wait(1000, function()
-      return self:_pipes_are_closed(self) and self.is_shutdown
-    end, 1, true)
+  if self._shutdown_check and uv.is_active(self._shutdown_check) then
+    -- shutdown has already started
+    return
   end
 
   self:_shutdown(code, signal)
