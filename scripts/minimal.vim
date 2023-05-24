@@ -1,3 +1,3 @@
 
-set rtp+=.
+let &runtimepath='.,'.&runtimepath
 runtime plugin/plenary.vim
