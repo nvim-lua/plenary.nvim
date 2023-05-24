@@ -918,4 +918,16 @@ function Path:readbyterange(offset, length)
   return data
 end
 
+function Path:find_upwards(filename)
+  local folder = Path:new(self)
+  while self:absolute() ~= path.root do
+    local p = folder:joinpath(filename)
+    if p:exists() then
+      return p
+    end
+    folder = folder:parent()
+  end
+  return ""
+end
+
 return Path
