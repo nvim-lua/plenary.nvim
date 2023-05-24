@@ -238,7 +238,7 @@ Without second argument, `PlenaryBustedDirectory` is also run with a minimal
 configuration. Otherwise it is a Lua option table with the following fields:
 - `nvim_cmd`: specify the command to launch this neovim instance (defaults to `vim.v.progpath`)
 - `init`: specify an init.vim to use for this instance
-- `minimal_init`: as for `init`, but also run the neovim instance with `--clean`
+- `minimal_init`: as for `init`, but also run the neovim instance with `--noplugin`
 - `sequential`: whether to run tests sequentially (default is to run in parallel)
 - `keep_going`: if `sequential`, whether to continue on test failure (default true)
 - `timeout`: controls the maximum time allotted to each job in parallel or
