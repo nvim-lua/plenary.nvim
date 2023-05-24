@@ -174,21 +174,21 @@ function harness.test_directory(directory, opts)
 end
 
 function harness._find_files_to_run(directory)
-  -- Default use the find command
-  local find_command = "find"
-  local find_args = { "-type", "f", "-name", "*_spec.lua" }
-
-  -- On windows use powershell Get-ChildItem instead
+  local finder
   if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then
-    find_command = "powershell"
-    find_args = { "-Command", [[Get-ChildItem -Recurse -n -Filter "*_spec.lua"]] }
+    -- On windows use powershell Get-ChildItem instead
+    finder = Job:new {
+      command = "powershell",
+      args = { "-Command", [[Get-ChildItem -Recurse -n -Filter "*_spec.lua"]] },
+      cwd = directory,
+    }
+  else
+    -- everywhere else use find
+    finder = Job:new {
+      command = "find",
+      args = { directory, "-type", "f", "-name", "*_spec.lua" },
+    }
   end
-
-  local finder = Job:new {
-    command = find_command,
-    args = find_args,
-    cwd = directory,
-  }
 
   return vim.tbl_map(Path.new, finder:sync())
 end
