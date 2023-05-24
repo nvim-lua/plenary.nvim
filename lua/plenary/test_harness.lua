@@ -83,7 +83,7 @@ function harness.test_directory(directory, opts)
     local args = {
       "--headless",
       "-c",
-      string.format('lua require("plenary.busted").run("%s")', p:absolute()),
+      string.format('lua require("plenary.busted").run("%s")', p:absolute():gsub("\\", "\\\\")),
     }
 
     if opts.minimal ~= nil then
@@ -174,10 +174,21 @@ function harness.test_directory(directory, opts)
 end
 
 function harness._find_files_to_run(directory)
-  local finder = Job:new {
-    command = "find",
-    args = { directory, "-type", "f", "-name", "*_spec.lua" },
-  }
+  local finder
+  if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then
+    -- On windows use powershell Get-ChildItem instead
+    finder = Job:new {
+      command = "powershell",
+      args = { "-Command", [[Get-ChildItem -Recurse -n -Filter "*_spec.lua"]] },
+      cwd = directory,
+    }
+  else
+    -- everywhere else use find
+    finder = Job:new {
+      command = "find",
+      args = { directory, "-type", "f", "-name", "*_spec.lua" },
+    }
+  end
 
   return vim.tbl_map(Path.new, finder:sync())
 end
