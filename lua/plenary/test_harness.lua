@@ -91,7 +91,7 @@ function harness.test_directory(directory, opts)
     }
 
     if minimal then
-      table.insert(args, "--clean")
+      table.insert(args, "--noplugin")
       if opts.minimal_init then
         table.insert(args, "-u")
         table.insert(args, opts.minimal_init)
