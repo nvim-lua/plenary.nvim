@@ -160,6 +160,10 @@ filetype.detect = function(filepath, opts)
   opts = opts or {}
   opts.fs_access = opts.fs_access or true
 
+  if type(filepath) ~= string then
+    filepath = tostring(filepath)
+  end
+
   local match = filetype.detect_from_name(filepath)
   if match ~= "" then
     return match
