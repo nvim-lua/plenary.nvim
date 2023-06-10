@@ -708,10 +708,7 @@ function Path:parents()
 end
 
 function Path:is_file()
-  local stat = uv.fs_stat(self:expand())
-  if stat then
-    return stat.type == "file" and true or nil
-  end
+  return self:_stat().type == "file" and true or nil
 end
 
 -- TODO:
@@ -725,7 +722,7 @@ function Path:write(txt, flag, mode)
 
   mode = mode or 438
 
-  local fd = assert(uv.fs_open(self:expand(), flag, mode))
+  local fd = assert(uv.fs_open(self:_fs_filename(), flag, mode))
   assert(uv.fs_write(fd, txt, -1))
   assert(uv.fs_close(fd))
 end
@@ -735,7 +732,7 @@ end
 function Path:_read()
   self = check_self(self)
 
-  local fd = assert(uv.fs_open(self:expand(), "r", 438)) -- for some reason test won't pass with absolute
+  local fd = assert(uv.fs_open(self:_fs_filename(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
   local data = assert(uv.fs_read(fd, stat.size, 0))
   assert(uv.fs_close(fd))
@@ -777,7 +774,7 @@ function Path:head(lines)
   self = check_self(self)
   local chunk_size = 256
 
-  local fd = uv.fs_open(self:expand(), "r", 438)
+  local fd = uv.fs_open(self:_fs_filename(), "r", 438)
   if not fd then
     return
   end
@@ -820,7 +817,7 @@ function Path:tail(lines)
   self = check_self(self)
   local chunk_size = 256
 
-  local fd = uv.fs_open(self:expand(), "r", 438)
+  local fd = uv.fs_open(self:_fs_filename(), "r", 438)
   if not fd then
     return
   end
@@ -884,7 +881,7 @@ end
 function Path:readbyterange(offset, length)
   self = check_self(self)
 
-  local fd = uv.fs_open(self:expand(), "r", 438)
+  local fd = uv.fs_open(self:_fs_filename(), "r", 438)
   if not fd then
     return
   end
