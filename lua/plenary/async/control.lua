@@ -32,10 +32,10 @@ function Condvar:notify_all()
     callback()
   end
 
-  for i = 1, len do
+  for _ = 1, len do
     -- table.remove will ensure that indexes are correct and make "ipairs" safe,
     -- which is not the case for "self.handles[i] = nil"
-    table.remove(self.handles, i)
+    table.remove(self.handles)
   end
 end
 
