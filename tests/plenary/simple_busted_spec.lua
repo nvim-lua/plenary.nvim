@@ -19,6 +19,14 @@ describe("busted specs", function()
     pcall(tester_function)
   end)
 
+  test("should alias test as it", function()
+    assert(true)
+  end)
+
+  test("should alias spec as it", function()
+    assert(true)
+  end)
+
   pending("other thing pending", function()
     error()
   end)

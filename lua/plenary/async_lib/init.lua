@@ -20,6 +20,8 @@ exports.tests.add_globals = function()
   a.describe = exports.tests.describe
   -- must prefix with a or stack overflow
   a.it = exports.tests.it
+  a.spec = exports.tests.it
+  a.test = exports.tests.it
 end
 
 exports.tests.add_to_env = function()
@@ -34,6 +36,8 @@ exports.tests.add_to_env = function()
   env.a.describe = exports.tests.describe
   -- must prefix with a or stack overflow
   env.a.it = exports.tests.it
+  env.a.spec = exports.tests.it
+  env.a.test = exports.tests.it
 
   setfenv(2, env)
 end

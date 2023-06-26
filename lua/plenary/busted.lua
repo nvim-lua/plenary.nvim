@@ -208,6 +208,8 @@ _PlenaryBustedOldAssert = _PlenaryBustedOldAssert or assert
 
 describe = mod.describe
 it = mod.it
+spec = mod.it
+test = mod.it
 pending = mod.pending
 before_each = mod.before_each
 after_each = mod.after_each
