@@ -74,7 +74,8 @@ util.gen_dump_path = function()
   if P.path.sep == "\\" then
     path = string.format("%s\\AppData\\Local\\Temp\\plenary_curl_%s.headers", os.getenv "USERPROFILE", id)
   else
-    path = "/tmp/plenary_curl_" .. id .. ".headers"
+    local temp_dir = os.getenv "XDG_RUNTIME_DIR" or "/tmp"
+    path = temp_dir .. "/plenary_curl_" .. id .. ".headers"
   end
   return { "-D", path }
 end
