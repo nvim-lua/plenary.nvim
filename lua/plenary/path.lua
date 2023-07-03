@@ -296,7 +296,11 @@ function Path:_st_mode()
 end
 
 function Path:joinpath(...)
-  return Path:new(self.filename, ...)
+  if string.char(self.filename:byte(-1)) == path.sep then
+    return Path:new(self.filename:sub(0, -2), ...)
+  else
+    return Path:new(self.filename, ...)
+  end
 end
 
 function Path:absolute()
@@ -917,14 +921,20 @@ end
 
 function Path:find_upwards(filename)
   local folder = Path:new(self)
-  while self:absolute() ~= path.root do
+  local root = path.root(folder:absolute())
+
+  while true do
     local p = folder:joinpath(filename)
     if p:exists() then
       return p
     end
+    if folder:absolute() == root then
+      break
+    end
     folder = folder:parent()
   end
-  return ""
+
+  return nil
 end
 
 return Path
