@@ -931,14 +931,18 @@ function Path:find_upwards(filename)
   local folder = Path:new(self)
   local root = path.root(folder)
 
-  while folder:absolute() ~= root do
+  while true do
     local p = folder:joinpath(filename)
     if p:exists() then
       return p
     end
+    if folder:absolute() == root then
+      break
+    end
     folder = folder:parent()
   end
-  return ""
+
+  return nil
 end
 
 return Path
