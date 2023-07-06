@@ -31,6 +31,35 @@ describe("iterators", function()
     check_keys(tbl, { 1, 2, 3, 4 })
   end)
 
+  it("should be able to fold", function()
+    local numbers = { 1, 2, 3, 4 }
+    local result = i.iter(numbers):fold(0, function(a, v)
+      return a + v
+    end)
+    eq(result, 10)
+
+    local strings = { "hello", "world", "this", "is", "a", "test" }
+    result = i.iter(strings):fold("", function(a, v)
+      return a .. v
+    end)
+    eq(result, "helloworldthisisatest")
+  end)
+
+  it("should be able to enumerate", function()
+    local tbl = { 1, 2, 3, 4 }
+    local results = i.iter(tbl)
+      :enumerate()
+      :map(function(idx, v)
+        return { idx, v }
+      end)
+      :tolist()
+    eq(#results, 4)
+    eq(results[1], { 1, 1 })
+    eq(results[2], { 2, 2 })
+    eq(results[3], { 3, 3 })
+    eq(results[4], { 4, 4 })
+  end)
+
   it("should be able to find", function()
     local tbl = { 1, 2, 3, 4 }
     local tbl_iter = i.iter(tbl)
