@@ -128,7 +128,7 @@ end
 
 ---Wraps the iterator triplet into a table to allow metamethods and calling with method form
 ---Important! We do not return param and state as multivals like the original luafun
----Se the __call metamethod for more information
+---See the __call metamethod for more information
 ---@param gen any
 ---@param param any
 ---@param state any
