@@ -59,13 +59,13 @@ local pop_description = function()
 end
 
 local add_new_each = function()
-  current_before_each[current_description[#current_description]] = {}
-  current_after_each[current_description[#current_description]] = {}
+  current_before_each[#current_description] = {}
+  current_after_each[#current_description] = {}
 end
 
 local clear_last_each = function()
-  current_before_each[current_description[#current_description]] = nil
-  current_after_each[current_description[#current_description]] = nil
+  current_before_each[#current_description] = nil
+  current_after_each[#current_description] = nil
 end
 
 local call_inner = function(desc, func)
@@ -140,11 +140,11 @@ mod.inner_describe = function(desc, func)
 end
 
 mod.before_each = function(fn)
-  table.insert(current_before_each[current_description[#current_description]], fn)
+  table.insert(current_before_each[#current_description], fn)
 end
 
 mod.after_each = function(fn)
-  table.insert(current_after_each[current_description[#current_description]], fn)
+  table.insert(current_after_each[#current_description], fn)
 end
 
 mod.clear = function()
@@ -161,7 +161,7 @@ local indent = function(msg, spaces)
 end
 
 local run_each = function(tbl)
-  for _, v in pairs(tbl) do
+  for _, v in ipairs(tbl) do
     for _, w in ipairs(v) do
       if type(w) == "function" then
         w()
