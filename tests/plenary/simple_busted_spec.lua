@@ -75,9 +75,6 @@ describe("before_each ordering", function()
   before_each(function()
     order = order .. "2,"
   end)
-  -- it("runs 1st and 2nd before_each in order", function ()
-  -- 	eq("1,2", order)
-  -- end)
   describe("nested 1 deep", function()
     before_each(function()
       order = order .. "3,"
