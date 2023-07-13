@@ -65,7 +65,7 @@ local function expand(path)
     return assert(uv.fs_realpath(path), string.format("Path must be valid: %s", path))
   else
     -- TODO: Probably want to check that this is valid here... otherwise that's weird.
-    return vim.fn.expand(vim.fn.escape(path, "$"), true)
+    return vim.fn.expand(vim.fn.escape(path, "[]$"), true)
   end
 end
 
