@@ -73,7 +73,7 @@ local _split_by_separator = (function()
 end)()
 
 local is_uri = function(filename)
-  return string.match(filename, "^[%w+-.]://") ~= nil
+  return string.match(filename, "^%a[%w+-.]*://") ~= nil
 end
 
 local is_absolute = function(filename, sep)
