@@ -6,10 +6,6 @@ local tbl = require "plenary.tbl"
 
 local rotate_lookup = {}
 
-rotate_lookup[0] = function()
-  return A0
-end
-
 rotate_lookup[1] = function(A0)
   return A0
 end
@@ -71,12 +67,16 @@ rotate_lookup[15] = function(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A
 end
 
 local function rotate_n(first, ...)
+  local n = select("#", ...) + 1
   local args = tbl.pack(...)
-  args[#args + 1] = first
-  return tbl.unpack(args)
+  args[n] = first
+  return tbl.unpack(args, 1, n)
 end
 
 local function rotate(nargs, ...)
+  if nargs == nil or nargs < 1 then
+    return
+  end
   return (rotate_lookup[nargs] or rotate_n)(...)
 end
 
