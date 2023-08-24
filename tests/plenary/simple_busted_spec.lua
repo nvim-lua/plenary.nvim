@@ -67,6 +67,48 @@ describe("before each", function()
   end)
 end)
 
+describe("before_each ordering", function()
+  local order = ""
+  before_each(function()
+    order = order .. "1,"
+  end)
+  before_each(function()
+    order = order .. "2,"
+  end)
+  describe("nested 1 deep", function()
+    before_each(function()
+      order = order .. "3,"
+    end)
+    before_each(function()
+      order = order .. "4,"
+    end)
+    describe("nested 2 deep", function()
+      before_each(function()
+        order = order .. "5,"
+      end)
+      it("runs before_each`s in order", function()
+        eq("1,2,3,4,5,", order)
+      end)
+    end)
+  end)
+  describe("adjacent nested 1 deep", function()
+    before_each(function()
+      order = order .. "3a,"
+    end)
+    before_each(function()
+      order = order .. "4a,"
+    end)
+    describe("nested 2 deep", function()
+      before_each(function()
+        order = order .. "5a,"
+      end)
+      it("runs before_each`s in order", function()
+        eq("1,2,3,4,5,1,2,3a,4a,5a,", order)
+      end)
+    end)
+  end)
+end)
+
 describe("after each", function()
   local a = 2
   local b = 3
@@ -110,7 +152,54 @@ describe("after each", function()
   end)
 end)
 
-describe("fourth top level describe test", function()
+describe("after_each ordering", function()
+  local order = ""
+  describe("1st describe having after_each", function()
+    after_each(function()
+      order = order .. "1,"
+    end)
+    after_each(function()
+      order = order .. "2,"
+    end)
+    describe("nested 1 deep", function()
+      after_each(function()
+        order = order .. "3,"
+      end)
+      after_each(function()
+        order = order .. "4,"
+      end)
+      describe("nested 2 deep", function()
+        after_each(function()
+          order = order .. "5,"
+        end)
+        it("a test to trigger the after_each`s", function()
+          assert(true)
+        end)
+      end)
+    end)
+    describe("adjacent nested 1 deep", function()
+      after_each(function()
+        order = order .. "3a,"
+      end)
+      after_each(function()
+        order = order .. "4a,"
+      end)
+      describe("nested 2 deep", function()
+        after_each(function()
+          order = order .. "5a,"
+        end)
+        it("a test to trigger the adjacent after_each`s", function()
+          assert(true)
+        end)
+      end)
+    end)
+  end)
+  it("ran after_each`s in order", function()
+    eq("1,2,3,4,5,1,2,3a,4a,5a,", order)
+  end)
+end)
+
+describe("another top level describe test", function()
   it("should work", function()
     eq(1, 1)
   end)
