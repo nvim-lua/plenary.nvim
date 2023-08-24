@@ -125,4 +125,34 @@ describe("condvar", function()
 
     eq(3, counter)
   end)
+
+  a.it("notify all works multiple times", function()
+    local condvar = Condvar.new()
+    local counter = 0
+
+    a.run(function()
+      condvar:wait()
+      counter = counter + 1
+    end)
+
+    a.run(function()
+      condvar:wait()
+      counter = counter + 1
+    end)
+
+    eq(0, counter)
+
+    condvar:notify_all()
+
+    eq(2, counter)
+
+    a.run(function()
+      condvar:wait()
+      counter = 0
+    end)
+
+    condvar:notify_all()
+
+    eq(0, counter)
+  end)
 end)
