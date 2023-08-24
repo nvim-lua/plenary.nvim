@@ -28,15 +28,15 @@ use "nvim-lua/plenary.nvim"
 
 ## Modules
 
-- `plenary.async`
-- `plenary.async_lib`
-- `plenary.job`
-- `plenary.path`
-- `plenary.scandir`
-- `plenary.context_manager`
-- `plenary.test_harness`
-- `plenary.filetype`
-- `plenary.strings`
+- [plenary.async](#plenaryasync)
+- [plenary.async_lib](#plenaryasync_lib)
+- [plenary.job](#plenaryjob)
+- [plenary.path](#plenarypath)
+- [plenary.scandir](#plenaryscandir)
+- [plenary.context_manager](#plenarycontext_manager)
+- [plenary.test_harness](#plenarytest_harness)
+- [plenary.filetype](#plenaryfiletype)
+- [plenary.strings](#plenarystrings)
 
 ### plenary.async
 
