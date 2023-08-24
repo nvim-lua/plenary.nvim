@@ -27,7 +27,6 @@ read_globals = {
 exclude_files = {
   "lua/plenary/profile/lua_profiler.lua",
   "lua/plenary/profile/memory_profiler.lua",
-  "lua/plenary/vararg/rotate.lua",
   "lua/plenary/async_lib/*.lua",
 }
 
