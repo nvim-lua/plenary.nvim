@@ -3,7 +3,7 @@ local path = require("plenary.path").path
 local M = {}
 
 M.strdisplaywidth = (function()
-  if jit and path.sep ~= [[\]] then
+  if jit and path.sep ~= [[\]] and vim.fn.has "nvim-0.10" ~= 1 then
     local ffi = require "ffi"
     ffi.cdef [[
       typedef unsigned char char_u;
