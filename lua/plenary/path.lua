@@ -296,11 +296,7 @@ function Path:_st_mode()
 end
 
 function Path:joinpath(...)
-  if string.char(self.filename:byte(-1)) == path.sep then
-    return Path:new(self.filename:sub(0, -2), ...)
-  else
-    return Path:new(self.filename, ...)
-  end
+  return Path:new(self.filename, ...)
 end
 
 function Path:absolute()
