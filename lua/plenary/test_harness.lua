@@ -42,6 +42,7 @@ end
 
 function harness.test_directory(directory, opts)
   print "Starting..."
+  directory = directory:gsub("\\", "/")
   local minimal = not opts or not opts.init or opts.minimal or opts.minimal_init
 
   opts = vim.tbl_deep_extend("force", {
