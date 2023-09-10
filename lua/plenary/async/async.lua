@@ -7,7 +7,7 @@ local f = require "plenary.functional"
 local M = {}
 
 local function is_callable(fn)
-  return type(fn) == "function" or type(getmetatable(fn)["__call"]) == "function"
+  return type(fn) == "function" or (type(fn) == "table" and type(getmetatable(fn)["__call"]) == "function")
 end
 
 ---because we can't store varargs
