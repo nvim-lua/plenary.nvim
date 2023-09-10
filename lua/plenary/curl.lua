@@ -33,6 +33,7 @@ local util, parse = {}, {}
 local F = require "plenary.functional"
 local J = require "plenary.job"
 local P = require "plenary.path"
+local S = require "plenary.system"
 
 -- Utils ----------------------------------------------------
 -------------------------------------------------------------
@@ -71,7 +72,7 @@ util.gen_dump_path = function()
     local v = (l == "x") and math.random(0, 0xf) or math.random(0, 0xb)
     return string.format("%x", v)
   end)
-  if P.path.sep == "\\" then
+  if S.is_windows() then
     path = string.format("%s\\AppData\\Local\\Temp\\plenary_curl_%s.headers", os.getenv "USERPROFILE", id)
   else
     local temp_dir = os.getenv "XDG_RUNTIME_DIR" or "/tmp"
