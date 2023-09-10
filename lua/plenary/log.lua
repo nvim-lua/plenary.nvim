@@ -79,10 +79,8 @@ local unpack = unpack or table.unpack
 log.new = function(config, standalone)
   config = vim.tbl_deep_extend("force", default_config, config)
 
-  local outfile = vim.F.if_nil(
-    config.outfile,
-    Path:new(Path:new(vim.api.nvim_call_function("stdpath", { "cache" })) / config.plugin).filename
-  )
+  local outfile =
+    vim.F.if_nil(config.outfile, Path:new(vim.api.nvim_call_function("stdpath", { "cache" }), config.plugin).filename)
 
   local obj
   if standalone then
