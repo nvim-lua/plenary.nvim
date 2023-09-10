@@ -7,19 +7,23 @@ local tbl = require('plenary.tbl')
 
 local rotate_lookup = {}
 
-{% for n in range(0, amount) %}
+{% for n in range(1, amount) %}
   rotate_lookup[{{n}}] = function ({% for n in range(n) %} A{{n}} {{ ", " if not loop.last else "" }} {% endfor %})
     return {% for n in range(1, n) %} A{{n}}, {% endfor %} A0
   end
 {% endfor %}
 
 local function rotate_n(first, ...)
+  local n = select("#", ...) + 1
   local args = tbl.pack(...)
-  args[#args+1] = first
-  return tbl.unpack(args)
+  args[n] = first
+  return tbl.unpack(args, 1, n)
 end
 
 local function rotate(nargs, ...)
+  if nargs == nil or nargs < 1 then
+    return
+  end
   return (rotate_lookup[nargs] or rotate_n)(...)
 end
 
