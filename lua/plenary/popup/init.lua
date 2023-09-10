@@ -426,7 +426,7 @@ function popup.create(what, vim_options)
       { noremap = true }
     )
   end
-  
+
   if vim_options.finalize_callback then
     vim_options.finalize_callback(win_id, bufnr)
   end

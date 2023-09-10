@@ -7,6 +7,8 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
+local Path = require "plenary.path"
+
 local p_debug = vim.fn.getenv "DEBUG_PLENARY"
 if p_debug == vim.NIL then
   p_debug = false
@@ -77,10 +79,8 @@ local unpack = unpack or table.unpack
 log.new = function(config, standalone)
   config = vim.tbl_deep_extend("force", default_config, config)
 
-  local outfile = vim.F.if_nil(
-    config.outfile,
-    string.format("%s/%s.log", vim.api.nvim_call_function("stdpath", { "cache" }), config.plugin)
-  )
+  local outfile =
+    vim.F.if_nil(config.outfile, Path:new(vim.api.nvim_call_function("stdpath", { "cache" }), config.plugin).filename)
 
   local obj
   if standalone then
@@ -159,7 +159,7 @@ log.new = function(config, standalone)
 
     -- Output to log file
     if config.use_file then
-      local outfile_parent_path = require("plenary.path"):new(outfile):parent()
+      local outfile_parent_path = Path:new(outfile):parent()
       if not outfile_parent_path:exists() then
         outfile_parent_path:mkdir { parents = true }
       end
