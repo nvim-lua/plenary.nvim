@@ -215,6 +215,8 @@ clear = mod.clear
 assert = require "luassert"
 
 mod.run = function(file)
+  file = file:gsub("\\", "/")
+
   print("\n" .. HEADER)
   print("Testing: ", file)
 

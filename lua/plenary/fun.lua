@@ -1,20 +1,6 @@
-local tbl = require "plenary.tbl"
-
 local M = {}
 
-function M.bind(fn, ...)
-  if select("#", ...) == 1 then
-    local arg = ...
-    return function(...)
-      fn(arg, ...)
-    end
-  end
-
-  local args = tbl.pack(...)
-  return function(...)
-    fn(tbl.unpack(args), ...)
-  end
-end
+M.bind = require("plenary.functional").partial
 
 function M.arify(fn, argc)
   return function(...)
