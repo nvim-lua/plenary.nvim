@@ -427,6 +427,10 @@ function popup.create(what, vim_options)
     )
   end
 
+  if vim_options.finalize_callback then
+    vim_options.finalize_callback(win_id, bufnr)
+  end
+
   -- TODO: Perhaps there's a way to return an object that looks like a window id,
   --    but actually has some extra metadata about it.
   --

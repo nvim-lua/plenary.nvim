@@ -16,11 +16,17 @@ function f.join(array, sep)
   return table.concat(vim.tbl_map(tostring, array), sep)
 end
 
-function f.partial(fun, ...)
-  local args = { ... }
-  return function(...)
-    return fun(unpack(args), ...)
+local function bind_n(fn, n, a, ...)
+  if n == 0 then
+    return fn
   end
+  return bind_n(function(...)
+    return fn(a, ...)
+  end, n - 1, ...)
+end
+
+function f.partial(fun, ...)
+  return bind_n(fun, select("#", ...), ...)
 end
 
 function f.any(fun, iterable)

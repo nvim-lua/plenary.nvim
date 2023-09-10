@@ -41,7 +41,7 @@
 
 -- Cache some library functions and objects.
 local jit = require("jit")
-assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
+assert(20100 <= jit.version_num and jit.version_num <= 20199, "LuaJIT core/library version mismatch: " .. jit.version)
 local profile = require("jit.profile")
 local vmdef = require("jit.vmdef")
 local math = math
