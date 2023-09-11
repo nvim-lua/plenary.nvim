@@ -103,7 +103,8 @@ function harness.test_directory(directory, opts)
     end
 
     table.insert(args, "-c")
-    table.insert(args, string.format('lua require("plenary.busted").run("%s")', p:absolute():gsub("\\", "\\\\")))
+    local abs_path = Path:new(directory, p.filename):absolute()
+    table.insert(args, string.format('lua require("plenary.busted").run("%s")', abs_path:gsub("\\", "\\\\")))
 
     local job = Job:new {
       command = opts.nvim_cmd,

@@ -6,4 +6,4 @@ command! -nargs=1 -complete=file PlenaryBustedFile
 command! -nargs=+ -complete=file PlenaryBustedDirectory
       \ lua require('plenary.test_harness').test_directory_command([[<args>]])
 
-nnoremap <Plug>PlenaryTestFile :lua require('plenary.test_harness').test_directory(vim.fn.expand("%:p"))<CR>
+nnoremap <Plug>PlenaryTestFile :lua require('plenary.busted').run(vim.fn.expand("%:p"))<CR>
