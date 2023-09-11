@@ -182,10 +182,15 @@ function harness.test_directory(directory, opts)
   print "Starting..."
   directory = directory:gsub("\\", "/")
   local paths = harness._find_files_to_run(directory)
-  local abs_paths = vim.tbl_map(function(p)
-    return Path:new(directory, p.filename)
-  end, paths)
-  _test_paths(abs_paths, opts)
+
+  if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then -- Paths work strangely on Windows
+    local abs_paths = vim.tbl_map(function(p)
+      return Path:new(directory, p.filename)
+    end, paths)
+    _test_paths(abs_paths, opts)
+  else
+    _test_paths(paths, opts)
+  end
 end
 
 function harness.test_file(filepath)
