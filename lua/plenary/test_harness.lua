@@ -40,9 +40,7 @@ function harness.test_directory_command(command)
   return harness.test_directory(directory, opts)
 end
 
-function harness.test_directory(directory, opts)
-  print "Starting..."
-  directory = directory:gsub("\\", "/")
+local function _test_paths(paths, opts)
   local minimal = not opts or not opts.init or opts.minimal or opts.minimal_init
 
   opts = vim.tbl_deep_extend("force", {
@@ -78,10 +76,7 @@ function harness.test_directory(directory, opts)
 
   local outputter = headless and print_output or get_nvim_output(res.job_id)
 
-  local paths = harness._find_files_to_run(directory)
-
   local path_len = #paths
-
   local failure = false
 
   local jobs = vim.tbl_map(function(p)
@@ -103,8 +98,7 @@ function harness.test_directory(directory, opts)
     end
 
     table.insert(args, "-c")
-    local abs_path = Path:new(directory, p.filename):absolute()
-    table.insert(args, string.format('lua require("plenary.busted").run("%s")', abs_path:gsub("\\", "\\\\")))
+    table.insert(args, string.format('lua require("plenary.busted").run("%s")', p:absolute():gsub("\\", "\\\\")))
 
     local job = Job:new {
       command = opts.nvim_cmd,
@@ -182,6 +176,21 @@ function harness.test_directory(directory, opts)
 
     return vim.cmd "0cq"
   end
+end
+
+function harness.test_directory(directory, opts)
+  print "Starting..."
+  directory = directory:gsub("\\", "/")
+  local paths = harness._find_files_to_run(directory)
+  local abs_paths = vim.tbl_map(function(p)
+    return Path:new(directory, p.filename)
+  end, paths)
+  _test_paths(abs_paths, opts)
+end
+
+function harness.test_file(filepath)
+  local fp = Path:new(filepath)
+  _test_paths { fp }
 end
 
 function harness._find_files_to_run(directory)
