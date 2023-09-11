@@ -187,7 +187,7 @@ function harness._find_files_to_run(directory)
   local finder
   if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then
     -- On windows use powershell Get-ChildItem instead
-    local cmd = vim.fn.executable("pwsh.exe") == 1 and "pwsh" or "powershell"
+    local cmd = vim.fn.executable "pwsh.exe" == 1 and "pwsh" or "powershell"
     finder = Job:new {
       command = cmd,
       args = { "-NoProfile", "-Command", [[Get-ChildItem -Recurse -n -Filter "*_spec.lua"]] },
