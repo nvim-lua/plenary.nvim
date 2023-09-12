@@ -40,7 +40,7 @@ function harness.test_directory_command(command)
   return harness.test_directory(directory, opts)
 end
 
-local function _test_paths(paths, opts)
+local function test_paths(paths, opts)
   local minimal = not opts or not opts.init or opts.minimal or opts.minimal_init
 
   opts = vim.tbl_deep_extend("force", {
@@ -183,19 +183,18 @@ function harness.test_directory(directory, opts)
   directory = directory:gsub("\\", "/")
   local paths = harness._find_files_to_run(directory)
 
-  if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then -- Paths work strangely on Windows
-    local abs_paths = vim.tbl_map(function(p)
+  -- Paths work strangely on Windows, so lets have abs paths
+  if vim.fn.has "win32" == 1 or vim.fn.has "win64" == 1 then
+    paths = vim.tbl_map(function(p)
       return Path:new(directory, p.filename)
     end, paths)
-    _test_paths(abs_paths, opts)
-  else
-    _test_paths(paths, opts)
   end
+
+  test_paths(paths, opts)
 end
 
 function harness.test_file(filepath)
-  local fp = Path:new(filepath)
-  _test_paths { fp }
+  test_paths { Path:new(filepath) }
 end
 
 function harness._find_files_to_run(directory)
