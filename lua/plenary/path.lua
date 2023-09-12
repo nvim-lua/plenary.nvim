@@ -431,13 +431,17 @@ local function shorten_len(filename, len, exclude)
 end
 
 local shorten = (function()
+  local fallback = function(filename)
+    return shorten_len(filename, 1)
+  end
+
   if jit and path.sep ~= "\\" then
     local ffi = require "ffi"
     ffi.cdef [[
     typedef unsigned char char_u;
     void shorten_dir(char_u *str);
     ]]
-    return function(filename)
+    local ffi_func = function(filename)
       if not filename or is_uri(filename) then
         return filename
       end
@@ -447,10 +451,14 @@ local shorten = (function()
       ffi.C.shorten_dir(c_str)
       return ffi.string(c_str)
     end
+    local ok = pcall(ffi_func, "/tmp/path/file.lua")
+    if ok then
+      return ffi_func
+    else
+      return fallback
+    end
   end
-  return function(filename)
-    return shorten_len(filename, 1)
-  end
+  return fallback
 end)()
 
 function Path:shorten(len, exclude)

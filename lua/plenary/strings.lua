@@ -3,6 +3,14 @@ local path = require("plenary.path").path
 local M = {}
 
 M.strdisplaywidth = (function()
+  local fallback = function(str, col)
+    str = tostring(str)
+    if vim.in_fast_event() then
+      return #str - (col or 0)
+    end
+    return vim.fn.strdisplaywidth(str, col)
+  end
+
   if jit and path.sep ~= [[\]] then
     local ffi = require "ffi"
     ffi.cdef [[
@@ -10,25 +18,33 @@ M.strdisplaywidth = (function()
       int linetabsize_col(int startcol, char_u *s);
     ]]
 
-    return function(str, col)
+    local ffi_func = function(str, col)
       str = tostring(str)
       local startcol = col or 0
       local s = ffi.new("char[?]", #str + 1)
       ffi.copy(s, str)
       return ffi.C.linetabsize_col(startcol, s) - startcol
     end
-  else
-    return function(str, col)
-      str = tostring(str)
-      if vim.in_fast_event() then
-        return #str - (col or 0)
-      end
-      return vim.fn.strdisplaywidth(str, col)
+
+    local ok = pcall(ffi_func, "hello")
+    if ok then
+      return ffi_func
+    else
+      return fallback
     end
+  else
+    return fallback
   end
 end)()
 
 M.strcharpart = (function()
+  local fallback = function(str, nchar, charlen)
+    if vim.in_fast_event() then
+      return str:sub(nchar + 1, charlen)
+    end
+    return vim.fn.strcharpart(str, nchar, charlen)
+  end
+
   if jit and path.sep ~= [[\]] then
     local ffi = require "ffi"
     ffi.cdef [[
@@ -40,6 +56,11 @@ M.strcharpart = (function()
       local c_str = ffi.new("char[?]", #str + 1)
       ffi.copy(c_str, str)
       return ffi.C.utf_ptr2len(c_str)
+    end
+
+    local ok = pcall(utf_ptr2len, "🔭")
+    if not ok then
+      return fallback
     end
 
     return function(str, nchar, charlen)
@@ -83,12 +104,7 @@ M.strcharpart = (function()
       return str:sub(nbyte + 1, nbyte + len)
     end
   else
-    return function(str, nchar, charlen)
-      if vim.in_fast_event() then
-        return str:sub(nchar + 1, charlen)
-      end
-      return vim.fn.strcharpart(str, nchar, charlen)
-    end
+    return fallback
   end
 end)()
 

@@ -319,6 +319,17 @@ local gen_date = (function()
 end)()
 
 local get_username = (function()
+  local fallback = function(tbl, id)
+    if not tbl then
+      return id
+    end
+    if tbl[id] then
+      return tbl[id]
+    end
+    tbl[id] = tostring(id)
+    return id
+  end
+
   if jit and os_sep ~= "\\" then
     local ffi = require "ffi"
     ffi.cdef [[
@@ -340,7 +351,7 @@ local get_username = (function()
       passwd *getpwuid(uid_t uid);
     ]]
 
-    return function(tbl, id)
+    local ffi_func = function(tbl, id)
       if tbl[id] then
         return tbl[id]
       end
@@ -354,21 +365,30 @@ local get_username = (function()
       tbl[id] = name
       return name
     end
-  else
-    return function(tbl, id)
-      if not tbl then
-        return id
-      end
-      if tbl[id] then
-        return tbl[id]
-      end
-      tbl[id] = tostring(id)
-      return id
+
+    local ok = pcall(ffi_func, {}, 1000)
+    if ok then
+      return ffi_func
+    else
+      return fallback
     end
+  else
+    return fallback
   end
 end)()
 
 local get_groupname = (function()
+  local fallback = function(tbl, id)
+    if not tbl then
+      return id
+    end
+    if tbl[id] then
+      return tbl[id]
+    end
+    tbl[id] = tostring(id)
+    return id
+  end
+
   if jit and os_sep ~= "\\" then
     local ffi = require "ffi"
     ffi.cdef [[
@@ -384,7 +404,7 @@ local get_groupname = (function()
       group *getgrgid(gid_t gid);
     ]]
 
-    return function(tbl, id)
+    local ffi_func = function(tbl, id)
       if tbl[id] then
         return tbl[id]
       end
@@ -398,17 +418,14 @@ local get_groupname = (function()
       tbl[id] = name
       return name
     end
-  else
-    return function(tbl, id)
-      if not tbl then
-        return id
-      end
-      if tbl[id] then
-        return tbl[id]
-      end
-      tbl[id] = tostring(id)
-      return id
+    local ok = pcall(ffi_func, {}, 1000)
+    if ok then
+      return ffi_func
+    else
+      return fallback
     end
+  else
+    return fallback
   end
 end)()
 
