@@ -243,16 +243,16 @@ end
 
 local request = function(specs)
   local response = {}
+  local compressed = true
+  local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
+  if is_windows then
+    compressed = false
+  end
   local args, opts = parse.request(vim.tbl_extend("force", {
-    compressed = true,
+    compressed = compressed,
     dry_run = false,
     dump = util.gen_dump_path(),
   }, specs))
-
-  local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
-  if is_windows then
-    opts.compressed = false
-  end
 
   if opts.dry_run then
     return args
