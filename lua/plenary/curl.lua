@@ -249,6 +249,11 @@ local request = function(specs)
     dump = util.gen_dump_path(),
   }, specs))
 
+  local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
+  if is_windows then
+    opts.compressed = false
+  end
+
   if opts.dry_run then
     return args
   end
