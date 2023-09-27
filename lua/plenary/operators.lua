@@ -94,6 +94,14 @@ return {
   lnot = function(a)
     return not a
   end,
+  lin = function(a, tbl)
+    for _, b in pairs(tbl) do
+      if b == a then
+        return true
+      end
+    end
+    return false
+  end,
   truth = function(a)
     return not not a
   end,
