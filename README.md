@@ -99,7 +99,6 @@ end
 #### Plugins using this
 
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 - [vgit.nvim](https://github.com/tanvirtin/vgit.nvim)
 - [neogit](https://github.com/TimUntersberger/neogit)
 - [neo-tree.nvim](https://github.com/nvim-neo-tree/neo-tree.nvim)
