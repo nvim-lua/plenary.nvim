@@ -36,6 +36,8 @@ return {
     ['graphql'] = 'graphql',
     ['hbs'] = 'handlebars',
     ['hdbs'] = 'handlebars',
+    ['hlsl'] = 'hlsl',
+    ['jai'] = 'jai',
     ['janet'] = 'janet',
     ['jl'] = 'julia',
     ['jsx'] = 'javascriptreact',
