@@ -22,7 +22,8 @@ M.sleep = a.wrap(defer_swapped, 2)
 M.block_on = function(async_function, timeout)
   async_function = M.protected(async_function)
 
-  local stat, ret
+  local stat
+  local ret = {}
 
   a.run(async_function, function(stat_, ...)
     stat = stat_
