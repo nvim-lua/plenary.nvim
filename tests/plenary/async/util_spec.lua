@@ -47,4 +47,31 @@ describe("async await util", function()
       eq(ret, "didnt fail")
     end)
   end)
+
+  local function sleep(msec)
+    return function()
+      a.util.sleep(msec)
+      return msec
+    end
+  end
+
+  describe("race", function()
+    a.it("should return the first result", function()
+      local funcs = vim.tbl_map(sleep, { 300, 400, 100, 200 })
+      local result = a.util.race(funcs)
+      eq(result, 100)
+    end)
+  end)
+
+  describe("run_first", function()
+    a.it("should return the first result", function()
+      local async_functions = vim.tbl_map(function(num)
+        return function(callback)
+          return a.run(sleep(num), callback)
+        end
+      end, { 300, 400, 100, 200 })
+      local result = a.util.run_first(async_functions)
+      eq(result, 100)
+    end)
+  end)
 end)

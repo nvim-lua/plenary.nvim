@@ -76,14 +76,14 @@ M.join = function(async_fns)
   return results
 end
 
----Returns a future that when run will select the first async_function that finishes
----@param async_funs table: The async_function that you want to select
+---Returns a result from the future that finishes at the first
+---@param async_functions table: The futures that you want to select
 ---@return ...
-M.run_first = a.wrap(function(async_funs, step)
+M.run_first = a.wrap(function(async_functions, step)
   local ran = false
 
-  for _, future in ipairs(async_funs) do
-    assert(type(future) == "function", "type error :: future must be function")
+  for _, async_function in ipairs(async_functions) do
+    assert(type(async_function) == "function", "type error :: future must be function")
 
     local callback = function(...)
       if not ran then
@@ -92,9 +92,21 @@ M.run_first = a.wrap(function(async_funs, step)
       end
     end
 
-    future(callback)
+    async_function(callback)
   end
 end, 2)
+
+---Returns a result from the functions that finishes at the first
+---@param funcs table: The async functions that you want to select
+---@return ...
+M.race = function(funcs)
+  local async_functions = vim.tbl_map(function(func)
+    return function(callback)
+      a.run(func, callback)
+    end
+  end, funcs)
+  return M.run_first(async_functions)
+end
 
 M.run_all = function(async_fns, callback)
   a.run(function()
