@@ -3,15 +3,16 @@ Curl Wrapper
 
 all curl methods accepts
 
-  url     = "The url to make the request to.", (string)
-  query   = "url query, append after the url", (table)
-  body    = "The request body" (string/filepath/table)
-  auth    = "Basic request auth, 'user:pass', or {"user", "pass"}" (string/array)
-  form    = "request form" (table)
-  raw     = "any additonal curl args, it must be an array/list." (array)
-  dry_run = "whether to return the args to be ran through curl." (boolean)
-  output  = "where to download something." (filepath)
-  timeout = "request timeout in mseconds" (number)
+  url          = "The url to make the request to.", (string)
+  query        = "url query, append after the url", (table)
+  body         = "The request body" (string/filepath/table)
+  auth         = "Basic request auth, 'user:pass', or {"user", "pass"}" (string/array)
+  form         = "request form" (table)
+  raw          = "any additonal curl args, it must be an array/list." (array)
+  dry_run      = "whether to return the args to be ran through curl." (boolean)
+  output       = "where to download something." (filepath)
+  timeout      = "request timeout in mseconds" (number)
+  http_version = "HTTP version to use: 'HTTP/0.9', 'HTTP/1.0', 'HTTP/1.1', 'HTTP/2', or 'HTTP/3'" (string)
 
 and returns table:
 
@@ -179,6 +180,19 @@ parse.accept_header = function(s)
   return { "-H", "Accept: " .. s }
 end
 
+parse.http_version = function(s)
+  if not s then
+    return
+  end
+  if s == "HTTP/0.9" or s == "HTTP/1.0" or s == "HTTP/1.1" or s == "HTTP/2" or s == "HTTP/3" then
+    s = s:lower()
+    s = s:gsub("/", "")
+    return { "--" .. s }
+  else
+    error "Unknown HTTP version."
+  end
+end
+
 -- Parse Request -------------------------------------------
 ------------------------------------------------------------
 parse.request = function(opts)
@@ -215,6 +229,7 @@ parse.request = function(opts)
   append(parse.form(opts.form))
   append(parse.file(opts.in_file))
   append(parse.auth(opts.auth))
+  append(parse.http_version(opts.http_version))
   append(opts.raw)
   if opts.output then
     table.insert(result, { "-o", opts.output })
