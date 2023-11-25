@@ -12,7 +12,7 @@ all curl methods accepts
   dry_run      = "whether to return the args to be ran through curl." (boolean)
   output       = "where to download something." (filepath)
   timeout      = "request timeout in mseconds" (number)
-  http_version = "HTTP version to use: 'HTTP/0.9', 'HTTP/1.0', 'HTTP/1.1', or 'HTTP/2'" (string)
+  http_version = "HTTP version to use: 'HTTP/0.9', 'HTTP/1.0', 'HTTP/1.1', 'HTTP/2', or 'HTTP/3'" (string)
 
 and returns table:
 
@@ -184,9 +184,13 @@ parse.http_version = function(s)
   if not s then
     return
   end
-  s = s:lower()
-  s = s:gsub("/", "")
-  return { "--" .. s }
+  if s == "HTTP/0.9" or s == "HTTP/1.0" or s == "HTTP/1.1" or s == "HTTP/2" or s == "HTTP/3" then
+    s = s:lower()
+    s = s:gsub("/", "")
+    return { "--" .. s }
+  else
+    error "Unknown HTTP version."
+  end
 end
 
 -- Parse Request -------------------------------------------
