@@ -8,7 +8,7 @@ return setmetatable({}, {
         util.scheduler()
       end
 
-      vim.api[k](...)
+      return vim.api[k](...)
     end
   end,
 })
