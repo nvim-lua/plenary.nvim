@@ -30,6 +30,7 @@ return {
     ['exs'] = 'elixir',
     ['fish'] = 'fish',
     ['fnl'] = 'fennel',
+    ['fsd'] = 'fsd',
     ['gd'] = 'gdscript',
     ['gql'] = 'graphql',
     ['gradle'] = 'groovy',
