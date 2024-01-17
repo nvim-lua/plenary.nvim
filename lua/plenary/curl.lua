@@ -244,8 +244,7 @@ end
 local request = function(specs)
   local response = {}
   local compressed = true
-  local is_windows = vim.loop.os_uname().sysname == "Windows_NT"
-  if is_windows then
+  if package.config:sub(1,1) == "\\" then
     compressed = false
   end
   local args, opts = parse.request(vim.tbl_extend("force", {
