@@ -244,11 +244,8 @@ end
 local request = function(specs)
   local response = {}
   local compressed = true
-  if package.config:sub(1,1) == "\\" then
-    compressed = false
-  end
   local args, opts = parse.request(vim.tbl_extend("force", {
-    compressed = compressed,
+    compressed = package.config:sub(1,1) ~= "\\",
     dry_run = false,
     dump = util.gen_dump_path(),
   }, specs))
