@@ -690,7 +690,7 @@ local _get_parent = (function()
   return function(abs_path)
     local parent = abs_path:match(formatted)
     if parent ~= nil and not parent:find(path.sep) then
-      return nil
+      return parent .. path.sep
     end
     return parent
   end
