@@ -5,5 +5,8 @@ test:
 generate_filetypes:
 	nvim --headless -c 'luafile scripts/update_filetypes_from_github.lua' -c 'qa!'
 
+generate_luassert_types:
+	nvim --headless -c 'luafile scripts/generate_luassert_types.lua' -c 'qa!'
+
 lint:
 	luacheck lua/plenary
