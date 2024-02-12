@@ -9,8 +9,19 @@ local m = {}
 local make_gitignore = function(basepath)
   local patterns = {}
   local valid = false
-  for _, v in ipairs(basepath) do
-    local p = Path:new(v .. os_sep .. ".gitignore")
+  local global_ignore
+  require("plenary.job")
+    :new({
+      command = "git",
+      args = { "config", "--get", "core.excludesfile" },
+      on_exit = function(job, rc)
+        if rc == 0 then
+          global_ignore = table.concat(job:result())
+        end
+      end,
+    })
+    :sync()
+  local function accumulate(p, v)
     if p:exists() then
       valid = true
       patterns[v] = { ignored = {}, negated = {} }
@@ -39,24 +50,38 @@ local make_gitignore = function(basepath)
       end
     end
   end
+  if global_ignore then
+    accumulate(Path:new(vim.fn.expand(global_ignore)), "")
+  end
+  for _, v in ipairs(basepath) do
+    accumulate(Path:new(v .. os_sep .. ".gitignore"), v)
+  end
   if not valid then
     return nil
   end
   return function(bp, entry)
-    for _, v in ipairs(bp) do
-      if entry:find(v, 1, true) then
-        local negated = false
-        for _, w in ipairs(patterns[v].ignored) do
-          if not negated and entry:match(w) then
-            for _, inverse in ipairs(patterns[v].negated) do
-              if not negated and entry:match(inverse) then
-                negated = true
-              end
-            end
-            if not negated then
-              return false
+    local function checkpat(pat)
+      if not pat then
+        return
+      end
+      local negated = false
+      for _, w in ipairs(pat.ignored) do
+        if not negated and entry:match(w) then
+          for _, inverse in ipairs(pat.negated) do
+            if not negated and entry:match(inverse) then
+              negated = true
             end
           end
+          if not negated then
+            return false
+          end
+        end
+      end
+    end
+    for _, v in ipairs(bp) do
+      if entry:find(v, 1, true) then
+        if checkpat(patterns[v]) == false or checkpat(patterns[""]) == false then
+          return false
         end
       end
     end
