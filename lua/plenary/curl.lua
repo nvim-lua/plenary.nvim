@@ -13,6 +13,8 @@ all curl methods accepts
   output       = "where to download something." (filepath)
   timeout      = "request timeout in mseconds" (number)
   http_version = "HTTP version to use: 'HTTP/0.9', 'HTTP/1.0', 'HTTP/1.1', 'HTTP/2', or 'HTTP/3'" (string)
+  proxy        = "[protocol://]host[:port] Use this proxy" (string)
+  insecure     = "Allow insecure server connections" (boolean)
 
 and returns table:
 
@@ -218,6 +220,12 @@ parse.request = function(opts)
     end
   end
 
+  if opts.insecure then
+    table.insert(result, "--insecure")
+  end
+  if opts.proxy then
+    table.insert(result, { "--proxy", opts.proxy })
+  end
   if opts.compressed then
     table.insert(result, "--compressed")
   end
