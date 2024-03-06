@@ -280,29 +280,30 @@ local request = function(specs)
     command = "curl",
     args = args,
   }
+
   if opts.stream then
     job_opts.on_stdout = opts.stream
-  else
-    job_opts.on_exit = function(j, code)
-      if code ~= 0 then
-        local stderr = vim.inspect(j:stderr_result())
-        local message = string.format("%s %s - curl error exit_code=%s stderr=%s", opts.method, opts.url, code, stderr)
-        if opts.on_error then
-          return opts.on_error {
-            message = message,
-            stderr = stderr,
-            exit = code,
-          }
-        else
-          error(message)
-        end
-      end
-      local output = parse.response(j:result(), opts.dump[2], code)
-      if opts.callback then
-        return opts.callback(output)
+  end
+
+  job_opts.on_exit = function(j, code)
+    if code ~= 0 then
+      local stderr = vim.inspect(j:stderr_result())
+      local message = string.format("%s %s - curl error exit_code=%s stderr=%s", opts.method, opts.url, code, stderr)
+      if opts.on_error then
+        return opts.on_error {
+          message = message,
+          stderr = stderr,
+          exit = code,
+        }
       else
-        response = output
+        error(message)
       end
+    end
+    local output = parse.response(j:result(), opts.dump[2], code)
+    if opts.callback then
+      return opts.callback(output)
+    else
+      response = output
     end
   end
   local job = J:new(job_opts)
