@@ -100,6 +100,13 @@ local gen_search_pat = function(pattern)
 end
 
 local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
+   if typ == "link" and opts.links then
+      local entry = uv.fs_readlink(current_dir .. "/" .. name)
+      local ln_type = uv.fs_stat(entry).type
+      if ln_type == "directory" then
+	 table.insert(data, entry)
+      end
+   end
   if opts.hidden or name:sub(1, 1) ~= "." then
     if typ == "directory" then
       local entry = current_dir .. os_sep .. name
