@@ -100,6 +100,10 @@ local gen_search_pat = function(pattern)
 end
 
 local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
+  if opts.symlink and typ == "link" then
+    typ = uv.fs_stat(current_dir .. os_sep .. name).type
+  end
+
   if opts.hidden or name:sub(1, 1) ~= "." then
     if typ == "directory" then
       local entry = current_dir .. os_sep .. name
@@ -146,6 +150,7 @@ end
 --   opts.search_pattern (regex):     regex for which files will be added, string, table of strings, or fn(e) -> bool
 --   opts.on_insert(entry):           Will be called for each element
 --   opts.silent (bool):              if true will not echo messages that are not accessible
+--   opts.symlink (bool):             if true will follow symlinks
 -- @return array with files
 m.scan_dir = function(path, opts)
   opts = opts or {}
