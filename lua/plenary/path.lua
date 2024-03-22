@@ -31,12 +31,15 @@ path.sep = (function()
   end
 end)()
 
+---@type fun(base?: string): string
 path.root = (function()
   if path.sep == "/" then
     return function()
       return "/"
     end
   else
+    ---@param base string
+    ---@return string
     return function(base)
       base = base or vim.loop.cwd()
       return base:sub(1, 1) .. ":\\"
@@ -46,24 +49,33 @@ end)()
 
 path.S_IF = S_IF
 
+---@param reg integer
+---@param value integer
+---@return boolean
 local band = function(reg, value)
   return bit.band(reg, value) == reg
 end
 
+---@param ... string
+---@return string
 local concat_paths = function(...)
   return table.concat({ ... }, path.sep)
 end
 
+---@param pathname string
+---@return boolean
 local function is_root(pathname)
   if path.sep == "\\" then
-    return string.match(pathname, "^[A-Z]:\\?$")
+    return string.match(pathname, "^[A-Z]:\\?$") ~= nil
   end
   return pathname == "/"
 end
 
+---@return fun(filepath: string): string[]
 local _split_by_separator = (function()
   local formatted = string.format("([^%s]+)", path.sep)
   return function(filepath)
+    ---@type string[]
     local t = {}
     for str in string.gmatch(filepath, formatted) do
       table.insert(t, str)
@@ -72,10 +84,15 @@ local _split_by_separator = (function()
   end
 end)()
 
+---@param filename string
+---@return boolean
 local is_uri = function(filename)
   return string.match(filename, "^%a[%w+-.]*://") ~= nil
 end
 
+---@param filename string
+---@param sep string
+---@return boolean
 local is_absolute = function(filename, sep)
   if sep == "\\" then
     return string.match(filename, "^[%a]:[\\/].*$") ~= nil
@@ -83,6 +100,9 @@ local is_absolute = function(filename, sep)
   return string.sub(filename, 1, 1) == sep
 end
 
+---@param filename string
+---@param cwd string
+---@return string
 local function _normalize_path(filename, cwd)
   if is_uri(filename) then
     return filename
@@ -100,6 +120,8 @@ local function _normalize_path(filename, cwd)
 
   if has then
     local is_abs = is_absolute(filename, path.sep)
+    ---@param filename_local string
+    ---@return string[]
     local split_without_disk_name = function(filename_local)
       local parts = _split_by_separator(filename_local)
       -- Remove disk name part on Windows
@@ -140,6 +162,8 @@ local function _normalize_path(filename, cwd)
   return out_file
 end
 
+---@param pathname string
+---@return string
 local clean = function(pathname)
   if is_uri(pathname) then
     return pathname
@@ -161,11 +185,17 @@ end
 -- S_IFLNK  = 0o120000  # symbolic link
 -- S_IFSOCK = 0o140000  # socket file
 
----@class Path
+---@class PlenaryPath
+---@field _absolute? string
+---@field _cwd? string
+---@field _sep string
+---@field filename string
 local Path = {
   path = path,
 }
 
+---@param self PlenaryPath|string
+---@return PlenaryPath
 local check_self = function(self)
   if type(self) == "string" then
     return Path:new(self)
@@ -174,6 +204,9 @@ local check_self = function(self)
   return self
 end
 
+---@param t PlenaryPath
+---@param k string
+---@return any
 Path.__index = function(t, k)
   local raw = rawget(Path, k)
   if raw then
@@ -196,6 +229,9 @@ end
 -- TODO: Could use this to not have to call new... not sure
 -- Path.__call = Path:new
 
+---@param self PlenaryPath
+---@param other PlenaryPath|string
+---@return PlenaryPath
 Path.__div = function(self, other)
   assert(Path.is_path(self))
   assert(Path.is_path(other) or type(other) == "string")
@@ -203,19 +239,49 @@ Path.__div = function(self, other)
   return self:joinpath(other)
 end
 
+---@param self PlenaryPath
+---@return string
 Path.__tostring = function(self)
   return clean(self.filename)
 end
 
 -- TODO: See where we concat the table, and maybe we could make this work.
+---@param self PlenaryPath
+---@param other PlenaryPath|string
+---@return string
 Path.__concat = function(self, other)
   return self.filename .. other
 end
 
+---@param a any
+---@return boolean
 Path.is_path = function(a)
   return getmetatable(a) == Path
 end
 
+---Path:new() is a constructor for PlenaryPath. This accepts `string` or
+---`PlenaryPath` as its arguments.
+---
+---```lua
+---local p1 = Path:new("path/to", "some_file")
+---
+---local p2 = Path:new { "path/to", "some_file" }
+---
+---local parent = Path:new "path/to"
+---local p3 = Path:new { parent, "some_file" }
+---```
+---
+---`p1`, `p2`, `p3` have the same filename: `path/to/some_file`.
+---
+---`sep` property can be used to create objects that has  different separator
+---from the system's one.
+---
+---```lua
+---local p4 = Path:new { "path/to", "some_file", sep = "\\" }
+---```
+---
+---This has `path\to\some_file` as its filename.
+---@type fun(...: string|(string|PlenaryPath)[]|PlenaryPath): PlenaryPath
 function Path:new(...)
   local args = { ... }
 
@@ -224,34 +290,39 @@ function Path:new(...)
     self = Path -- luacheck: ignore
   end
 
+  ---@type string|(string|PlenaryPath)[]|PlenaryPath
   local path_input
   if #args == 1 then
-    path_input = args[1]
+    path_input = args[1] --[[@as string|PlenaryPath]]
   else
-    path_input = args
+    path_input = args --[[@as (string|PlenaryPath)[] ]]
   end
 
   -- If we already have a Path, it's fine.
   --   Just return it
   if Path.is_path(path_input) then
-    return path_input
+    return path_input --[[@as PlenaryPath]]
   end
 
   -- TODO: Should probably remove and dumb stuff like double seps, periods in the middle, etc.
   local sep = path.sep
   if type(path_input) == "table" then
     sep = path_input.sep or path.sep
+    ---@diagnostic disable-next-line: inject-field
     path_input.sep = nil
   end
 
+  ---@type string
   local path_string
   if type(path_input) == "table" then
     -- TODO: It's possible this could be done more elegantly with __concat
     --       But I'm unsure of what we'd do to make that happen
+
+    ---@type string[]
     local path_objs = {}
     for _, v in ipairs(path_input) do
       if Path.is_path(v) then
-        table.insert(path_objs, v.filename)
+        table.insert(path_objs, (v --[[@as PlenaryPath]]).filename)
       else
         assert(type(v) == "string")
         table.insert(path_objs, v)
@@ -264,6 +335,7 @@ function Path:new(...)
     path_string = path_input
   end
 
+  ---@type PlenaryPath
   local obj = {
     filename = path_string,
 
@@ -275,10 +347,12 @@ function Path:new(...)
   return obj
 end
 
+---@return string
 function Path:_fs_filename()
   return self:absolute() or self.filename
 end
 
+---@return uv.aliases.fs_stat_table
 function Path:_stat()
   return uv.fs_stat(self:_fs_filename()) or {}
   -- local stat = uv.fs_stat(self:absolute())
@@ -291,14 +365,18 @@ function Path:_stat()
   -- return self._stat_result
 end
 
+---@return integer
 function Path:_st_mode()
   return self:_stat().mode or 0
 end
 
+---@param ... PlenaryPath|string
+---@return PlenaryPath
 function Path:joinpath(...)
   return Path:new(self.filename, ...)
 end
 
+---@return string
 function Path:absolute()
   if self:is_absolute() then
     return _normalize_path(self.filename, self._cwd)
@@ -307,10 +385,12 @@ function Path:absolute()
   end
 end
 
+---@return boolean
 function Path:exists()
   return not vim.tbl_isempty(self:_stat())
 end
 
+---@return string
 function Path:expand()
   if is_uri(self.filename) then
     return self.filename
@@ -339,6 +419,8 @@ function Path:expand()
   return expanded and expanded or error "Path not valid"
 end
 
+---@param cwd string
+---@return string
 function Path:make_relative(cwd)
   if is_uri(self.filename) then
     return self.filename
@@ -361,6 +443,8 @@ function Path:make_relative(cwd)
   return self.filename
 end
 
+---@param cwd string
+---@return string
 function Path:normalize(cwd)
   if is_uri(self.filename) then
     return self.filename
@@ -383,6 +467,10 @@ function Path:normalize(cwd)
   return _normalize_path(clean(self.filename), self._cwd)
 end
 
+---@param filename string
+---@param len integer
+---@param exclude? integer[]
+---@return string
 local function shorten_len(filename, len, exclude)
   len = len or 1
   exclude = exclude or { -1 }
@@ -430,6 +518,7 @@ local function shorten_len(filename, len, exclude)
   return table.concat(final_path_components)
 end
 
+---@return fun(filenamne: string): string
 local shorten = (function()
   local fallback = function(filename)
     return shorten_len(filename, 1)
@@ -461,6 +550,9 @@ local shorten = (function()
   return fallback
 end)()
 
+---@param len? integer
+---@param exclude? integer[]
+---@return string
 function Path:shorten(len, exclude)
   assert(len ~= 0, "len must be at least 1")
   if (len and len > 1) or exclude ~= nil then
@@ -469,6 +561,13 @@ function Path:shorten(len, exclude)
   return shorten(self.filename)
 end
 
+---@class PathMkdirOpts
+---@field mode? integer
+---@field parents? boolean
+---@field exists_ok? boolean
+
+---@param opts? PathMkdirOpts
+---@return boolean
 function Path:mkdir(opts)
   opts = opts or {}
 
@@ -523,6 +622,11 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
+---@class PathRenameOpts
+---@field new_name string
+
+---@param opts? PathRenameOpts
+---@return boolean|nil
 function Path:rename(opts)
   opts = opts or {}
   if not opts.new_name or opts.new_name == "" then
@@ -549,22 +653,25 @@ function Path:rename(opts)
   return status
 end
 
+---@class PathCopyOpts
+---@field destination string|PlenaryPath target file path to copy to
+---@field recursive boolean whether to copy folders recursively (default: false)
+---@field override boolean whether to override files (default: true)
+---@field interactive boolean confirm if copy would override; precedes `override` (default: false)
+---@field respect_gitignore boolean skip folders ignored by all detected `gitignore`s (default: false)
+---@field hidden boolean whether to add hidden files in recursively copying folders (default: true)
+---@field parents boolean whether to create possibly non-existing parent dirs of `opts.destination` (default: false)
+---@field exists_ok boolean whether ok if `opts.destination` exists, if so folders are merged (default: true)
+
 --- Copy files or folders with defaults akin to GNU's `cp`.
----@param opts table: options to pass to toggling registered actions
----@field destination string|Path: target file path to copy to
----@field recursive bool: whether to copy folders recursively (default: false)
----@field override bool: whether to override files (default: true)
----@field interactive bool: confirm if copy would override; precedes `override` (default: false)
----@field respect_gitignore bool: skip folders ignored by all detected `gitignore`s (default: false)
----@field hidden bool: whether to add hidden files in recursively copying folders (default: true)
----@field parents bool: whether to create possibly non-existing parent dirs of `opts.destination` (default: false)
----@field exists_ok bool: whether ok if `opts.destination` exists, if so folders are merged (default: true)
----@return table {[Path of destination]: bool} indicating success of copy; nested tables constitute sub dirs
+---@param opts? PathCopyOpts options to pass to toggling registered actions
+---@return table<string, boolean|nil> success indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
   opts = opts or {}
   opts.recursive = F.if_nil(opts.recursive, false, opts.recursive)
   opts.override = F.if_nil(opts.override, true, opts.override)
 
+  ---@type PlenaryPath
   local dest = opts.destination
   -- handles `.`, `..`, `./`, and `../`
   if not Path.is_path(dest) then
@@ -577,6 +684,7 @@ function Path:copy(opts)
     dest = Path:new(dest)
   end
   -- success is true in case file is copied, false otherwise
+  ---@type table<string, boolean|nil>
   local success = {}
   if not self:is_dir() then
     if opts.interactive and dest:exists() then
@@ -622,6 +730,12 @@ function Path:copy(opts)
   end
 end
 
+---@class PathTouchOpts
+---@field mode? integer
+---@field parents? boolean
+
+---@param opts PathTouchOpts
+---@return boolean|nil
 function Path:touch(opts)
   opts = opts or {}
 
@@ -647,6 +761,10 @@ function Path:touch(opts)
   return true
 end
 
+---@class PathRmOpts
+---@field recursive? boolean
+
+---@param opts PathRmOpts
 function Path:rm(opts)
   opts = opts or {}
 
@@ -677,6 +795,8 @@ function Path:rm(opts)
 end
 
 -- Path:is_* {{{
+
+---@return boolean
 function Path:is_dir()
   -- TODO: I wonder when this would be better, if ever.
   -- return self:_stat().type == 'directory'
@@ -684,18 +804,23 @@ function Path:is_dir()
   return band(S_IF.DIR, self:_st_mode())
 end
 
+---@return boolean
 function Path:is_absolute()
   return is_absolute(self.filename, self._sep)
 end
 -- }}}
 
+---@return string[]
 function Path:_split()
   return vim.split(self:absolute(), self._sep)
 end
 
 local _get_parent = (function()
   local formatted = string.format("^(.+)%s[^%s]+", path.sep, path.sep)
+  ---@param abs_path string
+  ---@return string?
   return function(abs_path)
+    ---@type string?
     local parent = abs_path:match(formatted)
     if parent ~= nil and not parent:find(path.sep) then
       return parent .. path.sep
@@ -704,13 +829,17 @@ local _get_parent = (function()
   end
 end)()
 
+---@return PlenaryPath
 function Path:parent()
   return Path:new(_get_parent(self:absolute()) or path.root(self:absolute()))
 end
 
+---@return string[]
 function Path:parents()
   local results = {}
-  local cur = self:absolute()
+  ---@type string?
+  local cur
+  cur = self:absolute()
   repeat
     cur = _get_parent(cur)
     table.insert(results, cur)
@@ -719,6 +848,7 @@ function Path:parents()
   return results
 end
 
+---@return boolean|nil
 function Path:is_file()
   return self:_stat().type == "file" and true or nil
 end
@@ -729,6 +859,9 @@ function Path:open() end
 
 function Path:close() end
 
+---@param txt string
+---@param flag uv.aliases.fs_access_flags|integer
+---@param mode? integer
 function Path:write(txt, flag, mode)
   assert(flag, [[Path:write_text requires a flag! For example: 'w' or 'a']])
 
@@ -741,25 +874,29 @@ end
 
 -- TODO: Asyncify this and use vim.wait in the meantime.
 --  This will allow other events to happen while we're waiting!
+---@return string
 function Path:_read()
   self = check_self(self)
 
   local fd = assert(uv.fs_open(self:_fs_filename(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
-  local data = assert(uv.fs_read(fd, stat.size, 0))
+  local data = assert(uv.fs_read(fd, stat.size, 0)) --[[@as string]]
   assert(uv.fs_close(fd))
 
   return data
 end
 
+---@param callback fun(data?: string): nil
 function Path:_read_async(callback)
   vim.loop.fs_open(self.filename, "r", 438, function(err_open, fd)
     if err_open then
       print("We tried to open this file but couldn't. We failed with following error message: " .. err_open)
       return
     end
+    assert(fd)
     vim.loop.fs_fstat(fd, function(err_fstat, stat)
       assert(not err_fstat, err_fstat)
+      assert(stat)
       if stat.type ~= "file" then
         return callback ""
       end
@@ -774,6 +911,8 @@ function Path:_read_async(callback)
   end)
 end
 
+---@param callback? fun(data?: string): nil
+---@return string?
 function Path:read(callback)
   if callback then
     return self:_read_async(callback)
@@ -781,6 +920,8 @@ function Path:read(callback)
   return self:_read()
 end
 
+---@param lines integer?
+---@return string?
 function Path:head(lines)
   lines = lines or 10
   self = check_self(self)
@@ -799,7 +940,7 @@ function Path:head(lines)
   local data = ""
   local index, count = 0, 0
   while count < lines and index < stat.size do
-    local read_chunk = assert(uv.fs_read(fd, chunk_size, index))
+    local read_chunk = assert(uv.fs_read(fd, chunk_size, index)) --[[@as string]]
 
     local i = 0
     for char in read_chunk:gmatch "." do
@@ -824,6 +965,8 @@ function Path:head(lines)
   return data
 end
 
+---@param lines? integer
+---@return string?
 function Path:tail(lines)
   lines = lines or 10
   self = check_self(self)
@@ -848,7 +991,7 @@ function Path:tail(lines)
       real_index = 0
     end
 
-    local read_chunk = assert(uv.fs_read(fd, chunk_size, real_index))
+    local read_chunk = assert(uv.fs_read(fd, chunk_size, real_index)) --[[@as string]]
 
     local i = #read_chunk
     while i > 0 do
@@ -869,15 +1012,20 @@ function Path:tail(lines)
   return data
 end
 
+---@type fun(self: string|PlenaryPath): string[]
 function Path:readlines()
   self = check_self(self)
 
   local data = self:read()
+  if not data then
+    return {}
+  end
 
   data = data:gsub("\r", "")
   return vim.split(data, "\n")
 end
 
+---@return fun(): string?
 function Path:iter()
   local data = self:readlines()
   local i = 0
@@ -890,6 +1038,9 @@ function Path:iter()
   end
 end
 
+---@param offset integer
+---@param length integer
+---@return string?
 function Path:readbyterange(offset, length)
   self = check_self(self)
 
@@ -927,6 +1078,8 @@ function Path:readbyterange(offset, length)
   return data
 end
 
+---@param filename string
+---@return PlenaryPath|string
 function Path:find_upwards(filename)
   local folder = Path:new(self)
   local root = path.root(folder:absolute())
