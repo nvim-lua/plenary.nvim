@@ -1,5 +1,6 @@
 -- Lazy load everything into plenary.
 ---@class Plenary
+---@field functional PlenaryFunctional
 ---@field path PlenaryPath
 local plenary = setmetatable({}, {
   __index = function(t, k)
