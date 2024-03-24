@@ -2,6 +2,7 @@
 ---@class Plenary
 ---@field functional PlenaryFunctional
 ---@field path PlenaryPath
+---@field scandir PlenaryScandir
 local plenary = setmetatable({}, {
   __index = function(t, k)
     local ok, val = pcall(require, string.format("plenary.%s", k))
