@@ -1,5 +1,9 @@
 local tbl = {}
 
+---@generic T, U
+---@param original table<T, U>
+---@param defaults table<T, U>
+---@return table<T, U>
 function tbl.apply_defaults(original, defaults)
   if original == nil then
     original = {}
@@ -16,10 +20,16 @@ function tbl.apply_defaults(original, defaults)
   return original
 end
 
+---@param ... any
+---@return table
 function tbl.pack(...)
   return { n = select("#", ...), ... }
 end
 
+---@param t table
+---@param i? integer
+---@param j? integer
+---@return ...
 function tbl.unpack(t, i, j)
   return unpack(t, i or 1, j or t.n or #t)
 end
