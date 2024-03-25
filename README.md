@@ -181,7 +181,7 @@ A Lua module that implements a bunch of the things from `pathlib` from Python, s
 
 ### plenary.scandir
 
-`plenery.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scans over a given directory, or a set of directories.
+`plenary.scandir` is fast recursive file operations. It is similar to unix `find` or `fd` in that it can do recursive scans over a given directory, or a set of directories.
 
 It offers a wide range of opts for limiting the depth, show hidden and more. `plenary.scan_dir` can be ran synchronously and asynchronously and offers `on_insert(file, typ)` and `on_exit(files)` callbacks. `on_insert(file, typ)` is available for both while `on_exit(files)` is only available for async.
 
@@ -381,7 +381,7 @@ If you're having trouble / things are hanging / other problems:
 $ export DEBUG_PLENARY=true
 ```
 
-This will enable debuggin for the plugin.
+This will enable debugging for the plugin.
 
 ### plenary.neorocks
 
