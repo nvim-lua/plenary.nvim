@@ -277,7 +277,7 @@ local request = function(specs)
   end
 
   local job_opts = {
-    command = "curl",
+    command = vim.g.plenary_curl_bin_path or "curl",
     args = args,
   }
 
