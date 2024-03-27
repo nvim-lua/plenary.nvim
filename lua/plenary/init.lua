@@ -2,6 +2,7 @@
 ---@class Plenary
 ---@field async PlenaryAsync
 ---@field functional PlenaryFunctional
+---@field job PlenaryJob
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir
 ---@field tbl PlenaryTbl
