@@ -1,8 +1,17 @@
 --- I like context managers for Python
 --- I want them in Lua.
 
+---@class PlenaryContextManager
 local context_manager = {}
 
+---@class PlenaryContextManagerObject
+---@field enter fun(self: PlenaryContextManagerObject): any
+---@field exit fun(self: PlenaryContextManagerObject)
+
+---@generic T, U
+---@param obj function|PlenaryContextManagerObject|thread
+---@param callable fun(arg: T): U?
+---@return U?
 function context_manager.with(obj, callable)
   -- Wrap functions for people since we're nice
   if type(obj) == "function" then
@@ -36,15 +45,16 @@ function context_manager.with(obj, callable)
     return result
   end
 end
-
---- @param filename string|table -- If string, used as io.open(filename)
----                                 Else, should be a table with `filename` as an attribute
+---If string, used as io.open(filename). Else, should be a table with `filename` as an attribute
+---@param filename string|{ filename: string }
+---@param mode? openmode
+---@return thread
 function context_manager.open(filename, mode)
   if type(filename) == "table" and filename.filename then
     filename = filename.filename
   end
 
-  local file_io = assert(io.open(filename, mode))
+  local file_io = assert(io.open(filename --[[@as string]], mode))
 
   return coroutine.create(function()
     coroutine.yield(file_io)

@@ -1,6 +1,7 @@
 -- Lazy load everything into plenary.
 ---@class Plenary
 ---@field async PlenaryAsync
+---@field context_manager PlenaryContextManager
 ---@field functional PlenaryFunctional
 ---@field job PlenaryJob
 ---@field path PlenaryPath
