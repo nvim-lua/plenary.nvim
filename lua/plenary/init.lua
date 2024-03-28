@@ -2,6 +2,7 @@
 ---@class Plenary
 ---@field async PlenaryAsync
 ---@field context_manager PlenaryContextManager
+---@field curl PlenaryCurl
 ---@field functional PlenaryFunctional
 ---@field job PlenaryJob
 ---@field path PlenaryPath
