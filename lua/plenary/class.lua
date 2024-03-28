@@ -4,19 +4,19 @@
 ---Copyright (c) 2014, rxi
 ---@brief ]]
 
----@class Object
+---@class PlenaryClass
+---@overload fun(...): PlenaryClass
 local Object = {}
 Object.__index = Object
 
 ---Does nothing.
 ---You have to implement this yourself for extra functionality when initializing
----@param self Object
+---@type fun(self: PlenaryClass, ...)
 function Object:new() end
 
 ---Create a new class/object by extending the base Object class.
 ---The extended object will have a field called `super` that will access the super class.
----@param self Object
----@return Object
+---@return PlenaryClass
 function Object:extend()
   local cls = {}
   for k, v in pairs(self) do
@@ -31,8 +31,7 @@ function Object:extend()
 end
 
 ---Implement a mixin onto this Object.
----@param self Object
----@param nil ...
+---@param ... any
 function Object:implement(...)
   for _, cls in pairs { ... } do
     for k, v in pairs(cls) do
@@ -45,8 +44,7 @@ end
 
 ---Checks if the object is an instance
 ---This will start with the lowest class and loop over all the superclasses.
----@param self Object
----@param T Object
+---@param T PlenaryClass
 ---@return boolean
 function Object:is(T)
   local mt = getmetatable(self)
@@ -61,16 +59,14 @@ end
 
 ---The default tostring implementation for an object.
 ---You can override this to provide a different tostring.
----@param self Object
 ---@return string
 function Object:__tostring()
   return "Object"
 end
 
 ---You can call the class the initialize it without using `Object:new`.
----@param self Object
----@param nil ...
----@return Object
+---@param ... any
+---@return PlenaryClass
 function Object:__call(...)
   local obj = setmetatable({}, self)
   obj:new(...)
