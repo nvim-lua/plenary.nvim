@@ -7,6 +7,7 @@
 ---@field functional PlenaryFunctional
 ---@field job PlenaryJob
 ---@field json PlenaryJson
+---@field log PlenaryLog
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir
 ---@field tbl PlenaryTbl
