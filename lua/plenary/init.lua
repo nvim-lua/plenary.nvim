@@ -6,6 +6,7 @@
 ---@field curl PlenaryCurl
 ---@field functional PlenaryFunctional
 ---@field job PlenaryJob
+---@field json PlenaryJson
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir
 ---@field tbl PlenaryTbl
