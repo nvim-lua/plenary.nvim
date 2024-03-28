@@ -2,20 +2,32 @@
 
 local singleComment = "singleComment"
 local multiComment = "multiComment"
+---@return ""
 local stripWithoutWhitespace = function()
   return ""
 end
 
+---@param str string
+---@param from? integer
+---@param to? integer
+---@return string
 local function slice(str, from, to)
   from = from or 1
   to = to or #str
   return str:sub(from, to)
 end
 
+---@param str string
+---@param from? integer
+---@param to? integer
+---@return string, integer count
 local stripWithWhitespace = function(str, from, to)
   return slice(str, from, to):gsub("%S", " ")
 end
 
+---@param jsonString string
+---@param quotePosition integer
+---@return boolean
 local isEscaped = function(jsonString, quotePosition)
   local index = quotePosition - 1
   local backslashCount = 0
@@ -27,13 +39,14 @@ local isEscaped = function(jsonString, quotePosition)
   return backslashCount % 2 == 1 and true or false
 end
 
+---@class PlenaryJson
 local M = {}
 
 -- Strips any json comments from a json string.
 -- The resulting string can then be used by `vim.fn.json_decode`
 --
 ---@param jsonString string
----@param options? table
+---@param options? { whitespace?: boolean }
 ---  * whitespace:
 ---     - defaults to true
 ---     - when true, comments will be replaced by whitespace
@@ -48,6 +61,7 @@ function M.json_strip_comments(jsonString, options)
   local omitTrailingCommas = not options.trailing_commas
 
   local insideString = false
+  ---@type "multiComment"|"singleComment"|false
   local insideComment = false
   local offset = 1
   local result = ""
