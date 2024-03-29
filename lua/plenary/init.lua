@@ -10,6 +10,7 @@
 ---@field log PlenaryLog
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir
+---@field strings PlenaryStrings
 ---@field tbl PlenaryTbl
 local plenary = setmetatable({}, {
   __index = function(t, k)
