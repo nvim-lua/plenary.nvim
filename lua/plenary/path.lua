@@ -929,7 +929,7 @@ end
 
 function Path:find_upwards(filename)
   local folder = Path:new(self)
-  while self:absolute() ~= path.root do
+  while folder:absolute() ~= path.root() do
     local p = folder:joinpath(filename)
     if p:exists() then
       return p
