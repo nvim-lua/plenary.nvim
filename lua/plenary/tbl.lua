@@ -1,5 +1,10 @@
+---@class PlenaryTbl
 local tbl = {}
 
+---@generic T
+---@param original? table
+---@param defaults T
+---@return T
 function tbl.apply_defaults(original, defaults)
   if original == nil then
     original = {}
@@ -16,10 +21,16 @@ function tbl.apply_defaults(original, defaults)
   return original
 end
 
+---@param ... any
+---@return table
 function tbl.pack(...)
   return { n = select("#", ...), ... }
 end
 
+---@param t table
+---@param i? integer
+---@param j? integer
+---@return ...
 function tbl.unpack(t, i, j)
   return unpack(t, i or 1, j or t.n or #t)
 end
