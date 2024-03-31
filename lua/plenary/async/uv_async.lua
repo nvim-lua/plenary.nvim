@@ -1,6 +1,7 @@
 local a = require "plenary.async.async"
 local uv = vim.loop
 
+---@class PlenaryAsyncUv
 local M = {}
 
 local function add(name, argc, custom)
