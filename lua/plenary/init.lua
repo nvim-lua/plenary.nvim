@@ -1,5 +1,6 @@
 -- Lazy load everything into plenary.
 ---@class Plenary
+---@field async PlenaryAsync
 ---@field functional PlenaryFunctional
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir

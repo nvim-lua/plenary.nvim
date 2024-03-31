@@ -1,12 +1,15 @@
+---@class PlenaryAsyncStructs
 local M = {}
 
+---A double ended queue
+---@class PlenaryDeque
+---@field first integer
+---@field last integer
+---@field [integer] any
 local Deque = {}
 Deque.__index = Deque
 
----@class Deque
----A double ended queue
----
----@return Deque
+---@return PlenaryDeque
 function Deque.new()
   -- the indexes are created with an offset so that the indices are consequtive
   -- otherwise, when both pushleft and pushright are used, the indices will have a 1 length hole in the middle
@@ -62,13 +65,13 @@ function Deque:is_empty()
 end
 
 ---returns the number of elements of the deque
----@return number
+---@return integer
 function Deque:len()
   return self.last - self.first + 1
 end
 
 ---returns and iterator of the indices and values starting from the left
----@return function
+---@return fun(): integer?, any?
 function Deque:ipairs_left()
   local i = self.first
 
@@ -85,7 +88,7 @@ function Deque:ipairs_left()
 end
 
 ---returns and iterator of the indices and values starting from the right
----@return function
+---@return fun(): integer?, any?
 function Deque:ipairs_right()
   local i = self.last
 

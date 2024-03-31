@@ -68,8 +68,6 @@ end)
 local Condvar = {}
 Condvar.__index = Condvar
 
----@class Condvar
----@return Condvar
 function Condvar.new()
   return setmetatable({ handles = {} }, Condvar)
 end
@@ -108,9 +106,6 @@ M.Condvar = Condvar
 local Semaphore = {}
 Semaphore.__index = Semaphore
 
----@class Semaphore
----@param initial_permits number: the number of permits that it can give out
----@return Semaphore
 function Semaphore.new(initial_permits)
   vim.validate {
     initial_permits = {
