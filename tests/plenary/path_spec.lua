@@ -720,6 +720,20 @@ SOFTWARE.]]
       assert.are.same(should, data)
     end)
   end)
+
+  describe(":find_upwards", function()
+    it("finds files that exist", function()
+      local p = Path:new(debug.getinfo(1, "S").source:sub(2))
+      local found = p:find_upwards "README.md"
+      assert.are.same(found:absolute(), Path:new("README.md"):absolute())
+    end)
+
+    it("returns nil if no file is found", function()
+      local p = Path:new(debug.getinfo(1, "S").source:sub(2))
+      local found = p:find_upwards "asdf"
+      assert.are.same(found, nil)
+    end)
+  end)
 end)
 
 -- function TestPath:testIsDir()
