@@ -6,6 +6,7 @@
 ---@field curl PlenaryCurl
 ---@field enum PlenaryEnum
 ---@field filetype PlenaryFiletype
+---@field fun PlenaryFun
 ---@field functional PlenaryFunctional
 ---@field job PlenaryJob
 ---@field json PlenaryJson
