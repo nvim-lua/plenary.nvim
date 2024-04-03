@@ -12,6 +12,7 @@
 ---@field json PlenaryJson
 ---@field log PlenaryLog
 ---@field nvim_meta PlenaryNvimMeta
+---@field operators PlenaryOperators
 ---@field path PlenaryPath
 ---@field scandir PlenaryScandir
 ---@field strings PlenaryStrings
