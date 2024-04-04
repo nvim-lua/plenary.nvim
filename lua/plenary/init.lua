@@ -15,6 +15,7 @@
 ---@field operators PlenaryOperators
 ---@field path PlenaryPath
 ---@field reload PlenaryReload
+---@field run PlenaryRun
 ---@field scandir PlenaryScandir
 ---@field strings PlenaryStrings
 ---@field tbl PlenaryTbl
