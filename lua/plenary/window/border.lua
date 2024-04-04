@@ -1,9 +1,42 @@
 local strings = require "plenary.strings"
 
+---@class PlenaryWindowBorder
+---@field bufnr integer
+---@field content_win_id integer
+---@field content_win_options vim.api.keyset.win_config
+---@field contents string[]
+---@field win_id integer
+---@field private _border_win_options PlenaryWindowBorderBorderOptions
 local Border = {}
+
+---@class PlenaryWindowBorderBorderOptions
+---@field border_thickness PlenaryWindowBorderBorderThickness
+---@field topleft string
+---@field topright string
+---@field top string
+---@field left string
+---@field right string
+---@field botleft string
+---@field botright string
+---@field bot string
+---@field focusable? boolean
+---@field highlight? string
+---@field title? string|PlenaryWindowBorderTitles
+---@field titlehighlight? string
+
+---@class PlenaryWindowBorderBorderThickness
+---@field top integer
+---@field right integer
+---@field bot integer
+---@field left integer
+
+---@alias PlenaryWindowBorderPos "NW"|"N"|"NE"|"SW"|"S"|"SE"
+---@alias PlenaryWindowBorderRanges { [1]: integer, [2]: integer, [3]: integer? }[]
+---@alias PlenaryWindowBorderTitles { text: string, pos: PlenaryWindowBorderPos }[]
 
 Border.__index = Border
 
+---@type PlenaryWindowBorderBorderThickness
 Border._default_thickness = {
   top = 1,
   right = 1,
@@ -11,6 +44,10 @@ Border._default_thickness = {
   left = 1,
 }
 
+---@param title_pos string
+---@param title_len integer
+---@param total_width integer
+---@return integer
 local calc_left_start = function(title_pos, title_len, total_width)
   if string.find(title_pos, "W") then
     return 0
@@ -21,6 +58,15 @@ local calc_left_start = function(title_pos, title_len, total_width)
   end
 end
 
+---comment
+---@param title string
+---@param pos PlenaryWindowBorderPos
+---@param width integer
+---@param left_char string
+---@param mid_char string
+---@param right_char string
+---@return string horizontal_line
+---@return PlenaryWindowBorderRanges ranges
 local create_horizontal_line = function(title, pos, width, left_char, mid_char, right_char)
   local title_len
   if title == "" then
@@ -46,6 +92,7 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
     string.rep(mid_char, width - title_len - left_start),
     right_char
   )
+  ---@type PlenaryWindowBorderRanges
   local ranges = {}
   if title_len ~= 0 then
     -- Need to calculate again due to multi-byte characters
@@ -55,6 +102,11 @@ local create_horizontal_line = function(title, pos, width, left_char, mid_char, 
   return horizontal_line, ranges
 end
 
+---@param content_win_id integer
+---@param content_win_options vim.api.keyset.win_config
+---@param border_win_options PlenaryWindowBorderBorderOptions
+---@return string[] border_lines
+---@return PlenaryWindowBorderRanges ranges
 function Border._create_lines(content_win_id, content_win_options, border_win_options)
   local content_pos = vim.api.nvim_win_get_position(content_win_id)
   local content_height = vim.api.nvim_win_get_height(content_win_id)
@@ -71,7 +123,9 @@ function Border._create_lines(content_win_id, content_win_options, border_win_op
   border_win_options.border_thickness.left = left_enabled and 1 or 0
   border_win_options.border_thickness.right = right_enabled and 1 or 0
 
+  ---@type string[]
   local border_lines = {}
+  ---@type PlenaryWindowBorderRanges
   local ranges = {}
 
   -- border_win_options.title should have be a list with entries of the
@@ -79,7 +133,7 @@ function Border._create_lines(content_win_id, content_win_options, border_win_op
   -- pos can take values in { "NW", "N", "NE", "SW", "S", "SE" }
   local titles = type(border_win_options.title) == "string" and { { pos = "N", text = border_win_options.title } }
     or border_win_options.title
-    or {}
+    or {} --[[@as PlenaryWindowBorderTitles]]
 
   local topline = nil
   local topleft = (left_enabled and border_win_options.topleft) or ""
@@ -164,6 +218,9 @@ function Border._create_lines(content_win_id, content_win_options, border_win_op
   return border_lines, ranges
 end
 
+---@param bufnr integer
+---@param ranges? PlenaryWindowBorderRanges
+---@param hl? string
 local set_title_highlights = function(bufnr, ranges, hl)
   -- Check if both `hl` and `ranges` are provided, and `ranges` is not the empty table.
   if hl and ranges and next(ranges) then
@@ -173,6 +230,8 @@ local set_title_highlights = function(bufnr, ranges, hl)
   end
 end
 
+---@param new_title string
+---@param pos string
 function Border:change_title(new_title, pos)
   if self._border_win_options.title == new_title then
     return
@@ -195,6 +254,9 @@ end
 
 -- Updates characters for border lines, and returns nvim_win_config
 -- (generally used in conjunction with `move` or `new`)
+---@param content_win_options vim.api.keyset.win_config
+---@param border_win_options PlenaryWindowBorderBorderOptions
+---@return vim.api.keyset.win_config
 function Border:__align_calc_config(content_win_options, border_win_options)
   border_win_options = vim.tbl_deep_extend("keep", border_win_options, {
     border_thickness = Border._default_thickness,
@@ -239,6 +301,8 @@ end
 -- Sets the size and position of the given Border.
 -- Can be used to create a new window (with `create_window = true`)
 -- or change an existing one
+---@param content_win_options vim.api.keyset.win_config
+---@param border_win_options PlenaryWindowBorderBorderOptions
 function Border:move(content_win_options, border_win_options)
   -- Update lines in border buffer, and get config for border window
   local nvim_win_config = self:__align_calc_config(content_win_options, border_win_options)
@@ -249,6 +313,11 @@ function Border:move(content_win_options, border_win_options)
   set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
 end
 
+---@param content_bufnr integer
+---@param content_win_id integer
+---@param content_win_options vim.api.keyset.win_config
+---@param border_win_options PlenaryWindowBorderBorderOptions
+---@return PlenaryWindowBorder
 function Border:new(content_bufnr, content_win_id, content_win_options, border_win_options)
   assert(type(content_win_id) == "number", "Must supply a valid win_id. It's possible you forgot to call with ':'")
 
