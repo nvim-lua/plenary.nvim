@@ -18,6 +18,7 @@
 ---@field scandir PlenaryScandir
 ---@field strings PlenaryStrings
 ---@field tbl PlenaryTbl
+---@field window PlenaryWindow
 local plenary = setmetatable({}, {
   __index = function(t, k)
     local ok, val = pcall(require, string.format("plenary.%s", k))
