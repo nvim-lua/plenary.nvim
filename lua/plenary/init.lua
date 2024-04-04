@@ -14,6 +14,7 @@
 ---@field nvim_meta PlenaryNvimMeta
 ---@field operators PlenaryOperators
 ---@field path PlenaryPath
+---@field reload PlenaryReload
 ---@field scandir PlenaryScandir
 ---@field strings PlenaryStrings
 ---@field tbl PlenaryTbl
