@@ -8,6 +8,7 @@
 ---@field filetype PlenaryFiletype
 ---@field fun PlenaryFun
 ---@field functional PlenaryFunctional
+---@field iterators PlenaryIterators
 ---@field job PlenaryJob
 ---@field json PlenaryJson
 ---@field log PlenaryLog
