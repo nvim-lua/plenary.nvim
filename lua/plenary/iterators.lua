@@ -12,12 +12,17 @@ local f = require "plenary.functional"
 -- Tools
 --------------------------------------------------------------------------------
 
+---@class PlenaryIterators
 local exports = {}
 
----@class Iterator
----@field gen function
----@field param any
----@field state any
+---@generic V
+---@alias PlenaryIteratorsIterator fun(table: V[], i?: integer): integer, V?
+
+---@class PlenaryIterator
+---@field gen PlenaryIteratorsIterator
+---@field param table
+---@field state? integer
+---@overload fun(param?: table, state?: integer): integer, any?
 local Iterator = {}
 Iterator.__index = Iterator
 
@@ -34,6 +39,7 @@ function Iterator:__call(param, state)
   return self.gen(param or self.param, state or self.state)
 end
 
+---@return string
 function Iterator:__tostring()
   return "<iterator>"
 end
@@ -86,6 +92,10 @@ local map_gen = function(map, key)
   return key, key, value
 end
 
+---@param param string
+---@param state integer
+---@return integer? state
+---@return string? r
 local string_gen = function(param, state)
   state = state + 1
   if state > #param then
@@ -95,6 +105,18 @@ local string_gen = function(param, state)
   return state, r
 end
 
+---@generic T: table, U: table
+---@alias PlenaryIteratorsRawiterTable fun(obj: T|PlenaryIterator, param?: string, state?: integer): PlenaryIteratorsIterator, T|U|nil, integer?
+
+---@generic T: table, U: table
+---@param obj T|PlenaryIterator
+---@param param? string
+---@param state? integer
+---@return PlenaryIteratorsIterator gen
+---@return T|U|nil param
+---@return integer? state
+---@overload fun(obj: PlenaryIteratorsIterator, param: any, state?: integer): PlenaryIteratorsIterator, any, integer?
+---@overload fun(obj: string): PlenaryIteratorsIterator, string?, integer?
 local rawiter = function(obj, param, state)
   assert(obj ~= nil, "invalid iterator")
 
@@ -132,7 +154,7 @@ end
 ---@param gen any
 ---@param param any
 ---@param state any
----@return Iterator
+---@return PlenaryIterator
 local function wrap(gen, param, state)
   return setmetatable({
     gen = gen,
@@ -142,7 +164,7 @@ local function wrap(gen, param, state)
 end
 
 ---Unwrap an iterator metatable into the iterator triplet
----@param self Iterator
+---@param self PlenaryIterator
 ---@return any
 ---@return any
 ---@return any
@@ -154,7 +176,7 @@ end
 ---@param obj any
 ---@param param any (optional)
 ---@param state any (optional)
----@return Iterator
+---@return PlenaryIterator
 local iter = function(obj, param, state)
   return wrap(rawiter(obj, param, state))
 end
@@ -228,7 +250,7 @@ end
 ---@param start number
 ---@param stop number
 ---@param step number
----@return Iterator
+---@return PlenaryIterator
 local range = function(start, stop, step)
   if step == nil then
     if stop == nil then
@@ -269,7 +291,7 @@ end
 ---Creates an infinite iterator that will yield the arguments
 ---If multiple arguments are passed, the args will be packed and unpacked
 ---@param ...: the arguments to duplicate
----@return Iterator
+---@return PlenaryIterator
 local duplicate = function(...)
   if select("#", ...) <= 1 then
     return wrap(duplicate_gen, select(1, ...), 0)
@@ -282,7 +304,7 @@ exports.duplicate = duplicate
 ---Creates an iterator from a function
 ---NOTE: if the function is a closure and modifies state, the resulting iterator will not be stateless
 ---@param fun function
----@return Iterator
+---@return PlenaryIterator
 local from_fun = function(fun)
   assert(type(fun) == "function")
   return wrap(duplicate_fun_gen, fun, 0)
@@ -291,7 +313,7 @@ exports.from_fun = from_fun
 
 ---Creates an infinite iterator that will yield zeros.
 ---This is an alias to calling duplicate(0)
----@return Iterator
+---@return PlenaryIterator
 local zeros = function()
   return wrap(duplicate_gen, 0, 0)
 end
@@ -299,7 +321,7 @@ exports.zeros = zeros
 
 ---Creates an infinite iterator that will yield ones.
 ---This is an alias to calling duplicate(1)
----@return Iterator
+---@return PlenaryIterator
 local ones = function()
   return wrap(duplicate_gen, 1, 0)
 end
@@ -316,7 +338,7 @@ end
 ---Creates an infinite iterator that will yield random values.
 ---@param n number
 ---@param m number
----@return Iterator
+---@return PlenaryIterator
 local rands = function(n, m)
   if n == nil and m == nil then
     return wrap(rands_nil_gen, 0, 0)
@@ -355,7 +377,7 @@ end
 ---Return an iterator of substrings separated by a string
 ---@param input string: the string to split
 ---@param sep string: the separator to find and split based on
----@return Iterator
+---@return PlenaryIterator
 local split = function(input, sep)
   return wrap(split_gen, { input, sep }, 1)
 end
@@ -386,7 +408,7 @@ end
 
 ---Iterator adapter that maps the previous iterator with a function
 ---@param fun function: The function to map with. Will be called on each element
----@return Iterator
+---@return PlenaryIterator
 function Iterator:map(fun)
   return wrap(map_gen2, { self.gen, self.param, fun }, self.state)
 end
@@ -428,7 +450,7 @@ local flatten_gen = function(_, state)
 end
 
 ---Iterator adapter that will recursivley flatten nested iterator structure
----@return Iterator
+---@return PlenaryIterator
 function Iterator:flatten()
   return wrap(flatten_gen, false, { self.gen, self.param, self.state })
 end
@@ -481,13 +503,13 @@ end
 
 ---Iterator adapter that will filter values
 ---@param fun function: The function to filter values with. If the function returns true, the value will be kept.
----@return Iterator
+---@return PlenaryIterator
 function Iterator:filter(fun)
   return wrap(filter_gen, { self.gen, self.param, fun }, self.state)
 end
 
 ---Iterator adapter that will provide numbers from 1 to n as the first multival
----@return Iterator
+---@return PlenaryIterator
 function Iterator:enumerate()
   local i = 0
   return self:map(function(...)
@@ -617,7 +639,7 @@ end
 ---Used for treating consecutive iterators as a single iterator.
 ---Infinity iterators are supported, but are not recommended.
 ---@param ...: the iterators to chain
----@return Iterator
+---@return PlenaryIterator
 local chain = function(...)
   local n = numargs(...)
 
@@ -666,7 +688,7 @@ end
 ---The returned iterator is truncated in length to the length of the shortest iterator.
 ---For multi-return iterators only the first variable is used.
 ---@param ...: the iterators to zip
----@return Iterator
+---@return PlenaryIterator
 local zip = function(...)
   local n = numargs(...)
   if n == 0 then
