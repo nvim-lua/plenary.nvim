@@ -97,6 +97,9 @@ log.new = function(config, standalone)
   end
 
   local round = function(x, increment)
+    if x == 0 then
+      return x
+    end
     increment = increment or 1
     x = x / increment
     return (x > 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)) * increment
@@ -108,11 +111,7 @@ log.new = function(config, standalone)
       local x = select(i, ...)
 
       if type(x) == "number" and config.float_precision then
-        if x ~= 0 then
-          x = tostring(round(x, config.float_precision))
-        else
-          x = tostring(x)
-        end
+        x = tostring(round(x, config.float_precision))
       elseif type(x) == "table" then
         x = vim.inspect(x)
       else
