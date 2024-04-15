@@ -108,7 +108,11 @@ log.new = function(config, standalone)
       local x = select(i, ...)
 
       if type(x) == "number" and config.float_precision then
-        x = tostring(round(x, config.float_precision))
+        if x ~= 0 then
+          x = tostring(round(x, config.float_precision))
+        else
+          x = tostring(x)
+        end
       elseif type(x) == "table" then
         x = vim.inspect(x)
       else
