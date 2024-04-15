@@ -115,6 +115,10 @@ end
 function popup.create(what, vim_options)
   vim_options = vim.deepcopy(vim_options)
 
+  if vim.o.modifiable == false then
+    vim.o.modifiable = true
+  end
+
   local bufnr
   if type(what) == "number" then
     bufnr = what

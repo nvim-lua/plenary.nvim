@@ -22,6 +22,19 @@ describe("plenary.popup", function()
     eq(20, win_config.width)
   end)
 
+  it("can create a very simple window after 'set nomodifiable'", function()
+    vim.o.modifiable = false
+    local win_id = popup.create("hello there", {
+      line = 1,
+      col = 1,
+      width = 20,
+    })
+
+    local win_config = vim.api.nvim_win_get_config(win_id)
+    eq(20, win_config.width)
+    vim.o.modifiable = true
+  end)
+
   it("can apply a highlight", function()
     local win_id = popup.create("hello there", {
       highlight = "PopupColor1",
