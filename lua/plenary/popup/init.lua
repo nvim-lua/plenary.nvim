@@ -115,18 +115,16 @@ end
 function popup.create(what, vim_options)
   vim_options = vim.deepcopy(vim_options)
 
-  if vim.o.modifiable == false then
-    vim.o.modifiable = true
-  end
-
   local bufnr
   if type(what) == "number" then
     bufnr = what
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
   else
     bufnr = vim.api.nvim_create_buf(false, true)
     assert(bufnr, "Failed to create buffer")
 
     vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
 
     -- TODO: Handle list of lines
     if type(what) == "string" then
