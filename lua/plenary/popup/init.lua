@@ -239,7 +239,6 @@ function popup.create(what, vim_options)
     assert(false, "I have not implemented this yet and don't know how")
   else
     win_id = vim.api.nvim_open_win(bufnr, false, win_opts)
-    vim.api.nvim_win_set_option(win_id, "modifiable", true)
   end
 
   -- Moved, handled after since we need the window ID
