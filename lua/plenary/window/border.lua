@@ -188,6 +188,9 @@ function Border:change_title(new_title, pos)
 
   self.contents, self.title_ranges =
     Border._create_lines(self.content_win_id, self.content_win_options, self._border_win_options)
+  if vim.o.modifiable == false then
+    vim.api.nvim_buf_set_option(self.bufnr, "modifiable", true)
+  end
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   set_title_highlights(self.bufnr, self.title_ranges, self._border_win_options.titlehighlight)
@@ -216,6 +219,9 @@ function Border:__align_calc_config(content_win_options, border_win_options)
   -- Update border characters and title_ranges
   self.contents, self.title_ranges = Border._create_lines(self.content_win_id, content_win_options, border_win_options)
 
+  if vim.o.modifiable == false then
+    vim.api.nvim_buf_set_option(self.bufnr, "modifiable", true)
+  end
   vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, self.contents)
 
   local thickness = border_win_options.border_thickness
