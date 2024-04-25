@@ -123,9 +123,7 @@ function popup.create(what, vim_options)
     assert(bufnr, "Failed to create buffer")
 
     vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
-    if vim.o.modifiable == false then
-      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
-    end
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
 
     -- TODO: Handle list of lines
     if type(what) == "string" then
