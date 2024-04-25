@@ -115,10 +115,6 @@ end
 function popup.create(what, vim_options)
   vim_options = vim.deepcopy(vim_options)
 
-  if vim.o.modifiable == false then
-    vim.o.modifiable = true
-  end
-
   local bufnr
   if type(what) == "number" then
     bufnr = what
@@ -127,6 +123,7 @@ function popup.create(what, vim_options)
     assert(bufnr, "Failed to create buffer")
 
     vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
 
     -- TODO: Handle list of lines
     if type(what) == "string" then
@@ -242,6 +239,7 @@ function popup.create(what, vim_options)
     assert(false, "I have not implemented this yet and don't know how")
   else
     win_id = vim.api.nvim_open_win(bufnr, false, win_opts)
+    vim.api.nvim_win_set_option(win_id, "modifiable", true)
   end
 
   -- Moved, handled after since we need the window ID
