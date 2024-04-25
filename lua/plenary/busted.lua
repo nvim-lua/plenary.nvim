@@ -212,6 +212,7 @@ pending = mod.pending
 before_each = mod.before_each
 after_each = mod.after_each
 clear = mod.clear
+---@type Luassert
 assert = require "luassert"
 
 mod.run = function(file)

@@ -97,6 +97,9 @@ log.new = function(config, standalone)
   end
 
   local round = function(x, increment)
+    if x == 0 then
+      return x
+    end
     increment = increment or 1
     x = x / increment
     return (x > 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)) * increment
