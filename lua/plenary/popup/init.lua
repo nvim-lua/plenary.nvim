@@ -118,6 +118,9 @@ function popup.create(what, vim_options)
   local bufnr
   if type(what) == "number" then
     bufnr = what
+    if vim.o.modifiable == false then
+      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    end
   else
     bufnr = vim.api.nvim_create_buf(false, true)
     assert(bufnr, "Failed to create buffer")
