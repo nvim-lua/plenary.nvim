@@ -1,8 +1,13 @@
 local path = require("plenary.path").path
 
+---@class PlenaryStrings
 local M = {}
 
+---@type fun(str: string, col?: integer): integer
 M.strdisplaywidth = (function()
+  ---@param str string
+  ---@param col? integer
+  ---@return integer
   local fallback = function(str, col)
     str = tostring(str)
     if vim.in_fast_event() then
@@ -18,6 +23,9 @@ M.strdisplaywidth = (function()
       int linetabsize_col(int startcol, char_u *s);
     ]]
 
+    ---@param str string
+    ---@param col? integer
+    ---@return integer
     local ffi_func = function(str, col)
       str = tostring(str)
       local startcol = col or 0
@@ -37,7 +45,13 @@ M.strdisplaywidth = (function()
   end
 end)()
 
+--- TODO: deal with the 4th param: `skipcc`
+---@type fun(str: string, start: integer, len?: integer): string
 M.strcharpart = (function()
+  ---@param str string
+  ---@param nchar integer
+  ---@param charlen? integer
+  ---@return string
   local fallback = function(str, nchar, charlen)
     if vim.in_fast_event() then
       return str:sub(nchar + 1, charlen)
@@ -52,6 +66,8 @@ M.strcharpart = (function()
       int utf_ptr2len(const char_u *const p);
     ]]
 
+    ---@param str string
+    ---@return integer
     local function utf_ptr2len(str)
       local c_str = ffi.new("char[?]", #str + 1)
       ffi.copy(c_str, str)
@@ -63,6 +79,10 @@ M.strcharpart = (function()
       return fallback
     end
 
+    ---@param str string
+    ---@param nchar integer
+    ---@param charlen? integer
+    ---@return string
     return function(str, nchar, charlen)
       local nbyte = 0
       if nchar > 0 then
@@ -108,6 +128,11 @@ M.strcharpart = (function()
   end
 end)()
 
+---@param str string
+---@param len integer
+---@param dots string
+---@param direction -1|1
+---@return string
 local truncate = function(str, len, dots, direction)
   if M.strdisplaywidth(str) <= len then
     return str
@@ -116,6 +141,10 @@ local truncate = function(str, len, dots, direction)
   local current = 0
   local result = ""
   local len_of_dots = M.strdisplaywidth(dots)
+  ---@param a string
+  ---@param b string
+  ---@param dir -1|1
+  ---@return string
   local concat = function(a, b, dir)
     if dir > 0 then
       return a .. b
@@ -136,6 +165,11 @@ local truncate = function(str, len, dots, direction)
   return result
 end
 
+---@param str string
+---@param len integer
+---@param dots? string default: `"…"`
+---@param direction? -1|1 default: `1`
+---@return string
 M.truncate = function(str, len, dots, direction)
   str = tostring(str) -- We need to make sure its an actually a string and not a number
   dots = dots or "…"
@@ -154,18 +188,28 @@ M.truncate = function(str, len, dots, direction)
   end
 end
 
+---@param string string
+---@param width integer
+---@param right_justify? boolean
+---@return string
 M.align_str = function(string, width, right_justify)
   local str_len = M.strdisplaywidth(string)
   return right_justify and string.rep(" ", width - str_len) .. string or string .. string.rep(" ", width - str_len)
 end
 
+---@param str string
+---@param leave_indent? integer
+---@return string
 M.dedent = function(str, leave_indent)
   -- Check each line and detect the minimum indent.
+  ---@type integer
   local indent
+  ---@type { line: string, chars?: integer, width?: integer }[]
   local info = {}
   for line in str:gmatch "[^\n]*\n?" do
     -- It matches '' for the last line.
     if line ~= "" then
+      ---@type integer, integer
       local chars, width
       local line_indent = line:match "^[ \t]+"
       if line_indent then
@@ -184,6 +228,7 @@ M.dedent = function(str, leave_indent)
 
   -- Build up the result
   leave_indent = leave_indent or 0
+  ---@type string[]
   local result = {}
   for _, i in ipairs(info) do
     local line
