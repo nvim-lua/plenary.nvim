@@ -107,7 +107,7 @@ local rawiter = function(obj, param, state)
       end
     end
 
-    if vim.tbl_islist(obj) then
+    if vim.islist(obj) then
       return ipairs(obj)
     else
       -- hash

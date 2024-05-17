@@ -592,7 +592,7 @@ describe("Path", function()
     it("should extract the ancestors of the path", function()
       local p = Path:new(vim.loop.cwd())
       local parents = p:parents()
-      assert(vim.tbl_islist(parents))
+      assert(vim.islist(parents))
       for _, parent in pairs(parents) do
         assert.are.same(type(parent), "string")
       end

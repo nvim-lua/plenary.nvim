@@ -416,7 +416,7 @@ function Job:_execute()
   if self.writer then
     if Job.is_job(self.writer) then
       self.writer:_execute()
-    elseif type(self.writer) == "table" and vim.tbl_islist(self.writer) then
+    elseif type(self.writer) == "table" and vim.islist(self.writer) then
       local writer_len = #self.writer
       for i, v in ipairs(self.writer) do
         self.stdin:write(v)
