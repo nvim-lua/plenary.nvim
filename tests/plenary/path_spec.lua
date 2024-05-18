@@ -1,6 +1,6 @@
 local Path = require "plenary.path"
 local path = Path.path
-local is_list = vim.is_list or vim.tbl_islist
+local is_list = vim.islist or vim.tbl_islist
 
 describe("Path", function()
   it("should find valid files", function()
