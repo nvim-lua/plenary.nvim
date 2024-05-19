@@ -38,6 +38,8 @@ function Iterator:__tostring()
   return "<iterator>"
 end
 
+local is_list = vim.islist or vim.tbl_islist
+
 -- A special hack for zip/chain to skip last two state, if a wrapped iterator
 -- has been passed
 local numargs = function(...)
@@ -107,7 +109,7 @@ local rawiter = function(obj, param, state)
       end
     end
 
-    if vim.tbl_islist(obj) then
+    if is_list(obj) then
       return ipairs(obj)
     else
       -- hash

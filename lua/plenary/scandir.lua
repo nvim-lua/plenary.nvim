@@ -3,6 +3,13 @@ local os_sep = Path.path.sep
 local F = require "plenary.functional"
 
 local uv = vim.loop
+local flatten = function(t)
+  if vim.fn.has "nvim-0.11" == 1 then
+    return vim.iter(t):flatten():totable()
+  else
+    return vim.tbl_flatten(t)
+  end
+end
 
 local m = {}
 
@@ -151,8 +158,8 @@ m.scan_dir = function(path, opts)
   opts = opts or {}
 
   local data = {}
-  local base_paths = vim.tbl_flatten { path }
-  local next_dir = vim.tbl_flatten { path }
+  local base_paths = flatten { path }
+  local next_dir = flatten { path }
 
   local gitignore = opts.respect_gitignore and make_gitignore(base_paths) or nil
   local match_search_pat = opts.search_pattern and gen_search_pat(opts.search_pattern) or nil
@@ -204,8 +211,8 @@ m.scan_dir_async = function(path, opts)
   opts = opts or {}
 
   local data = {}
-  local base_paths = vim.tbl_flatten { path }
-  local next_dir = vim.tbl_flatten { path }
+  local base_paths = flatten { path }
+  local next_dir = flatten { path }
   local current_dir = table.remove(next_dir, 1)
 
   -- TODO(conni2461): get gitignore is not async
