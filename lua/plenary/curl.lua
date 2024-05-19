@@ -37,7 +37,6 @@ local F = require "plenary.functional"
 local J = require "plenary.job"
 local P = require "plenary.path"
 
-
 local flatten = function(t)
   if vim.fn.has "nvim-0.11" == 1 then
     return vim.iter(t):flatten():totable()
