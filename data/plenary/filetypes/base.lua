@@ -647,6 +647,7 @@ return {
     ['tfstate.backup'] = [[json]],
     ['bzl'] = [[bzl]],
     ['cpp'] = [[cpp]],
+    ['cppm'] = [[cpp]],
     ['mod'] = [[ampl]],
     ['idc'] = [[c]],
     ['hh'] = [[cpp]],
