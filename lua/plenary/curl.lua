@@ -36,14 +36,7 @@ local util, parse = {}, {}
 local F = require "plenary.functional"
 local J = require "plenary.job"
 local P = require "plenary.path"
-
-local flatten = function(t)
-  if vim.fn.has "nvim-0.11" == 1 then
-    return vim.iter(t):flatten():totable()
-  else
-    return vim.tbl_flatten(t)
-  end
-end
+local compat = require "plenary.compat"
 
 -- Utils ----------------------------------------------------
 -------------------------------------------------------------
@@ -62,7 +55,7 @@ util.url_encode = function(str)
 end
 
 util.kv_to_list = function(kv, prefix, sep)
-  return flatten(F.kv_map(function(kvp)
+  return compat.flatten(F.kv_map(function(kvp)
     return { prefix, kvp[1] .. sep .. kvp[2] }
   end, kv))
 end
@@ -251,7 +244,7 @@ parse.request = function(opts)
     table.insert(result, { "-o", opts.output })
   end
   table.insert(result, parse.url(opts.url, opts.query))
-  return flatten(result), opts
+  return compat.flatten(result), opts
 end
 
 -- Parse response ------------------------------------------
