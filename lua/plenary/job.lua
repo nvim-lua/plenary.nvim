@@ -1,6 +1,6 @@
 local vim = vim
 local uv = vim.loop
-local is_list = vim.islist or vim.tbl_islist
+local compat = require "plenary.compat"
 
 local F = require "plenary.functional"
 
@@ -417,7 +417,7 @@ function Job:_execute()
   if self.writer then
     if Job.is_job(self.writer) then
       self.writer:_execute()
-    elseif type(self.writer) == "table" and is_list(self.writer) then
+    elseif type(self.writer) == "table" and compat.islist(self.writer) then
       local writer_len = #self.writer
       for i, v in ipairs(self.writer) do
         self.stdin:write(v)

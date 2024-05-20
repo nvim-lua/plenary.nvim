@@ -7,6 +7,7 @@
 
 local co = coroutine
 local f = require "plenary.functional"
+local compat = require "plenary.compat"
 
 --------------------------------------------------------------------------------
 -- Tools
@@ -37,8 +38,6 @@ end
 function Iterator:__tostring()
   return "<iterator>"
 end
-
-local is_list = vim.islist or vim.tbl_islist
 
 -- A special hack for zip/chain to skip last two state, if a wrapped iterator
 -- has been passed
@@ -109,7 +108,7 @@ local rawiter = function(obj, param, state)
       end
     end
 
-    if is_list(obj) then
+    if compat.islist(obj) then
       return ipairs(obj)
     else
       -- hash

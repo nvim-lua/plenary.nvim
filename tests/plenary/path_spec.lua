@@ -1,6 +1,6 @@
 local Path = require "plenary.path"
 local path = Path.path
-local is_list = vim.islist or vim.tbl_islist
+local compat = require "plenary.compat"
 
 describe("Path", function()
   it("should find valid files", function()
@@ -593,7 +593,7 @@ describe("Path", function()
     it("should extract the ancestors of the path", function()
       local p = Path:new(vim.loop.cwd())
       local parents = p:parents()
-      assert(is_list(parents))
+      assert(compat.islist(parents))
       for _, parent in pairs(parents) do
         assert.are.same(type(parent), "string")
       end
