@@ -58,7 +58,7 @@ end
 
 local function is_root(pathname)
   if sls_exists then
-    return string.match(pathname, "^[A-Z]:" .. path.sep .. "?$")
+    return string.match(pathname, "^[A-Z]:[\\/]?$")
   end
   return pathname == "/"
 end
@@ -79,8 +79,8 @@ local is_uri = function(filename)
 end
 
 local is_absolute = function(filename, sep)
-    return string.match(filename, "^[%a]:[\\/].*$") ~= nil
   if sls_exists then
+    return string.match(filename, "^[%a]:[\\/].*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
 end
