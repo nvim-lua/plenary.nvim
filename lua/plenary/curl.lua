@@ -15,6 +15,7 @@ all curl methods accepts
   http_version = "HTTP version to use: 'HTTP/0.9', 'HTTP/1.0', 'HTTP/1.1', 'HTTP/2', or 'HTTP/3'" (string)
   proxy        = "[protocol://]host[:port] Use this proxy" (string)
   insecure     = "Allow insecure server connections" (boolean)
+  redirect     = "Allow redirection" (boolean)
 
 and returns table:
 
@@ -214,7 +215,7 @@ parse.request = function(opts)
       opts.raw_body = b
     end
   end
-  local result = { "-sSL", opts.dump }
+  local result = { "-sS", opts.dump }
   local append = function(v)
     if v then
       table.insert(result, v)
@@ -229,6 +230,9 @@ parse.request = function(opts)
   end
   if opts.compressed then
     table.insert(result, "--compressed")
+  end
+  if opts.redirect ~= false then
+    table.insert(result, '-L')
   end
   append(parse.method(opts.method))
   append(parse.headers(opts.headers))
