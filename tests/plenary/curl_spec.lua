@@ -196,7 +196,7 @@ describe("CURL Wrapper:", function()
     end)
   end)
 
-  describe("DEPUG", function() --------------------------------------------------
+  describe("DEBUG", function() --------------------------------------------------
     it("dry_run return the curl command to be ran.", function()
       local res = curl.delete("https://jsonplaceholder.typicode.com/posts/8", { dry_run = true })
       assert(type(res) == "table")
