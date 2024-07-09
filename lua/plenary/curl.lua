@@ -332,9 +332,9 @@ end
 -- Main ----------------------------------------------------
 ------------------------------------------------------------
 return (function()
-  local spec = {}
   local partial = function(method)
     return function(url, opts)
+      local spec = {}
       opts = opts or {}
       if type(url) == "table" then
         opts = url
