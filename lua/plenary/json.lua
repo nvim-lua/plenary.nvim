@@ -33,7 +33,7 @@ local M = {}
 -- The resulting string can then be used by `vim.fn.json_decode`
 --
 ---@param jsonString string
----@param options table
+---@param options? table
 ---  * whitespace:
 ---     - defaults to true
 ---     - when true, comments will be replaced by whitespace
