@@ -53,6 +53,10 @@ end
 M.join = function(async_fns)
   local len = #async_fns
   local results = {}
+  if len == 0 then
+    return results
+  end
+
   local done = 0
 
   local tx, rx = channel.oneshot()
