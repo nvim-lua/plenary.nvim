@@ -1,3 +1,9 @@
+---@class PlenaryNvimMetaLuaVersion
+---@field jit string
+---@field lua string
+---@field version string
+
+---@return PlenaryNvimMetaLuaVersion
 local get_lua_version = function()
   if jit then
     return {
@@ -10,9 +16,13 @@ local get_lua_version = function()
   error("NEOROCKS: Unsupported Lua Versions", _VERSION)
 end
 
+---@class PlenaryNvimMeta
+---@field is_headless boolean
+---@field lua_jit PlenaryNvimMetaLuaVersion
+
 return {
   -- Is run in `--headless` mode.
   is_headless = (#vim.api.nvim_list_uis() == 0),
 
   lua_jit = get_lua_version(),
-}
+} --[[@as PlenaryNvimMeta]]

@@ -5,8 +5,13 @@ local compat = require "plenary.compat"
 
 local uv = vim.loop
 
+---@class PlenaryScandir
 local m = {}
 
+---@alias PlenaryScandirGitignore fun(bp: string[], entry: string): boolean
+
+---@param basepath string[]
+---@return PlenaryScandirGitignore?
 local make_gitignore = function(basepath)
   local patterns = {}
   local valid = false
@@ -67,6 +72,10 @@ end
 -- exposed for testing
 m.__make_gitignore = make_gitignore
 
+---@param base_paths string[]
+---@param entry string
+---@param depth integer
+---@return string?
 local handle_depth = function(base_paths, entry, depth)
   for _, v in ipairs(base_paths) do
     if entry:find(v, 1, true) then
@@ -81,6 +90,8 @@ local handle_depth = function(base_paths, entry, depth)
   return entry
 end
 
+---@param pattern string|string[]|function
+---@return (fun(entry: string): ...)?
 local gen_search_pat = function(pattern)
   if type(pattern) == "string" then
     return function(entry)
@@ -100,6 +111,16 @@ local gen_search_pat = function(pattern)
   end
 end
 
+---@param opts PlenaryScandirOpts
+---@param name string
+---@param typ? string
+---@param current_dir string
+---@param next_dir string[]
+---@param bp string[]
+---@param data string[]
+---@param giti? PlenaryScandirGitignore
+---@param msp? fun(entry: string): boolean
+---@return nil
 local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, giti, msp)
   if opts.hidden or name:sub(1, 1) ~= "." then
     if typ == "directory" then
@@ -133,26 +154,41 @@ local process_item = function(opts, name, typ, current_dir, next_dir, bp, data, 
   end
 end
 
---- m.scan_dir
--- Search directory recursive and syncronous
--- @param path: string or table
---   string has to be a valid path
---   table has to be a array of valid paths
--- @param opts: table to change behavior
---   opts.hidden (bool):              if true hidden files will be added
---   opts.add_dirs (bool):            if true dirs will also be added to the results
---   opts.only_dirs (bool):           if true only dirs will be added to the results
---   opts.respect_gitignore (bool):   if true will only add files that are not ignored by the git
---   opts.depth (int):                depth on how deep the search should go
---   opts.search_pattern (regex):     regex for which files will be added, string, table of strings, or fn(e) -> bool
---   opts.on_insert(entry):           Will be called for each element
---   opts.silent (bool):              if true will not echo messages that are not accessible
--- @return array with files
+---@class PlenaryScandirOpts
+---@field add_dirs? boolean if true dirs will also be added to the results
+---@field depth? integer depth on how deep the search should go
+---@field hidden? boolean if true hidden files will be added
+---@field only_dirs? boolean if true only dirs will be added to the results
+---@field on_insert? fun(entry: string, typ: string): nil Will be called for each element
+---@field respect_gitignore? boolean if true will only add files that are not ignored by the git
+---@field search_pattern? string regex for which files will be added, string, table of strings, or fn(e) -> bool
+---@field silent? boolean if true will not echo messages that are not accessible
+
+---m.scan_dir
+---Search directory recursive and syncronous
+---* param path: string or table
+---  string has to be a valid path
+---  table has to be a array of valid paths
+---* param opts: table to change behavior
+---  opts.hidden (bool):              if true hidden files will be added
+---  opts.add_dirs (bool):            if true dirs will also be added to the results
+---  opts.only_dirs (bool):           if true only dirs will be added to the results
+---  opts.respect_gitignore (bool):   if true will only add files that are not ignored by the git
+---  opts.depth (int):                depth on how deep the search should go
+---  opts.search_pattern (regex):     regex for which files will be added, string, table of strings, or fn(e) -> bool
+---  opts.on_insert(entry):           Will be called for each element
+---  opts.silent (bool):              if true will not echo messages that are not accessible
+---@param path string|string[]
+---@param opts PlenaryScandirOpts
+---@return string[] data array with files
 m.scan_dir = function(path, opts)
   opts = opts or {}
 
+  ---@type string[]
   local data = {}
+  ---@type string[]
   local base_paths = compat.flatten { path }
+  ---@type string[]
   local next_dir = compat.flatten { path }
 
   local gitignore = opts.respect_gitignore and make_gitignore(base_paths) or nil
@@ -171,6 +207,7 @@ m.scan_dir = function(path, opts)
   end
 
   repeat
+    ---@type string
     local current_dir = table.remove(next_dir, 1)
     local fd = uv.fs_scandir(current_dir)
     if fd then
@@ -186,27 +223,37 @@ m.scan_dir = function(path, opts)
   return data
 end
 
---- m.scan_dir_async
--- Search directory recursive and asyncronous
--- @param path: string or table
---   string has to be a valid path
---   table has to be a array of valid paths
--- @param opts: table to change behavior
---   opts.hidden (bool):              if true hidden files will be added
---   opts.add_dirs (bool):            if true dirs will also be added to the results
---   opts.only_dirs (bool):           if true only dirs will be added to the results
---   opts.respect_gitignore (bool):   if true will only add files that are not ignored by git
---   opts.depth (int):                depth on how deep the search should go
---   opts.search_pattern (regex):     regex for which files will be added, string, table of strings, or fn(e) -> bool
---   opts.on_insert function(entry):  will be called for each element
---   opts.on_exit function(results):  will be called at the end
---   opts.silent (bool):              if true will not echo messages that are not accessible
+---@class PlenaryScandirAsyncOpts: PlenaryScandirOpts
+---@field on_exit? fun(data: string[]): nil will be called at the end
+
+---m.scan_dir_async
+---Search directory recursive and asyncronous
+---* param path: string or table
+---  string has to be a valid path
+---  table has to be a array of valid paths
+---* param opts: table to change behavior
+---  opts.hidden (bool):              if true hidden files will be added
+---  opts.add_dirs (bool):            if true dirs will also be added to the results
+---  opts.only_dirs (bool):           if true only dirs will be added to the results
+---  opts.respect_gitignore (bool):   if true will only add files that are not ignored by git
+---  opts.depth (int):                depth on how deep the search should go
+---  opts.search_pattern (regex):     regex for which files will be added, string, table of strings, or fn(e) -> bool
+---  opts.on_insert function(entry):  will be called for each element
+---  opts.on_exit function(results):  will be called at the end
+---  opts.silent (bool):              if true will not echo messages that are not accessible
+---@param path string|string[]
+---@param opts PlenaryScandirAsyncOpts
+---@return string[]?
 m.scan_dir_async = function(path, opts)
   opts = opts or {}
 
+  ---@type string[]
   local data = {}
+  ---@type string[]
   local base_paths = compat.flatten { path }
+  ---@type string[]
   local next_dir = compat.flatten { path }
+  ---@type string
   local current_dir = table.remove(next_dir, 1)
 
   -- TODO(conni2461): get gitignore is not async
@@ -228,6 +275,8 @@ m.scan_dir_async = function(path, opts)
   end
 
   local read_dir
+  ---@param err string?
+  ---@param fd uv_fs_t
   read_dir = function(err, fd)
     if not err then
       while true do
@@ -251,6 +300,8 @@ m.scan_dir_async = function(path, opts)
 end
 
 local gen_permissions = (function()
+  ---@param nr integer
+  ---@return integer
   local conv_to_octal = function(nr)
     local octal, i = 0, 1
 
@@ -267,6 +318,9 @@ local gen_permissions = (function()
   local permissions_tbl = { [0] = "---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx" }
   local bit_tbl = { 4, 2, 1 }
 
+  ---@param cache table<integer, string>
+  ---@param mode integer
+  ---@return string
   return function(cache, mode)
     if cache[mode] then
       return cache[mode]
@@ -293,6 +347,8 @@ end)()
 local gen_size = (function()
   local size_types = { "", "K", "M", "G", "T", "P", "E", "Z" }
 
+  ---@param size number
+  ---@return string
   return function(size)
     -- TODO(conni2461): If type directory we could just return 4.0K
     for _, v in ipairs(size_types) do
@@ -311,15 +367,20 @@ end)()
 
 local gen_date = (function()
   local current_year = os.date "%Y"
+  ---@param mtime integer
+  ---@return string
   return function(mtime)
     if current_year ~= os.date("%Y", mtime) then
-      return os.date("%b %d  %Y", mtime)
+      return os.date("%b %d  %Y", mtime) --[[@as string]]
     end
-    return os.date("%b %d %H:%M", mtime)
+    return os.date("%b %d %H:%M", mtime) --[[@as string]]
   end
 end)()
 
 local get_username = (function()
+  ---@param tbl? table<integer, string>
+  ---@param id integer
+  ---@return string|integer
   local fallback = function(tbl, id)
     if not tbl then
       return id
@@ -352,10 +413,14 @@ local get_username = (function()
       passwd *getpwuid(uid_t uid);
     ]]
 
+    ---@param tbl table<integer, string>
+    ---@param id integer
+    ---@return string
     local ffi_func = function(tbl, id)
       if tbl[id] then
         return tbl[id]
       end
+      ---@type { pw_name: string }?
       local struct = ffi.C.getpwuid(id)
       local name
       if struct == nil then
@@ -379,6 +444,9 @@ local get_username = (function()
 end)()
 
 local get_groupname = (function()
+  ---@param tbl? table<integer, string>
+  ---@param id integer
+  ---@return string|integer
   local fallback = function(tbl, id)
     if not tbl then
       return id
@@ -405,10 +473,14 @@ local get_groupname = (function()
       group *getgrgid(gid_t gid);
     ]]
 
+    ---@param tbl table<integer, string>
+    ---@param id integer
+    ---@return string
     local ffi_func = function(tbl, id)
       if tbl[id] then
         return tbl[id]
       end
+      ---@type { gr_name: string }?
       local struct = ffi.C.getgrgid(id)
       local name
       if struct == nil then
@@ -430,6 +502,9 @@ local get_groupname = (function()
   end
 end)()
 
+---@generic T
+---@param tbl? T[][]
+---@return integer
 local get_max_len = function(tbl)
   if not tbl then
     return 0
@@ -443,11 +518,23 @@ local get_max_len = function(tbl)
   return max_len
 end
 
+---@class PlenaryScandirLsSection
+---@field start_index integer
+---@field end_index integer
+
+---@param data? string[]
+---@param path string
+---@param opts? PlenaryScandirLsOpts
+---@return string[] results
+---@return PlenaryScandirLsSection[][] sections
 local gen_ls = function(data, path, opts)
   if not data or #data == 0 then
     return {}, {}
   end
 
+  ---@param per string
+  ---@param file string
+  ---@return string
   local check_link = function(per, file)
     if per:sub(1, 1) == "l" then
       local resolved = uv.fs_realpath(path .. os_sep .. file)
@@ -462,11 +549,15 @@ local gen_ls = function(data, path, opts)
     return file
   end
 
+  ---@type string[], PlenaryScandirLsSection[][]
   local results, sections = {}, {}
 
+  ---@type table<integer, string>?
   local users_tbl = os_sep ~= "\\" and {} or nil
+  ---@type table<integer, string>?
   local groups_tbl = os_sep ~= "\\" and {} or nil
 
+  ---@type table<string, uv.aliases.fs_stat_table>, table<integer, string>
   local stats, permissions_cache = {}, {}
   for _, v in ipairs(data) do
     local stat = uv.fs_lstat(v)
@@ -479,10 +570,14 @@ local gen_ls = function(data, path, opts)
 
   local insert_in_results = (function()
     if not users_tbl and not groups_tbl then
+      ---@type table<integer, integer>
       local section_spacing_tbl = { [5] = 2, [6] = 0 }
 
+      ---@param ... string
+      ---@return nil
       return function(...)
         local args = { ... }
+        ---@type PlenaryScandirLsSection[]
         local section = {
           { start_index = 01, end_index = 11 }, -- permissions, hardcoded indexes
           { start_index = 12, end_index = 17 }, -- size, hardcoded indexes
@@ -504,6 +599,7 @@ local gen_ls = function(data, path, opts)
       local max_user_len = get_max_len(users_tbl)
       local max_group_len = get_max_len(groups_tbl)
 
+      ---@type table<integer, { max?: integer, add: integer }>
       local section_spacing_tbl = {
         [3] = { max = max_user_len, add = 1 },
         [4] = { max = max_group_len, add = 2 },
@@ -512,8 +608,11 @@ local gen_ls = function(data, path, opts)
       }
       local fmt_str = "%10s %5s %-" .. max_user_len .. "s %-" .. max_group_len .. "s  %s  %s"
 
+      ---@param ... string
+      ---@return nil
       return function(...)
         local args = { ... }
+        ---@type PlenaryScandirLsSection[]
         local section = {
           { start_index = 01, end_index = 11 }, -- permissions, hardcoded indexes
           { start_index = 12, end_index = 17 }, -- size, hardcoded indexes
@@ -550,7 +649,9 @@ local gen_ls = function(data, path, opts)
   end
 
   if opts and opts.group_directories_first then
+    ---@type string[]
     local sorted_results = {}
+    ---@type PlenaryScandirLsSection[][]
     local sorted_sections = {}
     for k, v in ipairs(results) do
       if v:sub(1, 1) == "d" then
@@ -570,37 +671,53 @@ local gen_ls = function(data, path, opts)
   end
 end
 
---- m.ls
--- List directory contents. Will always apply --long option.  Use scan_dir for without --long
--- @param path: string
---   string has to be a valid path
--- @param opts: table to change behavior
---   opts.hidden (bool):                  if true hidden files will be added
---   opts.add_dirs (bool):                if true dirs will also be added to the results, default: true
---   opts.respect_gitignore (bool):       if true will only add files that are not ignored by git
---   opts.depth (int):                    depth on how deep the search should go, default: 1
---   opts.group_directories_first (bool): same as real ls
--- @return array with formatted output
+---@class PlenaryScandirLsOpts
+---@field add_dirs boolean if true dirs will also be added to the results, default: true
+---@field depth integer depth on how deep the search should go, default: 1
+---@field group_directories_first boolean same as real ls
+---@field hidden boolean if true hidden files will be added
+---@field respect_gitignore boolean if true will only add files that are not ignored by git
+
+---m.ls
+---List directory contents. Will always apply --long option.  Use scan_dir for without --long
+---* param path: string
+---  string has to be a valid path
+---* param opts: table to change behavior
+---  opts.hidden (bool):                  if true hidden files will be added
+---  opts.add_dirs (bool):                if true dirs will also be added to the results, default: true
+---  opts.respect_gitignore (bool):       if true will only add files that are not ignored by git
+---  opts.depth (int):                    depth on how deep the search should go, default: 1
+---  opts.group_directories_first (bool): same as real ls
+---* return array with formatted output
+---@param path string
+---@param opts PlenaryScandirLsOpts
+---@return string[] results array with formatted output
+---@return PlenaryScandirLsSection[][] sections array with formatted output
 m.ls = function(path, opts)
   opts = opts or {}
   opts.depth = opts.depth or 1
   opts.add_dirs = opts.add_dirs or true
-  local data = m.scan_dir(path, opts)
+  local data = m.scan_dir(path, opts --[[@as PlenaryScandirOpts]])
 
   return gen_ls(data, path, opts)
 end
 
---- m.ls_async
--- List directory contents. Will always apply --long option. Use scan_dir for without --long
--- @param path: string
---   string has to be a valid path
--- @param opts: table to change behavior
---   opts.hidden (bool):                  if true hidden files will be added
---   opts.add_dirs (bool):                if true dirs will also be added to the results, default: true
---   opts.respect_gitignore (bool):       if true will only add files that are not ignored by git
---   opts.depth (int):                    depth on how deep the search should go, default: 1
---   opts.group_directories_first (bool): same as real ls
---   opts.on_exit function(results):      will be called at the end (required)
+---@class PlenaryScandirLsAsyncOpts: PlenaryScandirLsOpts
+---@field on_exit? fun(results: string[], sections: PlenaryScandirLsSection[][]): nil called at the end (required)
+
+---m.ls_async
+---List directory contents. Will always apply --long option. Use scan_dir for without --long
+---* param path: string
+---  string has to be a valid path
+---* param opts: table to change behavior
+---  opts.hidden (bool):                       if true hidden files will be added
+---  opts.add_dirs (bool):                     if true dirs will also be added to the results, default: true
+---  opts.respect_gitignore (bool):            if true will only add files that are not ignored by git
+---  opts.depth (int):                         depth on how deep the search should go, default: 1
+---  opts.group_directories_first (bool):      same as real ls
+---  opts.on_exit function(results, sections): will be called at the end (required)
+---@param path string
+---@param opts? PlenaryScandirLsAsyncOpts
 m.ls_async = function(path, opts)
   opts = opts or {}
   opts.depth = opts.depth or 1
@@ -614,7 +731,7 @@ m.ls_async = function(path, opts)
     end
   end
 
-  m.scan_dir_async(path, opts_copy)
+  m.scan_dir_async(path, opts_copy --[[@as PlenaryScandirAsyncOpts]])
 end
 
 return m

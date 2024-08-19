@@ -1,5 +1,8 @@
 local util = require "plenary.async.util"
 
+---@alias PlenaryAsyncApi table<string, PlenaryAsyncFunction>
+
+---@type PlenaryAsyncApi
 return setmetatable({}, {
   __index = function(t, k)
     return function(...)
