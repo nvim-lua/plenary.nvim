@@ -1,7 +1,49 @@
 local Path = require "plenary.path2"
 local path = Path.path
-local compat = require "plenary.compat"
+-- local compat = require "plenary.compat"
 local iswin = vim.loop.os_uname().sysname == "Windows_NT"
+
+local hasshellslash = vim.fn.exists "+shellslash" == 1
+
+---@param bool boolean
+local function set_shellslash(bool)
+  if hasshellslash then
+    vim.o.shellslash = bool
+  end
+end
+
+local function it_ssl(name, test_fn)
+  if not hasshellslash then
+    it(name, test_fn)
+  else
+    local orig = vim.o.shellslash
+    vim.o.shellslash = true
+    it(name .. " - shellslash", test_fn)
+
+    vim.o.shellslash = false
+    it(name .. " - noshellslash", test_fn)
+    vim.o.shellslash = orig
+  end
+end
+
+local function it_cross_plat(name, test_fn)
+  if not iswin then
+    it(name .. " - unix", test_fn)
+  else
+    it_ssl(name .. " - windows", test_fn)
+  end
+end
+
+--- convert unix path into window paths
+local function plat_path(p)
+  if not iswin then
+    return p
+  end
+  if hasshellslash and vim.o.shellslash then
+    return p
+  end
+  return p:gsub("/", "\\")
+end
 
 describe("absolute", function()
   describe("unix", function()
@@ -16,11 +58,11 @@ describe("absolute", function()
     end
 
     describe("shellslash", function()
-      vim.o.shellslash = true
+      set_shellslash(true)
     end)
 
     describe("noshellslash", function()
-      vim.o.shellslash = false
+      set_shellslash(false)
     end)
   end)
 end)
@@ -67,7 +109,7 @@ describe("Path", function()
       end
 
       local function get_windows_paths()
-        local nossl = vim.fn.exists "+shellslash" == 1 and not vim.o.shellslash
+        local nossl = hasshellslash and not vim.o.shellslash
 
         ---@type [string[]|string, string][]
         local paths = {
@@ -80,11 +122,12 @@ describe("Path", function()
           { [[//Server2//Share//Test/Foo.txt]], [[//Server2/Share/Test/Foo.txt]] },
           { [[\\Server2\\Share\\Test\Foo.txt]], [[//Server2/Share/Test/Foo.txt]] },
           { { "C:", "lua", "..", "README.md" }, "C:lua/../README.md" },
+          { { "C:/", "lua", "..", "README.md" }, "C:/lua/../README.md" },
+          { "C:lua/../README.md", "C:lua/../README.md" },
+          { "C:/lua/../README.md", "C:/lua/../README.md" },
           { [[foo/bar\baz]], [[foo/bar/baz]] },
-          -- TODO: add mixed sep paths
-          -- whatever these things are
-          -- \\.\C:\Test\Foo.txt
-          -- \\?\C:\Test\Foo.txt
+          { [[\\.\C:\Test\Foo.txt]], [[//./C:/Test/Foo.txt]] },
+          { [[\\?\C:\Test\Foo.txt]], [[//?/C:/Test/Foo.txt]] },
         }
         vim.list_extend(paths, get_paths())
 
@@ -97,13 +140,18 @@ describe("Path", function()
         return paths
       end
 
+      it("custom sep", function()
+        local p = Path:new { "foo\\bar/baz", sep = "/" }
+        assert.are.same(p.filename, "foo/bar/baz")
+      end)
+
       describe("noshellslash", function()
-        vim.o.shellslash = false
+        set_shellslash(false)
         test_filename(get_windows_paths())
       end)
 
       describe("shellslash", function()
-        vim.o.shellslash = true
+        set_shellslash(true)
         test_filename(get_windows_paths())
       end)
     end)
@@ -113,9 +161,9 @@ describe("Path", function()
     local function get_paths()
       local readme_path = vim.fn.fnamemodify("README.md", ":p")
 
-      ---@type [string[], string, boolean][]
+      ---@type [string[]|string, string, boolean][]
       local paths = {
-        { { "README.md" }, readme_path, false },
+        { "README.md", readme_path, false },
         { { "lua", "..", "README.md" }, readme_path, false },
         { { readme_path }, readme_path, true },
       }
@@ -146,14 +194,21 @@ describe("Path", function()
       end
 
       local function get_windows_paths()
-        local nossl = vim.fn.exists "+shellslash" == 1 and not vim.o.shellslash
+        local nossl = hasshellslash and not vim.o.shellslash
+        local disk = path.root():match "^[%a]:"
+        local readme_path = vim.fn.fnamemodify("README.md", ":p")
 
-        ---@type [string[], string, boolean][]
+        ---@type [string[]|string, string, boolean][]
         local paths = {
-          { { [[C:\Documents\Newsletters\Summer2018.pdf]] }, [[C:/Documents/Newsletters/Summer2018.pdf]], true },
-          { { [[C:/Documents/Newsletters/Summer2018.pdf]] }, [[C:/Documents/Newsletters/Summer2018.pdf]], true },
-          { { [[\\Server2\Share\Test\Foo.txt]] }, [[//Server2/Share/Test/Foo.txt]], true },
-          { { [[//Server2/Share/Test/Foo.txt]] }, [[//Server2/Share/Test/Foo.txt]], true },
+          { [[C:\Documents\Newsletters\Summer2018.pdf]], [[C:/Documents/Newsletters/Summer2018.pdf]], true },
+          { [[C:/Documents/Newsletters/Summer2018.pdf]], [[C:/Documents/Newsletters/Summer2018.pdf]], true },
+          { [[\\Server2\Share\Test\Foo.txt]], [[//Server2/Share/Test/Foo.txt]], true },
+          { [[//Server2/Share/Test/Foo.txt]], [[//Server2/Share/Test/Foo.txt]], true },
+          { [[\\.\C:\Test\Foo.txt]], [[//./C:/Test/Foo.txt]], true },
+          { [[\\?\C:\Test\Foo.txt]], [[//?/C:/Test/Foo.txt]], true },
+          { readme_path, readme_path, true },
+          { disk .. [[lua/../README.md]], readme_path, false },
+          { { disk, "lua", "..", "README.md" }, readme_path, false },
         }
         vim.list_extend(paths, get_paths())
 
@@ -167,126 +222,73 @@ describe("Path", function()
       end
 
       describe("shellslash", function()
-        vim.o.shellslash = true
+        set_shellslash(true)
         test_absolute(get_windows_paths())
       end)
 
       describe("noshellslash", function()
-        vim.o.shellslash = false
+        set_shellslash(false)
         test_absolute(get_windows_paths())
       end)
     end)
   end)
 
-  -- describe("absolute", function()
-  --   local readme_path = vim.fn.fnamemodify("README.md", ":p")
-  --   local posix_paths = {
-  --     { { "README.md" }, readme_path },
-  --     { { "lua", "..", "README.md" }, readme_path },
-  --     { { "lua/../README.md" }, readme_path },
-  --     { { "./lua/../README.md" }, readme_path },
-  --     { { readme_path }, readme_path },
-  --   }
+  it_cross_plat("can join paths by constructor or join path", function()
+    assert.are.same(Path:new("lua", "plenary"), Path:new("lua"):joinpath "plenary")
+  end)
 
-  --   local windows_paths = {
-  --     { { [[C:\Documents\Newsletters\Summer2018.pdf]] }, [[C:\Documents\Newsletters\Summer2018.pdf]] },
-  --     { { [[C:/Documents/Newsletters/Summer2018.pdf]] }, [[C:\Documents\Newsletters\Summer2018.pdf]] },
-  --     { { [[\\Server2\Share\Test\Foo.txt]] }, [[\\Server2\Share\Test\Foo.txt]] },
-  --     { { [[//Server2/Share/Test/Foo.txt]] }, [[\\Server2\Share\Test\Foo.txt]] },
-  --   }
-  --   vim.list_extend(windows_paths, posix_paths)
+  it_cross_plat("can join paths with /", function()
+    assert.are.same(Path:new("lua", "plenary"), Path:new "lua" / "plenary")
+  end)
 
-  --   local function test_absolute(input, expect)
-  --     it(string.format(":absolute() %s", vim.inspect(input)), function()
-  --       local p = Path:new(input)
-  --       assert.are.same(p:absolute(), expect)
-  --     end)
-  --   end
-
-  --   local test_path = iswin and windows_paths or posix_paths
-
-  --   for _, tc in ipairs(test_path) do
-  --     test_absolute(tc[1], tc[2])
-  --   end
-
-  --   it(".absolute()", function()
-  --     local p = Path:new { "README.md", sep = "\\" }
-  --     assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
-  --   end)
-
-  --   it("can determine absolute paths", function()
-  --     local p = Path:new { "/home/asdfasdf/", sep = "/" }
-  --     assert(p:is_absolute(), "Is absolute")
-  --     assert(p:absolute() == p.filename)
-  --   end)
-
-  --   it("can determine non absolute paths", function()
-  --     local p = Path:new { "./home/tj/", sep = "/" }
-  --     assert(not p:is_absolute(), "Is absolute")
-  --   end)
-
-  --   it("will normalize the path", function()
-  --     local p = Path:new { "lua", "..", "README.md", sep = "/" }
-  --     assert.are.same(p:absolute(), vim.fn.fnamemodify("README.md", ":p"))
-  --   end)
-  -- end)
-
-  -- it("can join paths by constructor or join path", function()
-  --   assert.are.same(Path:new("lua", "plenary"), Path:new("lua"):joinpath "plenary")
-  -- end)
-
-  -- it("can join paths with /", function()
-  --   assert.are.same(Path:new("lua", "plenary"), Path:new "lua" / "plenary")
-  -- end)
-
-  it("can join paths with paths", function()
+  it_cross_plat("can join paths with paths", function()
     assert.are.same(Path:new("lua", "plenary"), Path:new("lua", Path:new "plenary"))
   end)
 
-  it("inserts slashes", function()
+  it_cross_plat("inserts slashes", function()
     assert.are.same("lua" .. path.sep .. "plenary", Path:new("lua", "plenary").filename)
   end)
 
-  -- describe(".exists()", function()
-  --   it("finds files that exist", function()
-  --     assert.are.same(true, Path:new("README.md"):exists())
-  --   end)
+  describe(".exists()", function()
+    it_cross_plat("finds files that exist", function()
+      assert.are.same(true, Path:new("README.md"):exists())
+    end)
 
-  --   it("returns false for files that do not exist", function()
-  --     assert.are.same(false, Path:new("asdf.md"):exists())
-  --   end)
-  -- end)
+    it_cross_plat("returns false for files that do not exist", function()
+      assert.are.same(false, Path:new("asdf.md"):exists())
+    end)
+  end)
 
-  -- describe(".is_dir()", function()
-  --   it("should find directories that exist", function()
-  --     assert.are.same(true, Path:new("lua"):is_dir())
-  --   end)
+  describe(".is_dir()", function()
+    it_cross_plat("should find directories that exist", function()
+      assert.are.same(true, Path:new("lua"):is_dir())
+    end)
 
-  --   it("should return false when the directory does not exist", function()
-  --     assert.are.same(false, Path:new("asdf"):is_dir())
-  --   end)
+    it_cross_plat("should return false when the directory does not exist", function()
+      assert.are.same(false, Path:new("asdf"):is_dir())
+    end)
 
-  --   it("should not show files as directories", function()
-  --     assert.are.same(false, Path:new("README.md"):is_dir())
-  --   end)
-  -- end)
+    it_cross_plat("should not show files as directories", function()
+      assert.are.same(false, Path:new("README.md"):is_dir())
+    end)
+  end)
 
-  -- describe(".is_file()", function()
-  --   it("should not allow directories", function()
-  --     assert.are.same(true, not Path:new("lua"):is_file())
-  --   end)
+  describe(".is_file()", function()
+    it_cross_plat("should not allow directories", function()
+      assert.are.same(true, not Path:new("lua"):is_file())
+    end)
 
-  --   it("should return false when the file does not exist", function()
-  --     assert.are.same(true, not Path:new("asdf"):is_file())
-  --   end)
+    it_cross_plat("should return false when the file does not exist", function()
+      assert.are.same(true, not Path:new("asdf"):is_file())
+    end)
 
-  --   it("should show files as file", function()
-  --     assert.are.same(true, Path:new("README.md"):is_file())
-  --   end)
-  -- end)
+    it_cross_plat("should show files as file", function()
+      assert.are.same(true, Path:new("README.md"):is_file())
+    end)
+  end)
 
   describe(":new", function()
-    it("can be called with or without colon", function()
+    it_cross_plat("can be called with or without colon", function()
       -- This will work, cause we used a colon
       local with_colon = Path:new "lua"
       local no_colon = Path.new "lua"
@@ -295,162 +297,171 @@ describe("Path", function()
     end)
   end)
 
-  -- describe(":make_relative", function()
-  --   it("can take absolute paths and make them relative to the cwd", function()
-  --     local p = Path:new { "lua", "plenary", "path.lua" }
-  --     local absolute = vim.loop.cwd() .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative()
-  --     assert.are.same(relative, p.filename)
-  --   end)
+  describe(":make_relative", function()
+    local root = iswin and "c:\\" or "/"
+    it_cross_plat("can take absolute paths and make them relative to the cwd", function()
+      local p = Path:new { "lua", "plenary", "path.lua" }
+      local absolute = vim.loop.cwd() .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(p.filename, relative)
+    end)
 
-  --   it("can take absolute paths and make them relative to a given path", function()
-  --     local root = path.sep == "\\" and "c:\\" or "/"
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    it_cross_plat("can take absolute paths and make them relative to a given path", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
 
-  --   it("can take double separator absolute paths and make them relative to the cwd", function()
-  --     local p = Path:new { "lua", "plenary", "path.lua" }
-  --     local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative()
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    it_cross_plat("can take double separator absolute paths and make them relative to the cwd", function()
+      local p = Path:new { "lua", "plenary", "path.lua" }
+      local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(relative, p.filename)
+    end)
 
-  --   it("can take double separator absolute paths and make them relative to a given path", function()
-  --     local root = path.sep == "\\" and "c:\\" or "/"
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(relative, p.filename)
+    end)
 
-  --   it("can take absolute paths and make them relative to a given path with trailing separator", function()
-  --     local root = path.sep == "\\" and "c:\\" or "/"
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
+      assert.are.same(relative, p.filename)
+    end)
 
-  --   it("can take absolute paths and make them relative to the root directory", function()
-  --     local root = path.sep == "\\" and "c:\\" or "/"
-  --     local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
-  --     local absolute = root .. p.filename
-  --     local relative = Path:new(absolute):make_relative(root)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    it_cross_plat("can take absolute paths and make them relative to the root directory", function()
+      local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
+      local absolute = root .. p.filename
+      local relative = Path:new(absolute):make_relative(root)
+      assert.are.same(relative, p.filename)
+    end)
 
-  --   it("can take absolute paths and make them relative to themselves", function()
-  --     local root = path.sep == "\\" and "c:\\" or "/"
-  --     local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
-  --     local relative = Path:new(p.filename):make_relative(p.filename)
-  --     assert.are.same(relative, ".")
-  --   end)
+    it_cross_plat("can take absolute paths and make them relative to themselves", function()
+      local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
+      local relative = Path:new(p.filename):make_relative(p.filename)
+      assert.are.same(relative, ".")
+    end)
 
-  --   it("should not truncate if path separator is not present after cwd", function()
-  --     local cwd = "tmp" .. path.sep .. "foo"
-  --     local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-  --     local relative = Path:new(p.filename):make_relative(cwd)
-  --     assert.are.same(p.filename, relative)
-  --   end)
+    it_cross_plat("should not truncate if path separator is not present after cwd", function()
+      local cwd = "tmp" .. path.sep .. "foo"
+      local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
+      local relative = Path:new(p.filename):make_relative(cwd)
+      assert.are.same(p.filename, relative)
+    end)
 
-  --   it("should not truncate if path separator is not present after cwd and cwd ends in path sep", function()
-  --     local cwd = "tmp" .. path.sep .. "foo" .. path.sep
-  --     local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-  --     local relative = Path:new(p.filename):make_relative(cwd)
-  --     assert.are.same(p.filename, relative)
-  --   end)
-  -- end)
+    it_cross_plat("should not truncate if path separator is not present after cwd and cwd ends in path sep", function()
+      local cwd = "tmp" .. path.sep .. "foo" .. path.sep
+      local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
+      local relative = Path:new(p.filename):make_relative(cwd)
+      assert.are.same(p.filename, relative)
+    end)
+  end)
 
-  -- describe(":normalize", function()
-  --   it("can take path that has one character directories", function()
-  --     local orig = "/home/j/./p//path.lua"
-  --     local final = Path:new(orig):normalize()
-  --     assert.are.same(final, "/home/j/p/path.lua")
-  --   end)
+  describe(":normalize", function()
+    local home = iswin and "C:/Users/test/" or "/home/test/"
+    local tmp_lua = iswin and "C:/Windows/Temp/lua" or "/tmp/lua"
 
-  --   it("can take paths with double separators change them to single separators", function()
-  --     local orig = "/lua//plenary/path.lua"
-  --     local final = Path:new(orig):normalize()
-  --     assert.are.same(final, "/lua/plenary/path.lua")
-  --   end)
-  --   -- this may be redundant since normalize just calls make_relative which is tested above
-  --   it("can take absolute paths with double seps" .. "and make them relative with single seps", function()
-  --     local orig = "/lua//plenary/path.lua"
-  --     local final = Path:new(orig):normalize()
-  --     assert.are.same(final, "/lua/plenary/path.lua")
-  --   end)
+    it_cross_plat("can take path that has one character directories", function()
+      local orig = iswin and "C:/Users/j/./p//path.lua" or "/home/j/./p//path.lua"
+      local final = Path:new(orig):normalize()
+      local expect = plat_path(iswin and "C:/Users/j/p/path.lua" or "/home/j/p/path.lua")
+      assert.are.same(expect, final)
+    end)
 
-  --   it("can remove the .. in paths", function()
-  --     local orig = "/lua//plenary/path.lua/foo/bar/../.."
-  --     local final = Path:new(orig):normalize()
-  --     assert.are.same(final, "/lua/plenary/path.lua")
-  --   end)
+    it_cross_plat("can take paths with double separators change them to single separators", function()
+      local orig = "lua//plenary/path.lua"
+      local final = Path:new(orig):normalize()
+      local expect = plat_path("lua/plenary/path.lua")
+      assert.are.same(expect, final)
+    end)
 
-  --   it("can normalize relative paths", function()
-  --     assert.are.same(Path:new("lua/plenary/path.lua"):normalize(), "lua/plenary/path.lua")
-  --   end)
+   --  -- this may be redundant since normalize just calls make_relative which is tested above
+   --  it_cross_plat("can take absolute paths with double seps" .. "and make them relative with single seps", function()
+   --    local orig = "/lua//plenary/path.lua"
+   --    local final = Path:new(orig):normalize()
+   --    local expect = plat_path("/lua/plenary/path.lua")
+   --    assert.are.same(expect, final)
+   --  end)
 
-  --   it("can normalize relative paths containing ..", function()
-  --     assert.are.same(Path:new("lua/plenary/path.lua/../path.lua"):normalize(), "lua/plenary/path.lua")
-  --   end)
+   --  it_cross_plat("can remove the .. in paths", function()
+   --    local orig = "/lua//plenary/path.lua/foo/bar/../.."
+   --    local final = Path:new(orig):normalize()
+   --    local expect = plat_path("/lua/plenary/path.lua")
+   --    assert.are.same(expect, final)
+   --  end)
 
-  --   it("can normalize relative paths with initial ..", function()
-  --     local p = Path:new "../lua/plenary/path.lua"
-  --     p._cwd = "/tmp/lua"
-  --     assert.are.same("lua/plenary/path.lua", p:normalize())
-  --   end)
+   --  it_cross_plat("can normalize relative paths", function()
+   --    local orig = "lua/plenary/path.lua"
+   --    local final = Path:new(orig):normalize()
+   --    local expect = plat_path(orig)
+   --    assert.are.same(expect, final)
+   -- end)
 
-  --   it("can normalize relative paths to absolute when initial .. count matches cwd parts", function()
-  --     local p = Path:new "../../tmp/lua/plenary/path.lua"
-  --     p._cwd = "/tmp/lua"
-  --     assert.are.same("/tmp/lua/plenary/path.lua", p:normalize())
-  --   end)
+   --  it_cross_plat("can normalize relative paths containing ..", function()
+   --    local orig = "lua/plenary/path.lua/../path.lua"
+   --    local final = Path:new(orig):normalize()
+   --    local expect = plat_path("lua/plenary/path.lua")
+   --    assert.are.same(expect, final)
+   --  end)
 
-  --   it("can normalize ~ when file is within home directory (trailing slash)", function()
-  --     local home = "/home/test/"
-  --     local p = Path:new { home, "./test_file" }
-  --     p.path.home = home
-  --     p._cwd = "/tmp/lua"
-  --     assert.are.same("~/test_file", p:normalize())
-  --   end)
+   --  it_cross_plat("can normalize relative paths with initial ..", function()
+   --    local p = Path:new "../lua/plenary/path.lua"
+   --    p._cwd = tmp_lua
+   --    local expect = plat_path("lua/plenary/path.lua")
+   --    assert.are.same(expect, p:normalize())
+   --  end)
 
-  --   it("can normalize ~ when file is within home directory (no trailing slash)", function()
-  --     local home = "/home/test"
-  --     local p = Path:new { home, "./test_file" }
-  --     p.path.home = home
-  --     p._cwd = "/tmp/lua"
-  --     assert.are.same("~/test_file", p:normalize())
-  --   end)
+    -- it_cross_plat("can normalize relative paths to absolute when initial .. count matches cwd parts", function()
+    --   local p = Path:new "../../tmp/lua/plenary/path.lua"
+    --   p._cwd = "/tmp/lua"
+    --   assert.are.same("/tmp/lua/plenary/path.lua", p:normalize())
+    -- end)
 
-  --   it("handles usernames with a dash at the end", function()
-  --     local home = "/home/mattr-"
-  --     local p = Path:new { home, "test_file" }
-  --     p.path.home = home
-  --     p._cwd = "/tmp/lua"
-  --     assert.are.same("~/test_file", p:normalize())
-  --   end)
+    -- it_cross_plat("can normalize ~ when file is within home directory (trailing slash)", function()
+    --   local p = Path:new { home, "./test_file" }
+    --   p.path.home = home
+    --   p._cwd = tmp_lua
+    --   assert.are.same("~/test_file", p:normalize())
+    -- end)
 
-  --   it("handles filenames with the same prefix as the home directory", function()
-  --     local p = Path:new "/home/test.old/test_file"
-  --     p.path.home = "/home/test"
-  --     assert.are.same("/home/test.old/test_file", p:normalize())
-  --   end)
-  -- end)
+    -- it_cross_plat("can normalize ~ when file is within home directory (no trailing slash)", function()
+    --   local p = Path:new { home, "./test_file" }
+    --   p.path.home = home
+    --   p._cwd = tmp_lua
+    --   assert.are.same("~/test_file", p:normalize())
+    -- end)
+
+    -- it_cross_plat("handles usernames with a dash at the end", function()
+    --   local p = Path:new { home, "test_file" }
+    --   p.path.home = home
+    --   p._cwd = tmp_lua
+    --   assert.are.same("~/test_file", p:normalize())
+    -- end)
+
+    -- it_cross_plat("handles filenames with the same prefix as the home directory", function()
+    --   local pstr = iswin and "C:/Users/test.old/test_file" or "/home/test.old/test_file"
+    --   local p = Path:new(pstr)
+    --   p.path.home = home
+    --   assert.are.same(pstr, p:normalize())
+    -- end)
+  end)
 
   -- describe(":shorten", function()
-  --   it("can shorten a path", function()
+  --   it_cross_plat("can shorten a path", function()
   --     local long_path = "/this/is/a/long/path"
   --     local short_path = Path:new(long_path):shorten()
   --     assert.are.same(short_path, "/t/i/a/l/path")
   --   end)
 
-  --   it("can shorten a path's components to a given length", function()
+  --   it_cross_plat("can shorten a path's components to a given length", function()
   --     local long_path = "/this/is/a/long/path"
   --     local short_path = Path:new(long_path):shorten(2)
   --     assert.are.same(short_path, "/th/is/a/lo/path")
@@ -466,7 +477,7 @@ describe("Path", function()
   --     assert.are.same(short_path, "this/is/an/extre/long/path")
   --   end)
 
-  --   it("can shorten a path's components when excluding parts", function()
+  --   it_cross_plat("can shorten a path's components when excluding parts", function()
   --     local long_path = "/this/is/a/long/path"
   --     local short_path = Path:new(long_path):shorten(nil, { 1, -1 })
   --     assert.are.same(short_path, "/this/i/a/l/path")
@@ -487,7 +498,7 @@ describe("Path", function()
   --     assert.are.same(short_path, "this/i/an/e/long/p")
   --   end)
 
-  --   it("can shorten a path's components to a given length and exclude positions", function()
+  --   it_cross_plat("can shorten a path's components to a given length and exclude positions", function()
   --     local long_path = "/this/is/a/long/path"
   --     local short_path = Path:new(long_path):shorten(2, { 1, -1 })
   --     assert.are.same(short_path, "/this/is/a/lo/path")
@@ -503,7 +514,7 @@ describe("Path", function()
   -- end)
 
   -- describe("mkdir / rmdir", function()
-  --   it("can create and delete directories", function()
+  --   it_cross_plat("can create and delete directories", function()
   --     local p = Path:new "_dir_not_exist"
 
   --     p:rmdir()
@@ -516,18 +527,18 @@ describe("Path", function()
   --     assert(not p:exists())
   --   end)
 
-  --   it("fails when exists_ok is false", function()
+  --   it_cross_plat("fails when exists_ok is false", function()
   --     local p = Path:new "lua"
   --     assert(not pcall(p.mkdir, p, { exists_ok = false }))
   --   end)
 
-  --   it("fails when parents is not passed", function()
+  --   it_cross_plat("fails when parents is not passed", function()
   --     local p = Path:new("impossible", "dir")
   --     assert(not pcall(p.mkdir, p, { parents = false }))
   --     assert(not p:exists())
   --   end)
 
-  --   it("can create nested directories", function()
+  --   it_cross_plat("can create nested directories", function()
   --     local p = Path:new("impossible", "dir")
   --     assert(pcall(p.mkdir, p, { parents = true }))
   --     assert(p:exists())
@@ -540,7 +551,7 @@ describe("Path", function()
   -- end)
 
   -- describe("touch", function()
-  --   it("can create and delete new files", function()
+  --   it_cross_plat("can create and delete new files", function()
   --     local p = Path:new "test_file.lua"
   --     assert(pcall(p.touch, p))
   --     assert(p:exists())
@@ -549,7 +560,7 @@ describe("Path", function()
   --     assert(not p:exists())
   --   end)
 
-  --   it("does not effect already created files but updates last access", function()
+  --   it_cross_plat("does not effect already created files but updates last access", function()
   --     local p = Path:new "README.md"
   --     local last_atime = p:_stat().atime.sec
   --     local last_mtime = p:_stat().mtime.sec
@@ -564,13 +575,13 @@ describe("Path", function()
   --     assert.are.same(lines, p:readlines())
   --   end)
 
-  --   it("does not create dirs if nested in none existing dirs and parents not set", function()
+  --   it_cross_plat("does not create dirs if nested in none existing dirs and parents not set", function()
   --     local p = Path:new { "nested", "nested2", "test_file.lua" }
   --     assert(not pcall(p.touch, p, { parents = false }))
   --     assert(not p:exists())
   --   end)
 
-  --   it("does create dirs if nested in none existing dirs", function()
+  --   it_cross_plat("does create dirs if nested in none existing dirs", function()
   --     local p1 = Path:new { "nested", "nested2", "test_file.lua" }
   --     local p2 = Path:new { "nested", "asdf", ".hidden" }
   --     local d1 = Path:new { "nested", "dir", ".hidden" }
@@ -590,7 +601,7 @@ describe("Path", function()
   -- end)
 
   -- describe("rename", function()
-  --   it("can rename a file", function()
+  --   it_cross_plat("can rename a file", function()
   --     local p = Path:new "a_random_filename.lua"
   --     assert(pcall(p.touch, p))
   --     assert(p:exists())
@@ -601,7 +612,7 @@ describe("Path", function()
   --     p:rm()
   --   end)
 
-  --   it("can handle an invalid filename", function()
+  --   it_cross_plat("can handle an invalid filename", function()
   --     local p = Path:new "some_random_filename.lua"
   --     assert(pcall(p.touch, p))
   --     assert(p:exists())
@@ -613,7 +624,7 @@ describe("Path", function()
   --     p:rm()
   --   end)
 
-  --   it("can move to parent dir", function()
+  --   it_cross_plat("can move to parent dir", function()
   --     local p = Path:new "some_random_filename.lua"
   --     assert(pcall(p.touch, p))
   --     assert(p:exists())
@@ -624,7 +635,7 @@ describe("Path", function()
   --     p:rm()
   --   end)
 
-  --   it("cannot rename to an existing filename", function()
+  --   it_cross_plat("cannot rename to an existing filename", function()
   --     local p1 = Path:new "a_random_filename.lua"
   --     local p2 = Path:new "not_a_random_filename.lua"
   --     assert(pcall(p1.touch, p1))
@@ -641,7 +652,7 @@ describe("Path", function()
   -- end)
 
   -- describe("copy", function()
-  --   it("can copy a file", function()
+  --   it_cross_plat("can copy a file", function()
   --     local p1 = Path:new "a_random_filename.rs"
   --     local p2 = Path:new "not_a_random_filename.rs"
   --     assert(pcall(p1.touch, p1))
@@ -655,7 +666,7 @@ describe("Path", function()
   --     p2:rm()
   --   end)
 
-  --   it("can copy to parent dir", function()
+  --   it_cross_plat("can copy to parent dir", function()
   --     local p = Path:new "some_random_filename.lua"
   --     assert(pcall(p.touch, p))
   --     assert(p:exists())
@@ -667,7 +678,7 @@ describe("Path", function()
   --     Path:new(vim.loop.fs_realpath "../some_random_filename.lua"):rm()
   --   end)
 
-  --   it("cannot copy an existing file if override false", function()
+  --   it_cross_plat("cannot copy an existing file if override false", function()
   --     local p1 = Path:new "a_random_filename.rs"
   --     local p2 = Path:new "not_a_random_filename.rs"
   --     assert(pcall(p1.touch, p1))
@@ -683,7 +694,7 @@ describe("Path", function()
   --     p2:rm()
   --   end)
 
-  --   it("fails when copying folders non-recursively", function()
+  --   it_cross_plat("fails when copying folders non-recursively", function()
   --     local src_dir = Path:new "src"
   --     src_dir:mkdir()
   --     src_dir:joinpath("file1.lua"):touch()
@@ -698,7 +709,7 @@ describe("Path", function()
   --     src_dir:rm { recursive = true }
   --   end)
 
-  --   it("can copy directories recursively", function()
+  --   it_cross_plat("can copy directories recursively", function()
   --     -- vim.tbl_flatten doesn't work here as copy doesn't return a list
   --     local flatten
   --     flatten = function(ret, t)
@@ -789,7 +800,7 @@ describe("Path", function()
   -- end)
 
   --   describe("parents", function()
-  --     it("should extract the ancestors of the path", function()
+  --     it_cross_plat("should extract the ancestors of the path", function()
   --       local p = Path:new(vim.loop.cwd())
   --       local parents = p:parents()
   --       assert(compat.islist(parents))
@@ -797,14 +808,14 @@ describe("Path", function()
   --         assert.are.same(type(parent), "string")
   --       end
   --     end)
-  --     it("should return itself if it corresponds to path.root", function()
+  --     it_cross_plat("should return itself if it corresponds to path.root", function()
   --       local p = Path:new(Path.path.root(vim.loop.cwd()))
   --       assert.are.same(p:parent(), p)
   --     end)
   --   end)
 
   --   describe("read parts", function()
-  --     it("should read head of file", function()
+  --     it_cross_plat("should read head of file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:head()
   --       local should = [[MIT License
@@ -820,14 +831,14 @@ describe("Path", function()
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("should read the first line of file", function()
+  --     it_cross_plat("should read the first line of file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:head(1)
   --       local should = [[MIT License]]
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("head should max read whole file", function()
+  --     it_cross_plat("head should max read whole file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:head(1000)
   --       local should = [[MIT License
@@ -854,7 +865,7 @@ describe("Path", function()
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("should read tail of file", function()
+  --     it_cross_plat("should read tail of file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:tail()
   --       local should = [[The above copyright notice and this permission notice shall be included in all
@@ -870,14 +881,14 @@ describe("Path", function()
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("should read the last line of file", function()
+  --     it_cross_plat("should read the last line of file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:tail(1)
   --       local should = [[SOFTWARE.]]
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("tail should max read whole file", function()
+  --     it_cross_plat("tail should max read whole file", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:tail(1000)
   --       local should = [[MIT License
@@ -906,14 +917,14 @@ describe("Path", function()
   --   end)
 
   --   describe("readbyterange", function()
-  --     it("should read bytes at given offset", function()
+  --     it_cross_plat("should read bytes at given offset", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:readbyterange(13, 10)
   --       local should = "Copyright "
   --       assert.are.same(should, data)
   --     end)
 
-  --     it("supports negative offset", function()
+  --     it_cross_plat("supports negative offset", function()
   --       local p = Path:new "LICENSE"
   --       local data = p:readbyterange(-10, 10)
   --       local should = "SOFTWARE.\n"

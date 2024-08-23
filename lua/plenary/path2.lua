@@ -20,14 +20,14 @@
 - [x]  Path.__concat
 - [x]  Path.is_path
 - [x]  Path:new
-- [ ]  Path:_fs_filename
-- [ ]  Path:_stat
-- [ ]  Path:_st_mode
-- [ ]  Path:joinpath
-- [ ]  Path:absolute
-- [ ]  Path:exists
+- [x]  Path:_fs_filename
+- [x]  Path:_stat
+- [x]  Path:_st_mode
+- [x]  Path:joinpath
+- [x]  Path:absolute
+- [x]  Path:exists
 - [ ]  Path:expand
-- [ ]  Path:make_relative
+- [x]  Path:make_relative
 - [ ]  Path:normalize
 - [ ]  shorten_len
 - [ ]  shorten
@@ -39,7 +39,7 @@
 - [ ]  Path:touch
 - [ ]  Path:rm
 - [ ]  Path:is_dir
-- [ ]  Path:is_absolute
+- [x]  Path:is_absolute
 - [ ]  Path:_split
   - [ ]  _get_parent
 - [ ]  Path:parent
@@ -72,13 +72,23 @@ local S_IF = {
 }
 
 ---@class plenary.path
----@field home? string home directory path
----@field sep string OS path separator
----@field root fun():string root directory path
+---@field home string home directory path
+---@field sep string OS path separator respecting 'shellslash'
+---
+--- OS separator for paths returned by libuv functions.
+--- Note: libuv will happily take either path separator regardless of 'shellslash'.
+---@field private _uv_sep string
+---
+--- get the root directory path.
+--- On Windows, this is determined from the current working directory in order
+--- to capture the current disk name. But can be calculated from another path
+--- using the optional `base` parameter.
+---@field root fun(base: string?):string
 ---@field S_IF { DIR: integer, REG: integer } stat filetype bitmask
 local path = setmetatable({
-  home = vim.loop.os_homedir(),
+  home = vim.fn.getcwd(), -- respects shellslash unlike vim.uv.cwd()
   S_IF = S_IF,
+  _uv_sep = iswin and "\\" or "/",
 }, {
   __index = function(t, k)
     local raw = rawget(t, k)
@@ -86,54 +96,100 @@ local path = setmetatable({
       return raw
     end
 
-    if not iswin then
-      t.sep = "/"
-      return t.sep
-    end
+    if k == "sep" then
+      if not iswin then
+        t.sep = "/"
+        return t.sep
+      end
 
-    return (hasshellslash and vim.o.shellslash) and "/" or "\\"
+      return (hasshellslash and vim.o.shellslash) and "/" or "\\"
+    end
   end,
 })
 
 path.root = (function()
-  if path.sep == "/" then
+  if not iswin then
     return function()
       return "/"
     end
   else
     return function(base)
-      base = base or vim.loop.cwd()
-      return base:sub(1, 1) .. ":\\"
+      base = base or path.home
+      local disk = base:match "^[%a]:"
+      if disk then
+        return disk .. path.sep
+      end
+      return string.rep(path.sep, 2) -- UNC
     end
   end
 end)()
 
+--- WARNING: Should really avoid using this. It's more like
+--- `maybe_uri_maybe_not`. There are both false positives and false negative
+--- edge cases.
+---
+--- Approximates if a filename is a valid URI by checking if the filename
+--- starts with a plausible scheme.
+---
+--- A valid URI scheme begins with a letter, followed by any number of letters,
+--- numbers and `+`, `.`, `-` and ends with a `:`.
+---
+--- To disambiguate URI schemes from Windows path, we also check up to 2
+--- characters after the `:` to make sure it's followed by `//`.
+---
+--- Two major caveats according to our checks:
+--- - a "valid" URI is also a valid unix relative path so any relative unix
+---   path that's in the shape of a URI according to our check will be flagged
+---   as a URI.
+--- - relative Windows paths like `C:Projects/apilibrary/apilibrary.sln` will
+---   be caught as a URI.
+---
+---@param filename string
+---@return boolean
 local function is_uri(filename)
-  local char = string.byte(filename, 1) or 0
+  local ch = filename:byte(1) or 0
 
-  -- is alpha?
-  if char < 65 or (char > 90 and char < 97) or char > 122 then
+  -- is not alpha?
+  if not ((ch >= 97 and ch <= 122) or (ch >= 65 and ch <= 90)) then
     return false
   end
 
+  local scheme_end = 0
   for i = 2, #filename do
-    char = string.byte(filename, i)
-    if char == 58 then -- `:`
-      return i < #filename and string.byte(filename, i + 1) ~= 92 -- `\`
-    elseif
-      not (
-        (char >= 48 and char <= 57) -- 0-9
-        or (char >= 65 and char <= 90) -- A-Z
-        or (char >= 97 and char <= 122) -- a-z
-        or char == 43 -- `+`
-        or char == 46 -- `.`
-        or char == 45 -- `-`
-      )
-    then
+    ch = filename:byte(i)
+    if
+      (ch >= 97 and ch <= 122) -- a-z
+      or (ch >= 65 and ch <= 90) -- A-Z
+      or (ch >= 48 and ch <= 57) -- 0-9
+      or ch == 43 -- `+`
+      or ch == 46 -- `.`
+      or ch == 45 -- `-`
+    then -- luacheck: ignore 542
+      -- pass
+    elseif ch == 58 then
+      scheme_end = i
+      break
+    else
       return false
     end
   end
-  return false
+
+  if scheme_end == 0 then
+    return false
+  end
+
+  local next = filename:byte(scheme_end + 1) or 0
+  if next == 0 then
+    -- nothing following the scheme
+    return false
+  elseif next == 92 then -- `\`
+    -- could be Windows absolute path but not a uri
+    return false
+  elseif next == 47 and (filename:byte(scheme_end + 2) or 0) ~= 47 then -- `/`
+    -- still could be Windows absolute path using `/` seps but not a uri
+    return false
+  end
+  return true
 end
 
 --- Split a Windows path into a prefix and a body, such that the body can be processed like a POSIX
@@ -150,10 +206,10 @@ end
 ---
 --- @param p string Path to split.
 --- @return string, string, boolean : prefix, body, whether path is invalid.
-local function split_windows_p(p)
+local function split_windows_path(p)
   local prefix = ""
 
-  --- Match pattern. If there is a match, move the matched pattern from the p to the prefix.
+  --- Match pattern. If there is a match, move the matched pattern from the path to the prefix.
   --- Returns the matched pattern.
   ---
   --- @param pattern string Pattern to match.
@@ -170,31 +226,31 @@ local function split_windows_p(p)
   end
 
   local function process_unc_path()
-    return match_to_prefix "[^\\]+\\+[^\\]+\\+"
+    return match_to_prefix "[^/]+/+[^/]+/+"
   end
 
-  if match_to_prefix "^\\\\[?.]\\" then
-    -- Device ps
-    local device = match_to_prefix "[^\\]+\\+"
+  if match_to_prefix "^//[?.]/" then
+    -- Device paths
+    local device = match_to_prefix "[^/]+/+"
 
-    -- Return early if device pattern doesn't match, or if device is UNC and it's not a valid p
-    if not device or (device:match "^UNC\\+$" and not process_unc_path()) then
+    -- Return early if device pattern doesn't match, or if device is UNC and it's not a valid path
+    if not device or (device:match "^UNC/+$" and not process_unc_path()) then
       return prefix, p, false
     end
-  elseif match_to_prefix "^\\\\" then
-    -- Process UNC p, return early if it's invalid
+  elseif match_to_prefix "^//" then
+    -- Process UNC path, return early if it's invalid
     if not process_unc_path() then
       return prefix, p, false
     end
   elseif p:match "^%w:" then
-    -- Drive ps
+    -- Drive paths
     prefix, p = p:sub(1, 2), p:sub(3)
   end
 
   -- If there are slashes at the end of the prefix, move them to the start of the body. This is to
-  -- ensure that the body is treated as an absolute p. For ps like C:foo\\bar, there are no
-  -- slashes at the end of the prefix, so it will be treated as a relative p, as it should be.
-  local trailing_slash = prefix:match "\\+$"
+  -- ensure that the body is treated as an absolute path. For paths like C:foo/bar, there are no
+  -- slashes at the end of the prefix, so it will be treated as a relative path, as it should be.
+  local trailing_slash = prefix:match "/+$"
 
   if trailing_slash then
     prefix = prefix:sub(1, -1 - #trailing_slash)
@@ -216,14 +272,14 @@ local function path_resolve_dot(p)
   local new_path_components = {}
 
   for component in vim.gsplit(p, "/") do
-    if component == "." or component == "" then -- luacheck: ignore 542
+    if component == "." or component == "" then
       -- Skip `.` components and empty components
     elseif component == ".." then
       if #new_path_components > 0 and new_path_components[#new_path_components] ~= ".." then
         -- For `..`, remove the last component if we're still inside the current directory, except
         -- when the last component is `..` itself
         table.remove(new_path_components)
-      elseif is_path_absolute then -- luacheck: ignore 542
+      elseif is_path_absolute then
         -- Reached the root directory in absolute path, do nothing
       else
         -- Reached current directory in relative path, add `..` to the path
@@ -237,6 +293,11 @@ local function path_resolve_dot(p)
   return (is_path_absolute and "/" or "") .. table.concat(new_path_components, "/")
 end
 
+--- Resolves '.' and '..' in the path, removes extra path separator.
+---
+--- For Windows, converts separator `\` to `/` to simplify many operations.
+---
+--- Credit to famiu. This is basically neovim core `vim.fs.normalize`.
 ---@param p string path
 ---@return string
 local function normalize_path(p)
@@ -253,7 +314,7 @@ local function normalize_path(p)
 
   if iswin then
     local valid
-    prefix, p, valid = split_windows_p(p)
+    prefix, p, valid = split_windows_path(p)
     if not valid then
       return prefix .. p
     end
@@ -273,10 +334,14 @@ end
 ---@class plenary.Path
 ---@field path plenary.path
 ---@field filename string path as a string
----@field private _filename string
----@field private _sep string path separator
----@field private _absolute string absolute path
----@field private _cwd string cwd path
+---
+--- internal string representation of the path that's normalized and uses `/`
+--- as path separator. makes many other operations much easier to work with.
+---@field private _name string
+---@field private _sep string path separator taking into account 'shellslash' on windows
+---@field private _absolute string? absolute path
+---@field private _cwd string? cwd path
+---@field private _fs_stat table fs_stat
 local Path = {
   path = path,
 }
@@ -289,24 +354,30 @@ Path.__index = function(t, k)
 
   if k == "_cwd" then
     local cwd = uv.fs_realpath "."
+    if cwd ~= nil then
+      cwd = (cwd:gsub(path._uv_sep, "/"))
+    end
     t._cwd = cwd
-    return cwd
+    return t._cwd
   end
 
   if k == "_absolute" then
-    local absolute = uv.fs_realpath(t.filename)
+    local absolute = uv.fs_realpath(t._name)
+    if absolute ~= nil then
+      absolute = (absolute:gsub(path._uv_sep, "/"))
+    end
     t._absolute = absolute
     return absolute
   end
-end
 
-Path.__newindex = function(t, k, value)
-  if k == "filename" then
-    error "'filename' field is immutable"
+  if k == "_fs_stat" then
+    t._fs_stat = uv.fs_stat(t._absolute or t._name) or {}
+    return t._fs_stat
   end
-  return rawset(t, k, value)
 end
 
+---@param other plenary.Path|string
+---@return plenary.Path
 Path.__div = function(self, other)
   assert(Path.is_path(self))
   assert(Path.is_path(other) or type(other) == "string")
@@ -314,8 +385,9 @@ Path.__div = function(self, other)
   return self:joinpath(other)
 end
 
+---@return string
 Path.__tostring = function(self)
-  return clean(self.filename)
+  return self._name
 end
 
 -- TODO: See where we concat the table, and maybe we could make this work.
@@ -416,48 +488,89 @@ function Path:new(...)
     path_string = unix_path_str(path_input, sep)
   end
 
-  -- if type(path_input) == "string" then
-  --   if iswin then
-  --     if path_input:match "^[%a]:[\\/].*$" then
-  --     end
-  --     path_input = vim.split(path_input, "[\\/]")
-  --   else
-  --     path_input = vim.split(path_input, sep)
-  --   end
-  -- end
-
-  -- if type(path_input) == "table" then
-  --   local path_objs = {}
-  --   for _, v in ipairs(path_input) do
-  --     if Path.is_path(v) then
-  --       table.insert(path_objs, v.filename)
-  --     else
-  --       assert(type(v) == "string")
-  --       table.insert(path_objs, v)
-  --     end
-  --   end
-
-  --   if iswin and path_objs[1]:match "^[%a]:$" then
-  --     local disk = path_objs[1]
-  --     table.remove(path_objs, 1)
-  --     path_string = disk .. table.concat(path_objs, sep)
-  --   else
-  --     path_string = table.concat(path_objs, sep)
-  --   end
-  -- else
-  --   error("unexpected path input\n" .. vim.inspect(path_input))
-  -- end
-
-  local obj = {
+  local proxy = {
     -- precompute normalized path using `/` as sep
-    _filename = normalize_path(path_string),
+    _name = normalize_path(path_string),
     filename = path_string,
     _sep = sep,
   }
 
-  setmetatable(obj, Path)
+  setmetatable(proxy, Path)
+
+  local obj = { __inner = proxy }
+  setmetatable(obj, {
+    __index = function(_, k)
+      return proxy[k]
+    end,
+    __newindex = function(t, k, val)
+      if k == "filename" then
+        proxy.filename = val
+        proxy._name = normalize_path(val)
+        proxy._absolute = nil
+        proxy._fs_stat = nil
+      elseif k == "_name" then
+        proxy.filename = (val:gsub("/", t._sep))
+        proxy._name = val
+        proxy._absolute = nil
+        proxy._fs_stat = nil
+      else
+        proxy[k] = val
+      end
+    end,
+    ---@return plenary.Path
+    __div = function(t, other)
+      return Path.__div(t, other)
+    end,
+    ---@return string
+    __concat = function(t, other)
+      return Path.__concat(t, other)
+    end,
+    ---@return string
+    __tostring = function(t)
+      return Path.__tostring(t)
+    end,
+    __metatable = Path,
+  })
 
   return obj
+end
+
+---@return string
+function Path:absolute()
+  if self:is_absolute() then
+    return (self._name:gsub("/", self._sep))
+  end
+  return (normalize_path(self._cwd .. self._sep .. self._name):gsub("/", self._sep))
+end
+
+---@return string
+function Path:_fs_filename()
+  return self:absolute() or self.filename
+end
+
+---@return table
+function Path:_stat()
+  return self._fs_stat
+end
+
+---@return number
+function Path:_st_mode()
+  return self:_stat().mode or 0
+end
+
+---@return boolean
+function Path:exists()
+  return not vim.tbl_isempty(self:_stat())
+end
+
+---@return boolean
+function Path:is_dir()
+  return self:_stat().type == "directory"
+end
+
+---@return boolean
+function Path:is_file()
+  return self:_stat().type == "file"
 end
 
 --- For POSIX path, anything starting with a `/` is considered a absolute path.
@@ -465,7 +578,7 @@ end
 ---
 --- For Windows, it's a little more involved.
 ---
---- Disk names are single letters. They MUST be followed by a separator to be
+--- Disk names are single letters. They MUST be followed by a `:` + separator to be
 --- considered an absolute path. eg.
 --- C:\Documents\Newsletters\Summer2018.pdf -> An absolute file path from the root of drive C:.
 
@@ -479,30 +592,87 @@ end
 ---@return boolean
 function Path:is_absolute()
   if not iswin then
-    return string.sub(self._filename, 1, 1) == "/"
+    return string.sub(self._name, 1, 1) == "/"
   end
 
-  if string.match(self._filename, "^[%a]:/.*$") ~= nil then
+  if string.match(self._name, "^[%a]:/.*$") ~= nil then
     return true
-  elseif string.match(self._filename, "^//") then
+  elseif string.match(self._name, "^//") then
     return true
   end
 
   return false
 end
 
----@return string
-function Path:absolute()
-  if self:is_absolute() then
-    return self.filename
-  end
-  return (normalize_path(self._cwd .. self._sep .. self._filename):gsub("/", self._sep))
+---@return plenary.Path
+function Path:joinpath(...)
+  return Path:new(self._name, ...)
 end
 
-vim.o.shellslash = false
--- -- local p = Path:new { "C:", "README.md" }
-local p = Path:new { "C:\\Documents\\Newsletters\\Summer2018.pdf" }
-print(p.filename, p:is_absolute(), p:absolute())
-vim.o.shellslash = true
+--- Make path relative to another.
+---
+--- No-op if path is a URI.
+---@param cwd string? path to make relative to (default: cwd)
+---@return string # new filename
+function Path:make_relative(cwd)
+  if is_uri(self._name) then
+    return self.filename
+  end
+
+  cwd = Path:new(vim.F.if_nil(cwd, self._cwd))._name
+
+  if self._name == cwd then
+    self._name = "."
+    return self.filename
+  end
+
+  if cwd:sub(#cwd, #cwd) ~= "/" then
+    cwd = cwd .. "/"
+  end
+
+  if not self:is_absolute() then
+    self._name = normalize_path(cwd .. self._name)
+  end
+
+  -- TODO: doesn't handle distant relative cwd well
+  -- eg. cwd = '/tmp/foo' and path = '/home/user/bar'
+  --     would be something like '/tmp/foo/../../home/user/bar'?
+  -- I'm not even sure, check later
+  if self._name:sub(1, #cwd) == cwd then
+    self._name = self._name:sub(#cwd + 1, -1)
+  else
+    self._name = normalize_path(self.filename)
+  end
+  return self.filename
+end
+
+--- Makes the path relative to cwd or provided path and resolves any internal
+--- '.' and '..' in relative paths according. Substitutes home directory
+--- with `~` if applicable. Deduplicates path separators and trims any trailing
+--- separators.
+---
+--- No-op if path is a URI.
+---@param cwd string? path to make relative to (default: cwd)
+---@return string
+function Path:normalize(cwd)
+  if is_uri(self._name) then
+    return self.filename
+  end
+
+  print(self.filename, self._name)
+  self:make_relative(cwd)
+
+  local home = path.home
+  if home:sub(-1) ~= self._sep then
+    home = home .. self._sep
+  end
+
+  local start, finish = self._name:find(home, 1, true)
+  if start == 1 then
+    self._name = "~/" .. self._name:sub(finish + 1, -1)
+  end
+
+  return self.filename
+end
 
 return Path
