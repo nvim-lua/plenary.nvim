@@ -1,3 +1,25 @@
+--- NOTES:
+--- Rework on plenary.Path with a focus on better cross-platform support
+--- including 'shellslash' support.
+--- Effort to improve performance made (notably `:absolue` ~2x faster).
+---
+--- Some finiky behaviors ironed out
+--- eg. `:normalize`
+--- TODO: demonstrate
+---
+--- BREAKING CHANGES:
+--- - `Path.new` no longer supported (think it's more confusing that helpful
+---   and not really used as far as I can tell)
+---
+--- - drop `__concat` metamethod? it was untested, not sure how functional it is
+---
+--- - `Path` objects are now "read-only", I don't think people were ever doing
+---   things like `path.filename = 'foo'` but now explicitly adding some barrier
+---   to this. Allows us to compute `filename` from "metadata" parsed once on
+---   instantiation.
+
+--- TODO: rework `split_root` logic according to python 3.12
+
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
 local hasshellslash = vim.fn.exists "+shellslash" == 1
@@ -264,6 +286,9 @@ Path.__index = function(t, k)
   end
 end
 
+---@param self plenary.Path2
+---@param other string|plenary.Path2
+---@return plenary.Path2
 Path.__div = function(self, other)
   assert(Path.is_path(self))
   assert(Path.is_path(other) or type(other) == "string")
@@ -271,12 +296,22 @@ Path.__div = function(self, other)
   return self:joinpath(other)
 end
 
+---@param self plenary.Path2
+---@return string
 Path.__tostring = function(self)
   return self.filename
 end
 
-Path.__concat = function(self, other)
-  return self.filename .. other
+---@param self plenary.Path2
+---@param other string|plenary.Path2
+---@return boolean
+Path.__eq = function(self, other)
+  assert(Path.is_path(self))
+  assert(Path.is_path(other) or type(other) == "string")
+  -- TODO
+  if true then
+    error "not yet implemented"
+  end
 end
 
 ---@alias plenary.Path2Args string|plenary.Path2|(string|plenary.Path2)[]
@@ -335,6 +370,7 @@ function Path:new(...)
     __div = function(t, other) return Path.__div(t, other) end,
     __concat = function(t, other) return Path.__concat(t, other) end,
     __tostring = function(t) return Path.__tostring(t) end,
+    __eq = function(t, other) return Path.__eq(t, other) end,
     __metatable = Path,
     -- stylua: ignore end
   })
@@ -379,12 +415,28 @@ function Path:is_absolute()
   return self._path.has_drv and self.drv ~= ""
 end
 
+---@return boolean
+function Path:exists()
+  local stat = uv.fs_stat(self:absolute())
+  return stat ~= nil and not vim.tbl_isempty(stat)
+end
+
 --- if path doesn't exists, returns false
 ---@return boolean
 function Path:is_dir()
   local stat = uv.fs_stat(self:absolute())
   if stat then
     return stat.type == "directory"
+  end
+  return false
+end
+
+--- if path doesn't exists, returns false
+---@return boolean
+function Path:is_file()
+  local stat = uv.fs_stat(self:absolute())
+  if stat then
+    return stat.type == "file"
   end
   return false
 end
@@ -443,8 +495,46 @@ function Path:joinpath(...)
   return Path:new { self, ... }
 end
 
+--- makes a path relative to another (by default the cwd).
+--- if path is already a relative path
+---@param to string|plenary.Path2? absolute path to make relative to (default: cwd)
+---@return string
+function Path:make_relative(to)
+  to = vim.F.if_nil(to, self.cwd)
+  if type(to) == "string" then
+    to = Path:new(to)
+  end
+
+  if self:is_absolute() then
+    local to_abs = to:absolute()
+
+    if to_abs == self:absolute() then
+      return "."
+    else
+      -- TODO
+    end
+  else
+  end
+
+  -- SEE: `Path.relative_to` implementation (3.12) specifically `walk_up` param
+
+  local matches = true
+  for i = 1, #to.parts do
+    if to.parts[i] ~= self.parts[i] then
+      matches = false
+      break
+    end
+  end
+
+  if matches then
+    return "."
+  end
+
+  -- /home/jt/foo/bar/baz
+  -- /home/jt
+end
+
 -- vim.o.shellslash = false
-local p = Path:new("lua"):joinpath "plenary"
 -- vim.print(p)
 -- print(p.filename, p:is_absolute(), p:absolute())
 -- vim.o.shellslash = true
