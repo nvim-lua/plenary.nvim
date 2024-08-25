@@ -19,6 +19,7 @@
 ---   instantiation.
 
 --- TODO: rework `split_root` logic according to python 3.12
+--- TODO: rework `_filename` according to `_format_parsed_parts`
 
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
@@ -28,6 +29,7 @@ local hasshellslash = vim.fn.exists "+shellslash" == 1
 ---@field sep string
 ---@field altsep string
 ---@field has_drv boolean
+---@field case_sensitive boolean
 ---@field convert_altsep fun(self: plenary._Path, p:string): string
 ---@field split_root fun(self: plenary._Path, part:string): string, string, string
 
@@ -36,6 +38,7 @@ local _WindowsPath = {
   sep = "\\",
   altsep = "/",
   has_drv = true,
+  case_sensitive = true,
 }
 
 setmetatable(_WindowsPath, { __index = _WindowsPath })
@@ -123,6 +126,7 @@ local _PosixPath = {
   sep = "/",
   altsep = "",
   has_drv = false,
+  case_sensitive = true,
 }
 setmetatable(_PosixPath, { __index = _PosixPath })
 
@@ -245,10 +249,6 @@ local function parse_parts(parts, _path)
     end
   end
 
-  if drv or root then
-    table.insert(parsed, drv .. root)
-  end
-
   local n = #parsed
   for i = 1, math.floor(n / 2) do
     parsed[i], parsed[n - i + 1] = parsed[n - i + 1], parsed[i]
@@ -262,7 +262,7 @@ end
 ---@field private _path plenary._Path
 ---@field drv string drive name, eg. 'C:' (only for Windows)
 ---@field root string root path (excludes drive name)
----@field parts string[] path parts excluding separators
+---@field relparts string[] relative path parts excluding separators
 ---
 ---@field filename string
 ---@field cwd string
@@ -309,9 +309,10 @@ Path.__eq = function(self, other)
   assert(Path.is_path(self))
   assert(Path.is_path(other) or type(other) == "string")
   -- TODO
-  if true then
-    error "not yet implemented"
-  end
+  -- if true then
+  --   error "not yet implemented"
+  -- end
+  return self.filename == other.filename
 end
 
 ---@alias plenary.Path2Args string|plenary.Path2|(string|plenary.Path2)[]
@@ -336,22 +337,22 @@ function Path:new(...)
     end
   end
 
-  local parts = {}
+  local relparts = {}
   for _, a in ipairs(args) do
     if self.is_path(a) then
-      vim.list_extend(parts, a.parts)
+      vim.list_extend(relparts, a.relparts)
     else
       if a ~= "" then
-        table.insert(parts, a)
+        table.insert(relparts, a)
       end
     end
   end
 
   local _path = iswin and _WindowsPath or _PosixPath
   local drv, root
-  drv, root, parts = parse_parts(parts, _path)
+  drv, root, relparts = parse_parts(relparts, _path)
 
-  local proxy = { _path = _path, drv = drv, root = root, parts = parts }
+  local proxy = { _path = _path, drv = drv, root = root, relparts = relparts }
   setmetatable(proxy, Path)
 
   local obj = { __inner = proxy }
@@ -368,7 +369,6 @@ function Path:new(...)
     end,
     -- stylua: ignore start
     __div = function(t, other) return Path.__div(t, other) end,
-    __concat = function(t, other) return Path.__concat(t, other) end,
     __tostring = function(t) return Path.__tostring(t) end,
     __eq = function(t, other) return Path.__eq(t, other) end,
     __metatable = Path,
@@ -381,9 +381,9 @@ end
 ---@private
 ---@param drv string?
 ---@param root string?
----@param parts string[]?
+---@param relparts string[]?
 ---@return string
-function Path:_filename(drv, root, parts)
+function Path:_filename(drv, root, relparts)
   drv = vim.F.if_nil(drv, self.drv)
   drv = self.drv ~= "" and self.drv:gsub(self._path.sep, path.sep) or ""
 
@@ -394,10 +394,10 @@ function Path:_filename(drv, root, parts)
     root = self.root ~= "" and path.sep:rep(#self.root) or ""
   end
 
-  parts = vim.F.if_nil(parts, self.parts)
-  local relparts = table.concat(vim.list_slice(parts, 2), path.sep)
+  relparts = vim.F.if_nil(relparts, self.relparts)
+  local relpath = table.concat(relparts,  path.sep)
 
-  return drv .. root .. relparts
+  return drv .. root .. relpath
 end
 
 ---@param x any
@@ -441,11 +441,11 @@ function Path:is_file()
   return false
 end
 
----@param parts string[] path parts
+---@param relparts string[] path parts
 ---@return string[]
-local function resolve_dots(parts)
+local function resolve_dots(relparts)
   local new_parts = {}
-  for _, part in ipairs(parts) do
+  for _, part in ipairs(relparts) do
     if part == ".." then
       if #new_parts > 0 and new_parts[#new_parts] ~= ".." then
         table.remove(new_parts)
@@ -472,9 +472,9 @@ function Path:absolute()
     return self._absolute
   end
 
-  local parts = resolve_dots(self.parts)
+  local relparts = resolve_dots(self.relparts)
   if self:is_absolute() then
-    self._absolute = self:_filename(nil, nil, parts)
+    self._absolute = self:_filename(nil, nil, relparts)
   else
     -- using fs_realpath over fnamemodify
     -- fs_realpath resolves symlinks whereas fnamemodify doesn't but we're
@@ -519,8 +519,8 @@ function Path:make_relative(to)
   -- SEE: `Path.relative_to` implementation (3.12) specifically `walk_up` param
 
   local matches = true
-  for i = 1, #to.parts do
-    if to.parts[i] ~= self.parts[i] then
+  for i = 1, #to.relparts do
+    if to.relparts[i] ~= self.relparts[i] then
       matches = false
       break
     end
