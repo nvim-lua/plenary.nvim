@@ -243,6 +243,7 @@ end
 ---@field parts string[] path parts excluding separators
 ---
 ---@field filename string
+---@field cwd string
 ---@field private _absolute string? lazy eval'ed fully resolved absolute path
 local Path = { path = path }
 
@@ -256,6 +257,26 @@ Path.__index = function(t, k)
     t.filename = t:_filename()
     return t.filename
   end
+
+  if k == "cwd" then
+    t.cwd = vim.fn.getcwd()
+    return t.cwd
+  end
+end
+
+Path.__div = function(self, other)
+  assert(Path.is_path(self))
+  assert(Path.is_path(other) or type(other) == "string")
+
+  return self:joinpath(other)
+end
+
+Path.__tostring = function(self)
+  return self.filename
+end
+
+Path.__concat = function(self, other)
+  return self.filename .. other
 end
 
 ---@alias plenary.Path2Args string|plenary.Path2|(string|plenary.Path2)[]
@@ -310,16 +331,15 @@ function Path:new(...)
       end
       error "'Path' object is read-only"
     end,
+    -- stylua: ignore start
+    __div = function(t, other) return Path.__div(t, other) end,
+    __concat = function(t, other) return Path.__concat(t, other) end,
+    __tostring = function(t) return Path.__tostring(t) end,
     __metatable = Path,
+    -- stylua: ignore end
   })
 
   return obj
-end
-
----@param x any
----@return boolean
-function Path.is_path(x)
-  return getmetatable(x) == Path
 end
 
 ---@private
@@ -344,6 +364,12 @@ function Path:_filename(drv, root, parts)
   return drv .. root .. relparts
 end
 
+---@param x any
+---@return boolean
+function Path.is_path(x)
+  return getmetatable(x) == Path
+end
+
 ---@return boolean
 function Path:is_absolute()
   if self.root == "" then
@@ -351,6 +377,16 @@ function Path:is_absolute()
   end
 
   return self._path.has_drv and self.drv ~= ""
+end
+
+--- if path doesn't exists, returns false
+---@return boolean
+function Path:is_dir()
+  local stat = uv.fs_stat(self:absolute())
+  if stat then
+    return stat.type == "directory"
+  end
+  return false
 end
 
 ---@param parts string[] path parts
@@ -373,6 +409,10 @@ local function resolve_dots(parts)
 end
 
 --- normalized and resolved absolute path
+---
+--- if given path doesn't exists and isn't already an absolute path, creates
+--- one using the cwd
+---
 --- respects 'shellslash' on Windows
 ---@return string
 function Path:absolute()
@@ -381,16 +421,17 @@ function Path:absolute()
   end
 
   local parts = resolve_dots(self.parts)
-  local filename = self:_filename(self.drv, self.root, parts)
   if self:is_absolute() then
-    self._absolute = filename
+    self._absolute = self:_filename(nil, nil, parts)
   else
     -- using fs_realpath over fnamemodify
     -- fs_realpath resolves symlinks whereas fnamemodify doesn't but we're
     -- resolving/normalizing the path anyways for reasons of compat with old Path
-    self._absolute = uv.fs_realpath(self:_filename())
+    local p = uv.fs_realpath(self:_filename()) or Path:new({ self.cwd, self }):absolute()
     if self.path.isshellslash then
-      self._absolute = self._absolute:gsub("\\", path.sep)
+      self._absolute = p:gsub("\\", path.sep)
+    else
+      self._absolute = p
     end
   end
   return self._absolute
