@@ -31,6 +31,7 @@ local hasshellslash = vim.fn.exists "+shellslash" == 1
 ---@field case_sensitive boolean
 ---@field convert_altsep fun(self: plenary._Path, p:string): string
 ---@field split_root fun(self: plenary._Path, part:string): string, string, string
+---@field join fun(self: plenary._Path, path: string, ...: string): string
 
 ---@class plenary._WindowsPath : plenary._Path
 local _WindowsPath = {
@@ -48,46 +49,107 @@ function _WindowsPath:convert_altsep(p)
   return (p:gsub(self.altsep, self.sep))
 end
 
----@param part string path with only `\` separators
+--- splits path into drive, root, and relative path components
+--- split_root('//server/share/') == { '//server/share', '/', '' }
+--- split_root('C:/Users/Barney') == { 'C:', '/', 'Users/Barney' }
+--- split_root('C:///spam///ham') == { 'C:', '/', '//spam///ham' }
+--- split_root('Windows/notepad') == { '', '', 'Windows/notepad' }
+--- https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats
+---@param p string path with only `\` separators
 ---@return string drv
 ---@return string root
 ---@return string relpath
-function _WindowsPath:split_root(part)
-  -- https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats
+function _WindowsPath:split_root(p)
+  p = self:convert_altsep(p)
+
   local unc_prefix = "\\\\?\\UNC\\"
-  local first, second = part:sub(1, 1), part:sub(2, 2)
+  local first, second = p:sub(1, 1), p:sub(2, 2)
 
   if first == self.sep then
     if second == self.sep then
       -- UNC drives, e.g. \\server\share or \\?\UNC\server\share
       -- Device drives, e.g. \\.\device or \\?\device
-      local start = part:sub(1, 8):upper() == unc_prefix and 8 or 2
-      local index = part:find(self.sep, start)
+      local start = p:sub(1, 8):upper() == unc_prefix and 8 or 2
+      local index = p:find(self.sep, start)
       if index == nil then
-        return part, "", "" -- paths only has drive info
+        return p, "", "" -- paths only has drive info
       end
 
-      local index2 = part:find(self.sep, index + 1)
+      local index2 = p:find(self.sep, index + 1)
       if index2 == nil then
-        return part, "", "" -- still paths only has drive info
+        return p, "", "" -- still paths only has drive info
       end
-      return part:sub(1, index2 - 1), self.sep, part:sub(index2 + 1)
+      return p:sub(1, index2 - 1), self.sep, p:sub(index2 + 1)
     else
       -- Relative path with root, eg. \Windows
-      return "", part:sub(1, 1), part:sub(2)
+      return "", p:sub(1, 1), p:sub(2)
     end
-  elseif part:sub(2, 2) == ":" then
-    if part:sub(3, 3) == self.sep then
+  elseif p:sub(2, 2) == ":" then
+    if p:sub(3, 3) == self.sep then
       -- absolute path with drive, eg. C:\Windows
-      return part:sub(1, 2), self.sep, part:sub(3)
+      return p:sub(1, 2), self.sep, p:sub(3)
     else
       -- relative path with drive, eg. C:Windows
-      return part:sub(1, 2), "", part:sub(3)
+      return p:sub(1, 2), "", p:sub(3)
     end
   else
     -- relative path, eg. Windows
-    return "", "", part
+    return "", "", p
   end
+end
+
+---@param path string
+---@param ... string
+---@return string
+function _WindowsPath:join(path, ...)
+  local paths = { ... }
+
+  local result_drive, result_root, result_path = self:split_root(path)
+  local parts = {}
+
+  if result_path ~= "" then
+    table.insert(parts, result_path)
+  end
+
+  for _, p in ipairs(paths) do
+    p = self:convert_altsep(p)
+    local p_drive, p_root, p_path = self:split_root(p)
+
+    if p_root ~= "" then
+      -- second path is absolute
+      if p_drive ~= "" or result_drive == "" then
+        result_drive = p_drive
+      end
+      result_root = p_root
+      parts = { p_path }
+    elseif p_drive ~= "" and p_drive:lower() ~= result_drive:lower() then
+      -- drive letter is case insensitive
+      -- here they don't match => ignore first path, later paths take precedence
+      result_drive, result_root, parts = p_drive, p_root, { p_path }
+    else
+      if p_drive ~= "" then
+        result_drive = p_drive
+      end
+
+      if #parts > 0 and parts[#parts]:sub(-1) ~= self.sep then
+        table.insert(parts, self.sep)
+      end
+
+      table.insert(parts, p_path)
+    end
+  end
+
+  local drv_last_ch = result_drive:sub(-1)
+  if
+    result_path ~= ""
+    and result_root == ""
+    and result_drive ~= ""
+    and not (drv_last_ch == self.sep or drv_last_ch == ":")
+  then
+    return result_drive .. self.sep .. table.concat(parts)
+  end
+
+  return result_drive .. result_root .. table.concat(parts)
 end
 
 ---@class plenary._PosixPath : plenary._Path
@@ -95,7 +157,7 @@ local _PosixPath = {
   sep = "/",
   altsep = "",
   has_drv = false,
-  case_sensitive = true,
+  case_sensitive = false,
 }
 setmetatable(_PosixPath, { __index = _PosixPath })
 
@@ -115,6 +177,40 @@ function _PosixPath:split_root(part)
   end
   return "", "", part
 end
+
+---@param path string
+---@param ... string
+---@return string
+function _PosixPath:join(path, ...)
+  local paths = { ... }
+  local parts = {}
+
+  if path ~= "" then
+    table.insert(parts, path)
+  end
+
+  for _, p in ipairs(paths) do
+    if p:sub(1, 1) == self.sep then
+      parts = { p } -- is absolute, ignore previous path, later paths take precedence
+    elseif path == "" or path:sub(-1) == self.sep then
+      table.insert(parts, p)
+    else
+      table.insert(parts, self.sep .. p)
+    end
+  end
+  return table.concat(parts)
+end
+
+--[[
+
+        for b in map(os.fspath, p):
+            if b.startswith(sep):
+                path = b
+            elif not path or path.endswith(sep):
+                path += b
+            else:
+                path += sep + b
+]]
 
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
@@ -181,44 +277,29 @@ end)()
 local function parse_parts(parts, _flavor)
   local drv, root, rel, parsed = "", "", "", {}
 
-  for i = #parts, 1, -1 do
-    local part = parts[i]
-    part = _flavor:convert_altsep(part)
+  if #parts == 0 then
+    return drv, root, parsed
+  end
 
-    drv, root, rel = _flavor:split_root(part)
+  local sep = _flavor.sep
+  local p = _flavor:join(unpack(parts))
+  drv, root, rel = _flavor:split_root(p)
 
-    if rel:match(_flavor.sep) then
-      local relparts = vim.split(rel, _flavor.sep)
-      for j = #relparts, 1, -1 do
-        local p = relparts[j]
-        if p ~= "" and p ~= "." then
-          table.insert(parsed, p)
-        end
-      end
-    else
-      if rel ~= "" and rel ~= "." then
-        table.insert(parsed, rel)
-      end
-    end
-
-    if drv ~= "" or root ~= "" then
-      if not drv then
-        for j = #parts, 1, -1 do
-          local p = parts[j]
-          p = _flavor:convert_altsep(p)
-          drv = _flavor:split_root(p)
-          if drv ~= "" then
-            break
-          end
-        end
-      end
-      break
+  if root == "" and drv:sub(1, 1) == sep and drv:sub(-1) ~= sep then
+    local drv_parts = vim.split(drv, sep)
+    if #drv_parts == 4 and not (drv_parts[3] == "?" or drv_parts[3] == ".") then
+      -- e.g. //server/share
+      root = sep
+    elseif #drv_parts == 6 then
+      -- e.g. //?/unc/server/share
+      root = sep
     end
   end
 
-  local n = #parsed
-  for i = 1, math.floor(n / 2) do
-    parsed[i], parsed[n - i + 1] = parsed[n - i + 1], parsed[i]
+  for part in vim.gsplit(rel, sep) do
+    if part ~= "" and part ~= "." then
+      table.insert(parsed, part)
+    end
   end
 
   return drv, root, parsed
@@ -282,13 +363,36 @@ end
 ---@return boolean
 Path.__eq = function(self, other)
   assert(Path.is_path(self))
-  assert(Path.is_path(other) or type(other) == "string")
-  -- TODO
-  -- if true then
-  --   error "not yet implemented"
-  -- end
-  return self.filename == other.filename
+
+  local oth_type_str = type(other) == "string"
+  assert(Path.is_path(other) or oth_type_str)
+
+  if oth_type_str then
+    other = Path:new(other)
+  end
+  ---@cast other plenary.Path2
+
+  return self:absolute() == other:absolute()
 end
+
+local _readonly_mt = {
+  __index = function(t, k)
+    return t.__inner[k]
+  end,
+  __newindex = function(t, k, val)
+    if k == "_absolute" then
+      t.__inner[k] = val
+      return
+    end
+    error "'Path' object is read-only"
+  end,
+    -- stylua: ignore start
+    __div = function(t, other) return Path.__div(t, other) end,
+    __tostring = function(t) return Path.__tostring(t) end,
+    __eq = function(t, other) return Path.__eq(t, other) end, -- this never gets called
+    __metatable = Path,
+  -- stylua: ignore end
+}
 
 ---@alias plenary.Path2Args string|plenary.Path2|(string|plenary.Path2)[]
 
@@ -329,24 +433,7 @@ function Path:new(...)
   setmetatable(proxy, Path)
 
   local obj = { __inner = proxy }
-  setmetatable(obj, {
-    __index = function(_, k)
-      return proxy[k]
-    end,
-    __newindex = function(_, k, val)
-      if k == "_absolute" then
-        proxy[k] = val
-        return
-      end
-      error "'Path' object is read-only"
-    end,
-    -- stylua: ignore start
-    __div = function(t, other) return Path.__div(t, other) end,
-    __tostring = function(t) return Path.__tostring(t) end,
-    __eq = function(t, other) return Path.__eq(t, other) end,
-    __metatable = Path,
-    -- stylua: ignore end
-  })
+  setmetatable(obj, _readonly_mt)
 
   return obj
 end
@@ -468,6 +555,14 @@ function Path:joinpath(...)
   return Path:new { self, ... }
 end
 
+---@return string[] # a list of the path's logical parents
+function Path:parents()
+  local res = {}
+  local abs = self:absolute()
+
+  return res
+end
+
 --- makes a path relative to another (by default the cwd).
 --- if path is already a relative path
 ---@param to string|plenary.Path2? absolute path to make relative to (default: cwd)
@@ -507,10 +602,5 @@ function Path:make_relative(to)
   -- /home/jt
 end
 
--- vim.o.shellslash = false
-local p = Path:new { "/mnt/c/Users/jtrew/neovim/plenary.nvim/README.md" }
-vim.print(p.drv, p.root, p.relparts)
-print(p.filename, p:is_absolute())
--- vim.o.shellslash = true
 
 return Path

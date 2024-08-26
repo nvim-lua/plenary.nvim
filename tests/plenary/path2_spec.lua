@@ -271,71 +271,71 @@ describe("Path2", function()
     end)
   end)
 
-  -- describe(":make_relative", function()
-  --   local root = iswin and "c:\\" or "/"
-  --   it_cross_plat("can take absolute paths and make them relative to the cwd", function()
-  --     local p = Path:new { "lua", "plenary", "path.lua" }
-  --     local absolute = vim.loop.cwd() .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative()
-  --     assert.are.same(p.filename, relative)
-  --   end)
+  describe(":make_relative", function()
+    local root = iswin and "c:\\" or "/"
+    -- it_cross_plat("can take absolute paths and make them relative to the cwd", function()
+    --   local p = Path:new { "lua", "plenary", "path.lua" }
+    --   local absolute = vim.loop.cwd() .. path.sep .. p.filename
+    --   local relative = Path:new(absolute):make_relative()
+    --   assert.are.same(p.filename, relative)
+    -- end)
 
-  --   it_cross_plat("can take absolute paths and make them relative to a given path", function()
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    -- it_cross_plat("can take absolute paths and make them relative to a given path", function()
+    --   local r = Path:new { root, "home", "prime" }
+    --   local p = Path:new { "aoeu", "agen.lua" }
+    --   local absolute = r.filename .. path.sep .. p.filename
+    --   local relative = Path:new(absolute):make_relative(r.filename)
+    --   assert.are.same(relative, p.filename)
+    -- end)
 
-  --   it_cross_plat("can take double separator absolute paths and make them relative to the cwd", function()
-  --     local p = Path:new { "lua", "plenary", "path.lua" }
-  --     local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative()
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    -- it_cross_plat("can take double separator absolute paths and make them relative to the cwd", function()
+    --   local p = Path:new { "lua", "plenary", "path.lua" }
+    --   local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
+    --   local relative = Path:new(absolute):make_relative()
+    --   assert.are.same(relative, p.filename)
+    -- end)
 
-  --   it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    -- it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
+    --   local r = Path:new { root, "home", "prime" }
+    --   local p = Path:new { "aoeu", "agen.lua" }
+    --   local absolute = r.filename .. path.sep .. path.sep .. p.filename
+    --   local relative = Path:new(absolute):make_relative(r.filename)
+    --   assert.are.same(relative, p.filename)
+    -- end)
 
-  --   it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
-  --     local r = Path:new { root, "home", "prime" }
-  --     local p = Path:new { "aoeu", "agen.lua" }
-  --     local absolute = r.filename .. path.sep .. p.filename
-  --     local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    -- it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
+    --   local r = Path:new { root, "home", "prime" }
+    --   local p = Path:new { "aoeu", "agen.lua" }
+    --   local absolute = r.filename .. path.sep .. p.filename
+    --   local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
+    --   assert.are.same(relative, p.filename)
+    -- end)
 
-  --   it_cross_plat("can take absolute paths and make them relative to the root directory", function()
-  --     local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
-  --     local absolute = root .. p.filename
-  --     local relative = Path:new(absolute):make_relative(root)
-  --     assert.are.same(relative, p.filename)
-  --   end)
+    -- it_cross_plat("can take absolute paths and make them relative to the root directory", function()
+    --   local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
+    --   local absolute = root .. p.filename
+    --   local relative = Path:new(absolute):make_relative(root)
+    --   assert.are.same(relative, p.filename)
+    -- end)
 
-  --   it_cross_plat("can take absolute paths and make them relative to themselves", function()
-  --     local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
-  --     local relative = Path:new(p.filename):make_relative(p.filename)
-  --     assert.are.same(relative, ".")
-  --   end)
+    -- it_cross_plat("can take absolute paths and make them relative to themselves", function()
+    --   local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
+    --   local relative = Path:new(p.filename):make_relative(p.filename)
+    --   assert.are.same(relative, ".")
+    -- end)
 
-  --   it_cross_plat("should not truncate if path separator is not present after cwd", function()
-  --     local cwd = "tmp" .. path.sep .. "foo"
-  --     local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-  --     local relative = Path:new(p.filename):make_relative(cwd)
-  --     assert.are.same(p.filename, relative)
-  --   end)
+    -- it_cross_plat("should not truncate if path separator is not present after cwd", function()
+    --   local cwd = "tmp" .. path.sep .. "foo"
+    --   local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
+    --   local relative = Path:new(p.filename):make_relative(cwd)
+    --   assert.are.same(p.filename, relative)
+    -- end)
 
-  --   it_cross_plat("should not truncate if path separator is not present after cwd and cwd ends in path sep", function()
-  --     local cwd = "tmp" .. path.sep .. "foo" .. path.sep
-  --     local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-  --     local relative = Path:new(p.filename):make_relative(cwd)
-  --     assert.are.same(p.filename, relative)
-  --   end)
-  -- end)
+    -- it_cross_plat("should not truncate if path separator is not present after cwd and cwd ends in path sep", function()
+    --   local cwd = "tmp" .. path.sep .. "foo" .. path.sep
+    --   local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
+    --   local relative = Path:new(p.filename):make_relative(cwd)
+    --   assert.are.same(p.filename, relative)
+    -- end)
+  end)
 end)
