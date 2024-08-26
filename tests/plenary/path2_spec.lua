@@ -49,6 +49,7 @@ describe("Path2", function()
   describe("filename", function()
     local function get_paths()
       local readme_path = vim.fn.fnamemodify("README.md", ":p")
+      local license_path = vim.fn.fnamemodify("LICENSE", ":p")
 
       ---@type [string[]|string, string][]
       local paths = {
@@ -60,6 +61,7 @@ describe("Path2", function()
         { "./lua//..//README.md", "lua/../README.md" },
         { "foo/bar/", "foo/bar" },
         { { readme_path }, readme_path },
+        { { readme_path, license_path }, license_path }, -- takes only the last abs path
       }
 
       return paths
@@ -70,7 +72,7 @@ describe("Path2", function()
         local input, expect = tc[1], tc[2]
         it(vim.inspect(input), function()
           local p = Path:new(input)
-          assert.are.same(expect, p.filename, p.parts)
+          assert.are.same(expect, p.filename, p.relparts)
         end)
       end
     end
@@ -107,6 +109,8 @@ describe("Path2", function()
           { [[foo/bar\baz]], [[foo/bar/baz]] },
           { [[\\.\C:\Test\Foo.txt]], [[//./C:/Test/Foo.txt]] },
           { [[\\?\C:\Test\Foo.txt]], [[//?/C:/Test/Foo.txt]] },
+          { [[\\.\UNC\Server\Share\Test\Foo.txt]], [[//./UNC/Server/Share/Test/Foo.txt]] },
+          { [[\\?\UNC\Server\Share\Test\Foo.txt]], [[//?/UNC/Server/Share/Test/Foo.txt]] },
           { "/foo/bar/baz", "foo/bar/baz" },
         }
         vim.list_extend(paths, get_paths())

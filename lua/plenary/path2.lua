@@ -18,7 +18,6 @@
 ---   to this. Allows us to compute `filename` from "metadata" parsed once on
 ---   instantiation.
 
---- TODO: rework `split_root` logic according to python 3.12
 --- TODO: rework `_filename` according to `_format_parsed_parts`
 
 local uv = vim.loop
@@ -49,76 +48,46 @@ function _WindowsPath:convert_altsep(p)
   return (p:gsub(self.altsep, self.sep))
 end
 
----@param part string path
+---@param part string path with only `\` separators
 ---@return string drv
 ---@return string root
 ---@return string relpath
 function _WindowsPath:split_root(part)
   -- https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats
-  local prefix = ""
+  local unc_prefix = "\\\\?\\UNC\\"
   local first, second = part:sub(1, 1), part:sub(2, 2)
 
-  if first == self.sep and second == self.sep then
-    prefix, part = self:_split_extended_path(part)
-    first, second = part:sub(1, 1), part:sub(2, 2)
-  end
-
-  local third = part:sub(3, 3)
-
-  if first == self.sep and second == self.sep and third ~= self.sep then
-    -- is a UNC path:
-    -- vvvvvvvvvvvvvvvvvvvvv root
-    -- \\machine\mountpoint\directory\etc\...
-    --            directory ^^^^^^^^^^^^^^
-
-    local index = part:find(self.sep, 3)
-    if index ~= nil then
-      local index2 = part:find(self.sep, index + 1)
-      if index2 ~= index + 1 then
-        if index2 == nil then
-          index2 = #part
-        end
-
-        if prefix ~= "" then
-          return prefix + part:sub(2, index2 - 1), self.sep, part:sub(index2 + 1)
-        else
-          return part:sub(1, index2 - 1), self.sep, part:sub(index2 + 1)
-        end
-      end
-    end
-  end
-
-  local drv, root = "", ""
-  if second == ":" and first:match "%a" then
-    drv, part = part:sub(1, 2), part:sub(3)
-    first = third
-  end
-
   if first == self.sep then
-    root = first
-    part = part:gsub("^" .. self.sep .. "+", "")
-  end
+    if second == self.sep then
+      -- UNC drives, e.g. \\server\share or \\?\UNC\server\share
+      -- Device drives, e.g. \\.\device or \\?\device
+      local start = part:sub(1, 8):upper() == unc_prefix and 8 or 2
+      local index = part:find(self.sep, start)
+      if index == nil then
+        return part, "", "" -- paths only has drive info
+      end
 
-  return prefix .. drv, root, part
-end
-
----@param p string path
----@return string
----@return string
-function _WindowsPath:_split_extended_path(p)
-  local ext_prefix = [[\\?\]]
-  local prefix = ""
-
-  if p:sub(1, #ext_prefix) == ext_prefix then
-    prefix = p:sub(1, 4)
-    p = p:sub(5)
-    if p:sub(1, 3) == "UNC" .. self.sep then
-      prefix = prefix .. p:sub(1, 3)
-      p = self.sep .. p:sub(4)
+      local index2 = part:find(self.sep, index + 1)
+      if index2 == nil then
+        return part, "", "" -- still paths only has drive info
+      end
+      return part:sub(1, index2 - 1), self.sep, part:sub(index2 + 1)
+    else
+      -- Relative path with root, eg. \Windows
+      return "", part:sub(1, 1), part:sub(2)
     end
+  elseif part:sub(2, 2) == ":" then
+    if part:sub(3, 3) == self.sep then
+      -- absolute path with drive, eg. C:\Windows
+      return part:sub(1, 2), self.sep, part:sub(3)
+    else
+      -- relative path with drive, eg. C:Windows
+      return part:sub(1, 2), "", part:sub(3)
+    end
+  else
+    -- relative path, eg. Windows
+    return "", "", part
   end
-
-  return prefix, p
 end
 
 ---@class plenary._PosixPath : plenary._Path
@@ -206,21 +175,21 @@ path.root = (function()
 end)()
 
 ---@param parts string[]
----@param _path plenary._Path
+---@param _flavor plenary._Path
 ---@return string drv
 ---@return string root
 ---@return string[]
-local function parse_parts(parts, _path)
+local function parse_parts(parts, _flavor)
   local drv, root, rel, parsed = "", "", "", {}
 
   for i = #parts, 1, -1 do
     local part = parts[i]
-    part = _path:convert_altsep(part)
+    part = _flavor:convert_altsep(part)
 
-    drv, root, rel = _path:split_root(part)
+    drv, root, rel = _flavor:split_root(part)
 
-    if rel:match(_path.sep) then
-      local relparts = vim.split(rel, _path.sep)
+    if rel:match(_flavor.sep) then
+      local relparts = vim.split(rel, _flavor.sep)
       for j = #relparts, 1, -1 do
         local p = relparts[j]
         if p ~= "" and p ~= "." then
@@ -233,19 +202,18 @@ local function parse_parts(parts, _path)
       end
     end
 
-    if drv or root then
+    if drv ~= "" or root ~= "" then
       if not drv then
-        for k = #parts, 1, -1 do
-          local p = parts[k]
-          p = _path:convert_altsep(p)
-          drv = _path:split_root(p)
-          if drv then
+        for j = #parts, 1, -1 do
+          local p = parts[j]
+          p = _flavor:convert_altsep(p)
+          drv = _flavor:split_root(p)
+          if drv ~= "" then
             break
           end
         end
-
-        break
       end
+      break
     end
   end
 
@@ -259,20 +227,28 @@ end
 
 ---@class plenary.Path2
 ---@field path plenary.path2
----@field private _path plenary._Path
+---@field private _flavor plenary._Path
+---@field private _raw_parts string[]
 ---@field drv string drive name, eg. 'C:' (only for Windows)
 ---@field root string root path (excludes drive name)
----@field relparts string[] relative path parts excluding separators
+---@field relparts string[] path separator separated relative path parts
 ---
 ---@field filename string
 ---@field cwd string
 ---@field private _absolute string? lazy eval'ed fully resolved absolute path
 local Path = { path = path }
 
+---@param t plenary.Path2
+---@param k string
 Path.__index = function(t, k)
   local raw = rawget(Path, k)
   if raw then
     return raw
+  end
+
+  if k == "drv" or k == "root" or k == "relparts" then
+    t.drv, t.root, t.relparts = parse_parts(t._raw_parts, t._flavor)
+    return rawget(t, k)
   end
 
   if k == "filename" then
@@ -337,22 +313,20 @@ function Path:new(...)
     end
   end
 
-  local relparts = {}
+  local raw_parts = {}
   for _, a in ipairs(args) do
     if self.is_path(a) then
-      vim.list_extend(relparts, a.relparts)
+      vim.list_extend(raw_parts, a._raw_parts)
     else
       if a ~= "" then
-        table.insert(relparts, a)
+        table.insert(raw_parts, a)
       end
     end
   end
 
-  local _path = iswin and _WindowsPath or _PosixPath
-  local drv, root
-  drv, root, relparts = parse_parts(relparts, _path)
+  local _flavor = iswin and _WindowsPath or _PosixPath
 
-  local proxy = { _path = _path, drv = drv, root = root, relparts = relparts }
+  local proxy = { _flavor = _flavor, _raw_parts = raw_parts }
   setmetatable(proxy, Path)
 
   local obj = { __inner = proxy }
@@ -385,9 +359,9 @@ end
 ---@return string
 function Path:_filename(drv, root, relparts)
   drv = vim.F.if_nil(drv, self.drv)
-  drv = self.drv ~= "" and self.drv:gsub(self._path.sep, path.sep) or ""
+  drv = self.drv ~= "" and self.drv:gsub(self._flavor.sep, path.sep) or ""
 
-  if self._path.has_drv and drv == "" then
+  if self._flavor.has_drv and drv == "" then
     root = ""
   else
     root = vim.F.if_nil(root, self.root)
@@ -395,7 +369,7 @@ function Path:_filename(drv, root, relparts)
   end
 
   relparts = vim.F.if_nil(relparts, self.relparts)
-  local relpath = table.concat(relparts,  path.sep)
+  local relpath = table.concat(relparts, path.sep)
 
   return drv .. root .. relpath
 end
@@ -412,7 +386,7 @@ function Path:is_absolute()
     return false
   end
 
-  return self._path.has_drv and self.drv ~= ""
+  return self._flavor.has_drv and self.drv ~= ""
 end
 
 ---@return boolean
@@ -535,8 +509,8 @@ function Path:make_relative(to)
 end
 
 -- vim.o.shellslash = false
--- vim.print(p)
--- print(p.filename, p:is_absolute(), p:absolute())
+local p = Path:new { "C:", "lua", "..", "README.md" }
+print(p.filename)
 -- vim.o.shellslash = true
 
 return Path
