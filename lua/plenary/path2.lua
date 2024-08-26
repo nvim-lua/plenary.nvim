@@ -110,9 +110,8 @@ end
 ---@return string root
 ---@return string relpath
 function _PosixPath:split_root(part)
-  if part:sub(1) == self.sep then
-    part = (part:gsub("^" .. self.sep, ""))
-    return "", self.sep, part:sub(2, #part)
+  if part:sub(1, 1) == self.sep then
+    return "", self.sep, part:sub(2)
   end
   return "", "", part
 end
@@ -386,7 +385,7 @@ function Path:is_absolute()
     return false
   end
 
-  return self._flavor.has_drv and self.drv ~= ""
+  return not self._flavor.has_drv or self.drv ~= ""
 end
 
 ---@return boolean
@@ -509,8 +508,9 @@ function Path:make_relative(to)
 end
 
 -- vim.o.shellslash = false
-local p = Path:new { "C:", "lua", "..", "README.md" }
-print(p.filename)
+local p = Path:new { "/mnt/c/Users/jtrew/neovim/plenary.nvim/README.md" }
+vim.print(p.drv, p.root, p.relparts)
+print(p.filename, p:is_absolute())
 -- vim.o.shellslash = true
 
 return Path
