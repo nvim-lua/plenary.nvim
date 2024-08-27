@@ -1,6 +1,6 @@
 local Path = require "plenary.path2"
 local path = Path.path
--- local compat = require "plenary.compat"
+local compat = require "plenary.compat"
 local iswin = vim.loop.os_uname().sysname == "Windows_NT"
 
 local hasshellslash = vim.fn.exists "+shellslash" == 1
@@ -12,25 +12,21 @@ local function set_shellslash(bool)
   end
 end
 
-local function it_ssl(name, test_fn)
-  if not hasshellslash then
-    it(name, test_fn)
-  else
-    local orig = vim.o.shellslash
-    vim.o.shellslash = true
-    it(name .. " - shellslash", test_fn)
-
-    vim.o.shellslash = false
-    it(name .. " - noshellslash", test_fn)
-    vim.o.shellslash = orig
-  end
-end
-
 local function it_cross_plat(name, test_fn)
   if not iswin then
     it(name .. " - unix", test_fn)
   else
-    it_ssl(name .. " - windows", test_fn)
+    if not hasshellslash then
+      it(name .. " - windows", test_fn)
+    else
+      local orig = vim.o.shellslash
+      vim.o.shellslash = true
+      it(name .. " - windows (shellslash)", test_fn)
+
+      vim.o.shellslash = false
+      it(name .. " - windows (noshellslash)", test_fn)
+      vim.o.shellslash = orig
+    end
   end
 end
 
@@ -179,7 +175,7 @@ describe("Path2", function()
 
       local function get_windows_paths()
         local nossl = hasshellslash and not vim.o.shellslash
-        local drive = Path:new(vim.loop.cwd()).drv
+        local drive = Path:new(vim.fn.getcwd()).drv
         local readme_path = vim.fn.fnamemodify("README.md", ":p")
 
         ---@type [string[]|string, string, boolean][]
@@ -273,56 +269,56 @@ describe("Path2", function()
 
   describe(":make_relative", function()
     local root = iswin and "c:\\" or "/"
-    -- it_cross_plat("can take absolute paths and make them relative to the cwd", function()
-    --   local p = Path:new { "lua", "plenary", "path.lua" }
-    --   local absolute = vim.loop.cwd() .. path.sep .. p.filename
-    --   local relative = Path:new(absolute):make_relative()
+    it_cross_plat("can take absolute paths and make them relative to the cwd", function()
+      local p = Path:new { "lua", "plenary", "path.lua" }
+      local absolute = vim.fn.getcwd() .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(p.filename, relative)
+    end)
+
+    it_cross_plat("can take absolute paths and make them relative to a given path", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(p.filename, relative)
+    end)
+
+    it_cross_plat("can take double separator absolute paths and make them relative to the cwd", function()
+      local p = Path:new { "lua", "plenary", "path.lua" }
+      local absolute = vim.fn.getcwd() .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative()
+      assert.are.same(p.filename, relative)
+    end)
+
+    it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename)
+      assert.are.same(p.filename, relative)
+    end)
+
+    it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
+      local r = Path:new { root, "home", "prime" }
+      local p = Path:new { "aoeu", "agen.lua" }
+      local absolute = r.filename .. path.sep .. p.filename
+      local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
+      assert.are.same(p.filename, relative)
+    end)
+
+    -- it_cross_plat("can take absolute paths and make them relative to the root directory", function()
+    --   local p = Path:new { root, "prime", "aoeu", "agen.lua" }
+    --   local absolute = root .. p.filename
+    --   local relative = Path:new(absolute):make_relative(root)
     --   assert.are.same(p.filename, relative)
     -- end)
 
-    -- it_cross_plat("can take absolute paths and make them relative to a given path", function()
-    --   local r = Path:new { root, "home", "prime" }
-    --   local p = Path:new { "aoeu", "agen.lua" }
-    --   local absolute = r.filename .. path.sep .. p.filename
-    --   local relative = Path:new(absolute):make_relative(r.filename)
-    --   assert.are.same(relative, p.filename)
-    -- end)
-
-    -- it_cross_plat("can take double separator absolute paths and make them relative to the cwd", function()
-    --   local p = Path:new { "lua", "plenary", "path.lua" }
-    --   local absolute = vim.loop.cwd() .. path.sep .. path.sep .. p.filename
-    --   local relative = Path:new(absolute):make_relative()
-    --   assert.are.same(relative, p.filename)
-    -- end)
-
-    -- it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
-    --   local r = Path:new { root, "home", "prime" }
-    --   local p = Path:new { "aoeu", "agen.lua" }
-    --   local absolute = r.filename .. path.sep .. path.sep .. p.filename
-    --   local relative = Path:new(absolute):make_relative(r.filename)
-    --   assert.are.same(relative, p.filename)
-    -- end)
-
-    -- it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
-    --   local r = Path:new { root, "home", "prime" }
-    --   local p = Path:new { "aoeu", "agen.lua" }
-    --   local absolute = r.filename .. path.sep .. p.filename
-    --   local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
-    --   assert.are.same(relative, p.filename)
-    -- end)
-
-    -- it_cross_plat("can take absolute paths and make them relative to the root directory", function()
-    --   local p = Path:new { "home", "prime", "aoeu", "agen.lua" }
-    --   local absolute = root .. p.filename
-    --   local relative = Path:new(absolute):make_relative(root)
-    --   assert.are.same(relative, p.filename)
-    -- end)
-
-    -- it_cross_plat("can take absolute paths and make them relative to themselves", function()
-    --   local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
-    --   local relative = Path:new(p.filename):make_relative(p.filename)
-    --   assert.are.same(relative, ".")
-    -- end)
+    it_cross_plat("can take absolute paths and make them relative to themselves", function()
+      local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
+      local relative = Path:new(p.filename):make_relative(p.filename)
+      assert.are.same(".", relative)
+    end)
 
     -- it_cross_plat("should not truncate if path separator is not present after cwd", function()
     --   local cwd = "tmp" .. path.sep .. "foo"
@@ -337,5 +333,22 @@ describe("Path2", function()
     --   local relative = Path:new(p.filename):make_relative(cwd)
     --   assert.are.same(p.filename, relative)
     -- end)
+  end)
+
+  describe("parents", function()
+    it_cross_plat("should extract the ancestors of the path", function()
+      local p = Path:new(vim.fn.getcwd())
+      local parents = p:parents()
+      assert(compat.islist(parents))
+      for _, parent in pairs(parents) do
+        assert.are.same(type(parent), "string")
+      end
+    end)
+
+    it_cross_plat("should return itself if it corresponds to path.root", function()
+      local p = Path:new(Path.path.root(vim.fn.getcwd()))
+      assert.are.same(p:absolute(), p:parent():absolute())
+      -- assert.are.same(p, p:parent())
+    end)
   end)
 end)

@@ -263,8 +263,8 @@ path.root = (function()
   else
     return function(base)
       base = base or path.home
-      local _, root, _ = _WindowsPath:split_root(base)
-      return root
+      local drv, root, _ = _WindowsPath:split_root(base)
+      return ((drv .. root):gsub("\\", path.sep))
     end
   end
 end)()
@@ -309,10 +309,10 @@ end
 ---@field path plenary.path2
 ---@field private _flavor plenary._Path
 ---@field private _raw_parts string[]
----@field drv string drive name, eg. 'C:' (only for Windows)
----@field root string root path (excludes drive name)
+---@field drv string drive name, eg. 'C:' (only for Windows, empty string for Posix)
+---@field root string root path (excludes drive name for Windows)
 ---@field relparts string[] path separator separated relative path parts
----
+---@field sep string path separator (respects 'shellslash' on Windows)
 ---@field filename string
 ---@field cwd string
 ---@field private _absolute string? lazy eval'ed fully resolved absolute path
@@ -334,6 +334,10 @@ Path.__index = function(t, k)
   if k == "filename" then
     t.filename = t:_filename()
     return t.filename
+  end
+
+  if k == "sep" then
+    return path.sep
   end
 
   if k == "cwd" then
@@ -445,17 +449,17 @@ end
 ---@return string
 function Path:_filename(drv, root, relparts)
   drv = vim.F.if_nil(drv, self.drv)
-  drv = self.drv ~= "" and self.drv:gsub(self._flavor.sep, path.sep) or ""
+  drv = self.drv ~= "" and self.drv:gsub(self._flavor.sep, self.sep) or ""
 
   if self._flavor.has_drv and drv == "" then
     root = ""
   else
     root = vim.F.if_nil(root, self.root)
-    root = self.root ~= "" and path.sep:rep(#self.root) or ""
+    root = self.root ~= "" and self.sep:rep(#self.root) or ""
   end
 
   relparts = vim.F.if_nil(relparts, self.relparts)
-  local relpath = table.concat(relparts, path.sep)
+  local relpath = table.concat(relparts, self.sep)
 
   return drv .. root .. relpath
 end
@@ -538,10 +542,11 @@ function Path:absolute()
   else
     -- using fs_realpath over fnamemodify
     -- fs_realpath resolves symlinks whereas fnamemodify doesn't but we're
-    -- resolving/normalizing the path anyways for reasons of compat with old Path
+    -- resolving/normalizing the path anyways for reasons of compat with old
+    -- Path
     local p = uv.fs_realpath(self:_filename()) or Path:new({ self.cwd, self }):absolute()
     if self.path.isshellslash then
-      self._absolute = p:gsub("\\", path.sep)
+      self._absolute = p:gsub("\\", self.sep)
     else
       self._absolute = p
     end
@@ -555,52 +560,118 @@ function Path:joinpath(...)
   return Path:new { self, ... }
 end
 
+---@return plenary.Path2
+function Path:parent()
+  local parent = self:iter_parents()()
+  if parent == nil then
+    return Path:new(self.filename)
+  end
+  return Path:new(parent)
+end
+
+--- a list of the path's logical parents.
+--- path is made absolute using cwd if relative
 ---@return string[] # a list of the path's logical parents
 function Path:parents()
   local res = {}
-  local abs = self:absolute()
-
+  for p in self:iter_parents() do
+    table.insert(res, p)
+  end
   return res
 end
 
---- makes a path relative to another (by default the cwd).
---- if path is already a relative path
----@param to string|plenary.Path2? absolute path to make relative to (default: cwd)
----@return string
-function Path:make_relative(to)
-  to = vim.F.if_nil(to, self.cwd)
-  if type(to) == "string" then
+---@return fun(): string? # iterator function
+function Path:iter_parents()
+  local abs = Path:new(self:absolute())
+  local root_part = abs.drv .. abs.root
+  root_part = self.path.isshellslash and root_part:gsub("\\", self.sep) or root_part
+
+  local root_sent = #abs.relparts == 0
+  return function()
+    table.remove(abs.relparts)
+    if #abs.relparts < 1 then
+      if not root_sent then
+        root_sent = true
+        return root_part
+      end
+      return nil
+    end
+    return root_part .. table.concat(abs.relparts, self.sep)
+  end
+end
+
+--- return true if the path is relative to another, otherwise false
+---@param to plenary.Path2|string path to compare to
+---@return boolean
+function Path:is_relative(to)
+  if not Path.is_path(to) then
     to = Path:new(to)
   end
+  ---@cast to plenary.Path2
 
-  if self:is_absolute() then
-    local to_abs = to:absolute()
+  local to_abs = to:absolute()
+  return self:absolute():sub(1, #to_abs) == to_abs
+end
 
-    if to_abs == self:absolute() then
+--- makes a path relative to another (by default the cwd).
+--- if path is already a relative path, it will first be turned absolute using
+--- the cwd then made relative to the `to` path.
+---@param to string|plenary.Path2? absolute path to make relative to (default: cwd)
+---@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
+---@return string
+function Path:make_relative(to, walk_up)
+  walk_up = vim.F.if_nil(walk_up, false)
+
+  if to == nil then
+    if not self:is_absolute() then
       return "."
-    else
-      -- TODO
     end
-  else
+
+    to = Path:new(self.cwd)
+  elseif type(to) == "string" then
+    to = Path:new(to) ---@cast to plenary.Path2
   end
 
-  -- SEE: `Path.relative_to` implementation (3.12) specifically `walk_up` param
+  local abs = self:absolute()
+  if abs == to:absolute() then
+    return "."
+  end
 
-  local matches = true
-  for i = 1, #to.relparts do
-    if to.relparts[i] ~= self.relparts[i] then
-      matches = false
+  if self:is_relative(to) then
+    return Path:new(abs:sub(#to:absolute() + 1)).filename
+  end
+
+  if not walk_up then
+    error(string.format("'%s' is not in the subpath of '%s'", self, to))
+  end
+
+  local steps = {}
+  local common_path
+  for parent in to:iter_parents() do
+    table.insert(steps, "..")
+    print(parent, abs)
+    if abs:sub(1, #parent) == parent then
+      common_path = parent
       break
     end
   end
 
-  if matches then
-    return "."
+  if not common_path then
+    error(string.format("'%s' and '%s' have different anchors", self, to))
   end
 
-  -- /home/jt/foo/bar/baz
-  -- /home/jt
+  local res_path = abs:sub(#common_path + 1)
+  return table.concat(steps, self.sep) .. res_path
 end
 
+-- vim.o.shellslash = false
+
+local root = "C:/"
+local p = Path:new(Path.path.root(vim.fn.getcwd()))
+vim.print("p parent", p.filename, p:parents(), p:parent().filename)
+-- local absolute = p:absolute()
+-- local relative = Path:new(absolute):make_relative(Path:new "C:/Windows", true)
+-- print(p.filename, absolute, relative)
+vim.o.shellslash = true
 
 return Path
