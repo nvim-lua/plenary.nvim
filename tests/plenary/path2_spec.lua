@@ -307,12 +307,12 @@ describe("Path2", function()
       assert.are.same(p.filename, relative)
     end)
 
-    -- it_cross_plat("can take absolute paths and make them relative to the root directory", function()
-    --   local p = Path:new { root, "prime", "aoeu", "agen.lua" }
-    --   local absolute = root .. p.filename
-    --   local relative = Path:new(absolute):make_relative(root)
-    --   assert.are.same(p.filename, relative)
-    -- end)
+    it_cross_plat("can take absolute paths and make them relative to the root directory", function()
+      local p = Path:new { root, "prime", "aoeu", "agen.lua" }
+      local absolute = root .. p.filename
+      local relative = Path:new(absolute):make_relative(root)
+      assert.are.same(p.filename, relative)
+    end)
 
     it_cross_plat("can take absolute paths and make them relative to themselves", function()
       local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
@@ -320,19 +320,18 @@ describe("Path2", function()
       assert.are.same(".", relative)
     end)
 
-    -- it_cross_plat("should not truncate if path separator is not present after cwd", function()
-    --   local cwd = "tmp" .. path.sep .. "foo"
-    --   local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-    --   local relative = Path:new(p.filename):make_relative(cwd)
-    --   assert.are.same(p.filename, relative)
-    -- end)
+    it_cross_plat("should fail to make relative a path to somewhere not in the subpath", function()
+      assert.has_error(function()
+        _ = Path:new({ "tmp", "foo_bar", "fileb.lua" }):make_relative(Path:new { "tmp", "foo" })
+      end)
+    end)
 
-    -- it_cross_plat("should not truncate if path separator is not present after cwd and cwd ends in path sep", function()
-    --   local cwd = "tmp" .. path.sep .. "foo" .. path.sep
-    --   local p = Path:new { "tmp", "foo_bar", "fileb.lua" }
-    --   local relative = Path:new(p.filename):make_relative(cwd)
-    --   assert.are.same(p.filename, relative)
-    -- end)
+    it_cross_plat("can walk upwards out of current subpath", function()
+      local p = Path:new { "foo", "bar", "baz" }
+      local cwd = Path:new { "foo", "foo_inner" }
+      local expect = Path:new { "..", "bar", "baz" }
+      assert.are.same(expect.filename, p:make_relative(cwd, true))
+    end)
   end)
 
   describe("parents", function()

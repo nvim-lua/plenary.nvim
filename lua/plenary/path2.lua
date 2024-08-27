@@ -17,8 +17,18 @@
 ---   things like `path.filename = 'foo'` but now explicitly adding some barrier
 ---   to this. Allows us to compute `filename` from "metadata" parsed once on
 ---   instantiation.
-
---- TODO: rework `_filename` according to `_format_parsed_parts`
+---
+--- - FIX: `Path:make_relative` throws error if you try to make a path relative
+---   to another path that is not in the same subpath.
+---
+---   eg. `Path:new("foo/bar_baz"):make_relative("foo/bar")` => errors as you
+---   can't get to "foo/bar_baz" from "foo/bar" without going up in directory.
+---   This would previously return "foo/bar_baz" which is wrong.
+---
+---   Adds an option to walk up path to compensate.
+---
+---   eg. `Path:new("foo/bar_baz"):make_relative("foo/bar", true)` => returns
+---   "../bar_baz"
 
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
@@ -609,8 +619,21 @@ function Path:is_relative(to)
   end
   ---@cast to plenary.Path2
 
+  if to == self then
+    return true
+  end
+
+  -- NOTE: could probably be optimized by letting _WindowsPath/_WindowsPath
+  -- handle this.
+
   local to_abs = to:absolute()
-  return self:absolute():sub(1, #to_abs) == to_abs
+  for parent in self:iter_parents() do
+    if to_abs == parent then
+      return true
+    end
+  end
+
+  return false
 end
 
 --- makes a path relative to another (by default the cwd).
@@ -620,6 +643,11 @@ end
 ---@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
 ---@return string
 function Path:make_relative(to, walk_up)
+  -- NOTE: could probably take some shortcuts and avoid some `Path:new` calls
+  -- by allowing _WindowsPath/_PosixPath handle this individually.
+  -- As always, Windows root complicates things, so generating a new Path often
+  -- easier/less error prone than manual string manipulate but at the cost of
+  -- perf.
   walk_up = vim.F.if_nil(walk_up, false)
 
   if to == nil then
@@ -649,7 +677,6 @@ function Path:make_relative(to, walk_up)
   local common_path
   for parent in to:iter_parents() do
     table.insert(steps, "..")
-    print(parent, abs)
     if abs:sub(1, #parent) == parent then
       common_path = parent
       break
@@ -660,18 +687,9 @@ function Path:make_relative(to, walk_up)
     error(string.format("'%s' and '%s' have different anchors", self, to))
   end
 
-  local res_path = abs:sub(#common_path + 1)
-  return table.concat(steps, self.sep) .. res_path
+  local res_path = abs:sub(#common_path + 1):gsub("^" .. self.sep, "")
+  table.insert(steps, res_path)
+  return Path:new(steps).filename
 end
-
--- vim.o.shellslash = false
-
-local root = "C:/"
-local p = Path:new(Path.path.root(vim.fn.getcwd()))
-vim.print("p parent", p.filename, p:parents(), p:parent().filename)
--- local absolute = p:absolute()
--- local relative = Path:new(absolute):make_relative(Path:new "C:/Windows", true)
--- print(p.filename, absolute, relative)
-vim.o.shellslash = true
 
 return Path
