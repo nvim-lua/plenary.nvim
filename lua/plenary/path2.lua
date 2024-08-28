@@ -230,7 +230,7 @@ local S_IF = {
 }
 
 ---@class plenary.path2
----@field home string home directory path
+---@field home string? home directory path
 ---@field sep string OS path separator respecting 'shellslash'
 ---@field isshellslash boolean whether shellslash is on (always false on unix systems)
 ---
@@ -241,7 +241,6 @@ local S_IF = {
 ---@field root fun(base: string?):string
 ---@field S_IF { DIR: integer, REG: integer } stat filetype bitmask
 local path = setmetatable({
-  home = vim.fn.getcwd(), -- respects shellslash unlike vim.uv.cwd()
   S_IF = S_IF,
 }, {
   __index = function(t, k)
@@ -261,6 +260,19 @@ local path = setmetatable({
       end
 
       return t.isshellslash and "/" or "\\"
+    end
+
+    if k == "home" then
+      if not iswin then
+        t.home = uv.os_homedir()
+        return t.home
+      end
+
+      local home = uv.os_homedir()
+      if home == nil then
+        return home
+      end
+      return (home:gsub("\\", t.sep))
     end
   end,
 })
