@@ -394,6 +394,70 @@ describe("Path2", function()
     end)
   end)
 
+  local function assert_permission(expect, actual)
+    if iswin then
+      return
+    end
+    assert.equal(expect, actual)
+  end
+
+  describe("mkdir / rmdir", function()
+    it_cross_plat("can create and delete directories", function()
+      local p = Path:new "_dir_not_exist"
+
+      p:rmdir()
+      assert.is_false(p:exists())
+
+      p:mkdir()
+      assert.is_true(p:exists())
+      assert.is_true(p:is_dir())
+      assert_permission(0777, p:permission())
+
+      p:rmdir()
+      assert.is_false(p:exists())
+    end)
+
+    it_cross_plat("fails when exists_ok is false", function()
+      local p = Path:new "lua"
+      assert.has_error(function()
+        p:mkdir { exists_ok = false }
+      end)
+    end)
+
+    it_cross_plat("fails when parents is not passed", function()
+      local p = Path:new("impossible", "dir")
+      assert.has_error(function()
+        p:mkdir { parents = false }
+      end)
+      assert.is_false(p:exists())
+    end)
+
+    it_cross_plat("can create nested directories", function()
+      local p = Path:new("impossible", "dir")
+      assert.has_no_error(function()
+        p:mkdir { parents = true }
+      end)
+      assert.is_true(p:exists())
+
+      p:rmdir()
+      Path:new("impossible"):rmdir()
+      assert.is_false(p:exists())
+      assert.is_false(Path:new("impossible"):exists())
+    end)
+
+    -- it_cross_plat("can set different modes", function()
+    --   local p = Path:new "_dir_not_exist"
+    --   assert.has_no_error(function()
+    --     p:mkdir { mode = 0755 }
+    --   end)
+    --   print(vim.uv.fs_stat(p:absolute()).mode)
+    --   assert_permission(0755, p:permission())
+
+    --   p:rmdir()
+    --   assert.is_false(p:exists())
+    -- end)
+  end)
+
   describe("parents", function()
     it_cross_plat("should extract the ancestors of the path", function()
       local p = Path:new(vim.fn.getcwd())

@@ -49,6 +49,7 @@
 ---   `../../Users/test/test_file` and there's no home directory absolute path
 ---   in this.
 
+local bit = require "plenary.bit"
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
 local hasshellslash = vim.fn.exists "+shellslash" == 1
@@ -524,6 +525,40 @@ function Path:is_absolute()
   return not self._flavor.has_drv or self.drv ~= ""
 end
 
+--- Get file status.
+--- Will throw error if path doesn't exist.
+---@return uv.aliases.fs_stat_table
+function Path:stat()
+  local res, _, err_msg = uv.fs_stat(self:absolute())
+  if res == nil then
+    error(err_msg)
+  end
+  return res
+end
+
+--- Get file status. Like `Path:stat` but if the path points to a symbolic
+--- link, returns the symbolic link's information.
+--- Will throw error if path doesn't exist.
+---@return uv.aliases.fs_stat_table
+function Path:lstat()
+  local res, _, err_msg = uv.fs_lstat(self:absolute())
+  if res == nil then
+    error(err_msg)
+  end
+  return res
+end
+
+---@return integer
+function Path:permission()
+  local stat = self:stat()
+  local perm = bit.band(stat.mode, 0x1FF)
+  local owner = bit.rshift(perm, 6)
+  local group = bit.rshift(perm, 3) % 8
+  local user = perm % 8
+
+  return owner * 100 + group * 10 + user
+end
+
 ---@return boolean
 function Path:exists()
   local stat = uv.fs_stat(self:absolute())
@@ -727,7 +762,6 @@ function Path:make_relative(to, walk_up)
   return Path:new(steps).filename
 end
 
-
 --- Shorten path parts.
 --- By default, shortens all part except the last tail part to a length of 1.
 --- eg.
@@ -756,11 +790,84 @@ function Path:shorten(len, excludes)
   return self:_filename(nil, nil, new_parts)
 end
 
--- vim.o.shellslash = false
-local long_path = "/this/is/a/long/path"
-local p = Path:new(long_path)
-local short_path = p:shorten()
-print(p.filename, short_path)
-vim.o.shellslash = true
+---@class plenary.Path2.mkdirOpts
+---@field mode integer? permission to give to the directory, no umask effect will be applied (default: `o777`)
+---@field parents boolean? creates parent directories if true and necessary (default: `false`)
+---@field exists_ok boolean? ignores error if true and target directory exists (default: `false`)
+
+--- Create directory
+---@param opts plenary.Path2.mkdirOpts?
+---@return boolean success
+function Path:mkdir(opts)
+  opts = opts or {}
+  opts.mode = vim.F.if_nil(opts.mode, 511)
+  opts.parents = vim.F.if_nil(opts.parents, false)
+  opts.exists_ok = vim.F.if_nil(opts.exists_ok, false)
+
+  local abs_path = self:absolute()
+
+  if not opts.exists_ok and self:exists() then
+    error(string.format("FileExistsError: %s", abs_path))
+  end
+
+  local ok, err_msg, err_code = uv.fs_mkdir(abs_path, opts.mode)
+  if ok then
+    return true
+  end
+  if err_code == "EEXIST" then
+    return true
+  end
+  if err_code == "ENOENT" then
+    if not opts.parents or self.parent == self then
+      error(err_msg)
+    end
+    self:parent():mkdir { mode = opts.mode }
+    uv.fs_mkdir(abs_path, opts.mode)
+    return true
+  end
+
+  error(err_msg)
+end
+
+--- Delete directory
+function Path:rmdir()
+  if not self:exists() then
+    return
+  end
+
+  local ok, err_msg = uv.fs_rmdir(self:absolute())
+  if not ok then
+    error(err_msg)
+  end
+end
+
+---@class plenary.Path2.touchOpts
+---@field mode integer? permissions to give to the file if created (default: `o666`)
+--- create parent directories if true and necessary. can optionally take a mode value
+--- for the mkdir function (default: `false`)
+---@field parents boolean|integer?
+
+--- 'touch' file.
+--- If it doesn't exist, creates it including optionally, the parent directories
+---@param opts plenary.Path2.touchOpts?
+---@return boolean success
+function Path:touch(opts)
+  opts = opts or {}
+  opts.mode = vim.F.if_nil(opts.mode, 438)
+  opts.parents = vim.F.if_nil(opts.parents, false)
+
+  local abs_path = self:absolute()
+
+  if self:exists() then
+    local new_time = os.time()
+    uv.fs_utime(abs_path, new_time, new_time)
+    return true
+  end
+
+  if not not opts.parents then
+    local mode = type(opts.parents) == "number" and opts.parents ---@cast mode number?
+    _ = Path:new(self:parent()):mkdir { mode = mode, parents = true }
+  end
+end
 
 return Path
