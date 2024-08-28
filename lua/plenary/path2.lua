@@ -3,9 +3,6 @@
 --- including 'shellslash' support.
 --- Effort to improve performance made (notably `:absolue` ~2x faster).
 ---
---- Some finiky behaviors ironed out
---- eg. `:normalize`
---- TODO: demonstrate
 ---
 --- BREAKING CHANGES:
 --- - `Path.new` no longer supported (think it's more confusing that helpful
@@ -29,6 +26,28 @@
 ---
 ---   eg. `Path:new("foo/bar_baz"):make_relative("foo/bar", true)` => returns
 ---   "../bar_baz"
+---
+--- - remove `Path:normalize`. It doesn't make any sense. eg. this test case
+---   ```lua
+---   it("can normalize ~ when file is within home directory (trailing slash)", function()
+---     local home = "/home/test/"
+---     local p = Path:new { home, "./test_file" }
+---     p.path.home = home
+---     p._cwd = "/tmp/lua"
+---     assert.are.same("~/test_file", p:normalize())
+---   end)
+---   ```
+---   if the idea is to make `/home/test/test_file` relative to `/tmp/lua`, the result
+---   should be `../../home/test/test_file`, only then can you substitue the
+---   home directory for `~`.
+---   So should really be `../../~/test_file`. But using `~` in a relative path
+---   like that looks weird to me. And as this function first makes paths
+---   relative, you will never get a leading `~` (since `~` literally
+---   represents the absolute path of the home directory).
+---   To top it off, something like `../../~/test_file` is impossible on Windows.
+---   `C:/Users/test/test_file` relative to `C:/Windows/temp` is
+---   `../../Users/test/test_file` and there's no home directory absolute path
+---   in this.
 
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
@@ -482,8 +501,12 @@ function Path:_filename(drv, root, relparts)
 
   relparts = vim.F.if_nil(relparts, self.relparts)
   local relpath = table.concat(relparts, self.sep)
+  local res = drv .. root .. relpath
 
-  return drv .. root .. relpath
+  if res ~= "" then
+    return res
+  end
+  return "."
 end
 
 ---@param x any
@@ -703,5 +726,41 @@ function Path:make_relative(to, walk_up)
   table.insert(steps, res_path)
   return Path:new(steps).filename
 end
+
+
+--- Shorten path parts.
+--- By default, shortens all part except the last tail part to a length of 1.
+--- eg.
+--- ```lua
+--- local p = Path:new("this/is/a/long/path")
+--- p:shorten() -- Output: "t/i/a/l/path"
+--- ```
+---@param len integer? length to shorthen path parts to (default: `1`)
+--- indices of path parts to exclude from being shortened, supports negative index
+---@param excludes integer[]?
+---@return string
+function Path:shorten(len, excludes)
+  len = vim.F.if_nil(len, 1)
+  excludes = vim.F.if_nil(excludes, { #self.relparts })
+
+  local new_parts = {}
+
+  for i, part in ipairs(self.relparts) do
+    local neg_i = -(#self.relparts + 1) + i
+    if #part > len and not vim.list_contains(excludes, i) and not vim.list_contains(excludes, neg_i) then
+      part = part:sub(1, len)
+    end
+    table.insert(new_parts, part)
+  end
+
+  return self:_filename(nil, nil, new_parts)
+end
+
+-- vim.o.shellslash = false
+local long_path = "/this/is/a/long/path"
+local p = Path:new(long_path)
+local short_path = p:shorten()
+print(p.filename, short_path)
+vim.o.shellslash = true
 
 return Path
