@@ -222,7 +222,7 @@ function _PosixPath:join(path, ...)
   for _, p in ipairs(paths) do
     if p:sub(1, 1) == self.sep then
       parts = { p } -- is absolute, ignore previous path, later paths take precedence
-    elseif path == "" or path:sub(-1) == self.sep then
+    elseif #parts > 1 and parts[#parts]:sub(-1) == self.sep then
       table.insert(parts, p)
     else
       table.insert(parts, self.sep .. p)
@@ -230,17 +230,6 @@ function _PosixPath:join(path, ...)
   end
   return table.concat(parts)
 end
-
---[[
-
-        for b in map(os.fspath, p):
-            if b.startswith(sep):
-                path = b
-            elif not path or path.endswith(sep):
-                path += b
-            else:
-                path += sep + b
-]]
 
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
@@ -736,7 +725,7 @@ function Path:make_relative(to, walk_up)
   end
 
   if self:is_relative(to) then
-    return Path:new(abs:sub(#to:absolute() + 1)).filename
+    return Path:new((abs:sub(#to:absolute() + 1):gsub("^" .. self.sep, ""))).filename
   end
 
   if not walk_up then

@@ -55,6 +55,7 @@ describe("Path2", function()
         { { "lua/../README.md" }, "lua/../README.md" },
         { { "./lua/../README.md" }, "lua/../README.md" },
         { "./lua//..//README.md", "lua/../README.md" },
+        { { "foo", "bar", "baz" }, "foo/bar/baz" },
         { "foo/bar/", "foo/bar" },
         { { readme_path }, readme_path },
         { { readme_path, license_path }, license_path }, -- takes only the last abs path
@@ -269,7 +270,16 @@ describe("Path2", function()
   end)
 
   describe(":make_relative", function()
-    local root = iswin and "c:\\" or "/"
+    local root = function()
+      if not iswin then
+        return "/"
+      end
+      if hasshellslash and vim.o.shellslash then
+        return "C:/"
+      end
+      return "C:\\"
+    end
+
     it_cross_plat("can take absolute paths and make them relative to the cwd", function()
       local p = Path:new { "lua", "plenary", "path.lua" }
       local absolute = vim.fn.getcwd() .. path.sep .. p.filename
@@ -278,7 +288,7 @@ describe("Path2", function()
     end)
 
     it_cross_plat("can take absolute paths and make them relative to a given path", function()
-      local r = Path:new { root, "home", "prime" }
+      local r = Path:new { root(), "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename)
@@ -293,7 +303,7 @@ describe("Path2", function()
     end)
 
     it_cross_plat("can take double separator absolute paths and make them relative to a given path", function()
-      local r = Path:new { root, "home", "prime" }
+      local r = Path:new { root(), "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename)
@@ -301,7 +311,7 @@ describe("Path2", function()
     end)
 
     it_cross_plat("can take absolute paths and make them relative to a given path with trailing separator", function()
-      local r = Path:new { root, "home", "prime" }
+      local r = Path:new { root(), "home", "prime" }
       local p = Path:new { "aoeu", "agen.lua" }
       local absolute = r.filename .. path.sep .. p.filename
       local relative = Path:new(absolute):make_relative(r.filename .. path.sep)
@@ -309,14 +319,13 @@ describe("Path2", function()
     end)
 
     it_cross_plat("can take absolute paths and make them relative to the root directory", function()
-      local p = Path:new { root, "prime", "aoeu", "agen.lua" }
-      local absolute = root .. p.filename
-      local relative = Path:new(absolute):make_relative(root)
-      assert.are.same(p.filename, relative)
+      local p = Path:new { root(), "prime", "aoeu", "agen.lua" }
+      local relative = Path:new(p:absolute()):make_relative(root())
+      assert.are.same((p.filename:gsub(root(), "")), relative)
     end)
 
     it_cross_plat("can take absolute paths and make them relative to themselves", function()
-      local p = Path:new { root, "home", "prime", "aoeu", "agen.lua" }
+      local p = Path:new { root(), "home", "prime", "aoeu", "agen.lua" }
       local relative = Path:new(p.filename):make_relative(p.filename)
       assert.are.same(".", relative)
     end)
@@ -445,17 +454,16 @@ describe("Path2", function()
       assert.is_false(Path:new("impossible"):exists())
     end)
 
-    -- it_cross_plat("can set different modes", function()
-    --   local p = Path:new "_dir_not_exist"
-    --   assert.has_no_error(function()
-    --     p:mkdir { mode = 0755 }
-    --   end)
-    --   print(vim.uv.fs_stat(p:absolute()).mode)
-    --   assert_permission(0755, p:permission())
+    it_cross_plat("can set different modes", function()
+      local p = Path:new "_dir_not_exist"
+      assert.has_no_error(function()
+        p:mkdir { mode = 0755 }
+      end)
+      assert_permission(0755, p:permission())
 
-    --   p:rmdir()
-    --   assert.is_false(p:exists())
-    -- end)
+      p:rmdir()
+      assert.is_false(p:exists())
+    end)
   end)
 
   describe("parents", function()
