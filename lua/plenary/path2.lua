@@ -531,6 +531,11 @@ function Path:stat()
   return res
 end
 
+---@deprecated
+function Path:_stat()
+  return self:stat()
+end
+
 --- Get file status. Like `Path:stat` but if the path points to a symbolic
 --- link, returns the symbolic link's information.
 --- Will throw error if path doesn't exist.
@@ -863,6 +868,22 @@ function Path:touch(opts)
     local mode = type(opts.parents) == "number" and opts.parents ---@cast mode number?
     _ = Path:new(self:parent()):mkdir { mode = mode, parents = true }
   end
+
+  local fd, _, err_msg = uv.fs_open(self:absolute(), "w", opts.mode)
+  if fd == nil then
+    error(err_msg)
+  end
+
+  local ok
+  ok, _, err_msg = uv.fs_close(fd)
+  if not ok then
+    error(err_msg)
+  end
+
+  return true
+end
+
+function Path:rm(opts)
 end
 
 return Path

@@ -466,6 +466,56 @@ describe("Path2", function()
     end)
   end)
 
+  describe("touch/rm", function()
+    it("can create and delete new files", function()
+      local p = Path:new "test_file.lua"
+      assert(pcall(p.touch, p))
+      assert(p:exists())
+
+      p:rm()
+      assert(not p:exists())
+    end)
+
+    it("does not effect already created files but updates last access", function()
+      local p = Path:new "README.md"
+      local last_atime = p:stat().atime.sec
+      local last_mtime = p:stat().mtime.sec
+
+      local lines = p:readlines()
+
+      assert(pcall(p.touch, p))
+      print(p:stat().atime.sec > last_atime)
+      print(p:stat().mtime.sec > last_mtime)
+      assert(p:exists())
+
+      assert.are.same(lines, p:readlines())
+    end)
+
+    it("does not create dirs if nested in none existing dirs and parents not set", function()
+      local p = Path:new { "nested", "nested2", "test_file.lua" }
+      assert(not pcall(p.touch, p, { parents = false }))
+      assert(not p:exists())
+    end)
+
+    it("does create dirs if nested in none existing dirs", function()
+      local p1 = Path:new { "nested", "nested2", "test_file.lua" }
+      local p2 = Path:new { "nested", "asdf", ".hidden" }
+      local d1 = Path:new { "nested", "dir", ".hidden" }
+      assert(pcall(p1.touch, p1, { parents = true }))
+      assert(pcall(p2.touch, p2, { parents = true }))
+      assert(pcall(d1.mkdir, d1, { parents = true }))
+      assert(p1:exists())
+      assert(p2:exists())
+      assert(d1:exists())
+
+      Path:new({ "nested" }):rm { recursive = true }
+      assert(not p1:exists())
+      assert(not p2:exists())
+      assert(not d1:exists())
+      assert(not Path:new({ "nested" }):exists())
+    end)
+  end)
+
   describe("parents", function()
     it_cross_plat("should extract the ancestors of the path", function()
       local p = Path:new(vim.fn.getcwd())
