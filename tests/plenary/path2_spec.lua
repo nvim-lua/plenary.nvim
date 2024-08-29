@@ -233,39 +233,39 @@ describe("Path2", function()
 
   describe(".exists()", function()
     it_cross_plat("finds files that exist", function()
-      assert.are.same(true, Path:new("README.md"):exists())
+      assert.is_true(Path:new("README.md"):exists())
     end)
 
     it_cross_plat("returns false for files that do not exist", function()
-      assert.are.same(false, Path:new("asdf.md"):exists())
+      assert.is_false(Path:new("asdf.md"):exists())
     end)
   end)
 
   describe(".is_dir()", function()
     it_cross_plat("should find directories that exist", function()
-      assert.are.same(true, Path:new("lua"):is_dir())
+      assert.is_true(Path:new("lua"):is_dir())
     end)
 
     it_cross_plat("should return false when the directory does not exist", function()
-      assert.are.same(false, Path:new("asdf"):is_dir())
+      assert.is_false(Path:new("asdf"):is_dir())
     end)
 
     it_cross_plat("should not show files as directories", function()
-      assert.are.same(false, Path:new("README.md"):is_dir())
+      assert.is_false(Path:new("README.md"):is_dir())
     end)
   end)
 
   describe(".is_file()", function()
     it_cross_plat("should not allow directories", function()
-      assert.are.same(true, not Path:new("lua"):is_file())
+      assert.is_true(not Path:new("lua"):is_file())
     end)
 
     it_cross_plat("should return false when the file does not exist", function()
-      assert.are.same(true, not Path:new("asdf"):is_file())
+      assert.is_true(not Path:new("asdf"):is_file())
     end)
 
     it_cross_plat("should show files as file", function()
-      assert.are.same(true, Path:new("README.md"):is_file())
+      assert.is_true(Path:new("README.md"):is_file())
     end)
   end)
 
@@ -321,7 +321,7 @@ describe("Path2", function()
     it_cross_plat("can take absolute paths and make them relative to the root directory", function()
       local p = Path:new { root(), "prime", "aoeu", "agen.lua" }
       local relative = Path:new(p:absolute()):make_relative(root())
-      assert.are.same((p.filename:gsub(root(), "")), relative)
+      assert.are.same((p.filename:gsub("^" .. root(), "")), relative)
     end)
 
     it_cross_plat("can take absolute paths and make them relative to themselves", function()

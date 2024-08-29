@@ -342,6 +342,7 @@ end
 ---@field private _raw_parts string[]
 ---@field drv string drive name, eg. 'C:' (only for Windows, empty string for Posix)
 ---@field root string root path (excludes drive name for Windows)
+---@field anchor string drive + root (eg 'C:/' for Windows, just '/' otherwise)
 ---@field relparts string[] path separator separated relative path parts
 ---@field sep string path separator (respects 'shellslash' on Windows)
 ---@field filename string
@@ -360,6 +361,11 @@ Path.__index = function(t, k)
   if k == "drv" or k == "root" or k == "relparts" then
     t.drv, t.root, t.relparts = parse_parts(t._raw_parts, t._flavor)
     return rawget(t, k)
+  end
+
+  if k == "anchor" then
+    t.anchor = t.drv .. t.root
+    return t.anchor
   end
 
   if k == "filename" then
