@@ -546,6 +546,95 @@ describe("Path2", function()
     end)
   end)
 
+  describe("rename", function()
+    after_each(function()
+      uv.fs_unlink "a_random_filename.lua"
+      uv.fs_unlink "not_a_random_filename.lua"
+      uv.fs_unlink "some_random_filename.lua"
+      uv.fs_unlink "../some_random_filename.lua"
+    end)
+
+    it_cross_plat("can rename a file", function()
+      local p = Path:new "a_random_filename.lua"
+      assert.no_error(function()
+        p:touch()
+      end)
+      assert.is_true(p:exists())
+
+      local new_p
+      assert.no_error(function()
+        new_p = p:rename { new_name = "not_a_random_filename.lua" }
+      end)
+      assert.not_nil(new_p)
+      assert.are.same("not_a_random_filename.lua", new_p.name)
+    end)
+
+    it_cross_plat("can handle an invalid filename", function()
+      local p = Path:new "some_random_filename.lua"
+      assert.no_error(function()
+        p:touch()
+      end)
+      assert.is_true(p:exists())
+
+      assert.has_error(function()
+        p:rename { new_name = "" }
+      end)
+      assert.has_error(function()
+        ---@diagnostic disable-next-line: missing-fields
+        p:rename {}
+      end)
+
+      assert.are.same("some_random_filename.lua", p.name)
+    end)
+
+    it_cross_plat("can move to parent dir", function()
+      local p = Path:new "some_random_filename.lua"
+      assert.no_error(function()
+        p:touch()
+      end)
+      assert.is_true(p:exists())
+
+      local new_p
+      assert.no_error(function()
+        new_p = p:rename { new_name = "../some_random_filename.lua" }
+      end)
+      assert.not_nil(new_p)
+      assert.are.same(Path:new("../some_random_filename.lua"):absolute(), new_p:absolute())
+    end)
+
+    it_cross_plat("cannot rename to an existing filename", function()
+      local p1 = Path:new "a_random_filename.lua"
+      local p2 = Path:new "not_a_random_filename.lua"
+      assert.no_error(function()
+        p1:touch()
+        p2:touch()
+      end)
+      assert.is_true(p1:exists())
+      assert.is_true(p2:exists())
+
+      assert.has_error(function()
+        p1:rename { new_name = "not_a_random_filename.lua" }
+      end)
+      assert.are.same(p1.filename, "a_random_filename.lua")
+    end)
+
+    it_cross_plat("handles Path as new_name", function()
+      local p1 = Path:new "a_random_filename.lua"
+      local p2 = Path:new "not_a_random_filename.lua"
+      assert.no_error(function()
+        p1:touch()
+      end)
+      assert.is_true(p1:exists())
+
+      local new_p
+      assert.no_error(function()
+        new_p = p1:rename { new_name = p2 }
+      end)
+      assert.not_nil(new_p)
+      assert.are.same("not_a_random_filename.lua", new_p.name)
+    end)
+  end)
+
   describe("parents", function()
     it_cross_plat("should extract the ancestors of the path", function()
       local p = Path:new(vim.fn.getcwd())

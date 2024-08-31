@@ -48,6 +48,8 @@
 ---   `C:/Users/test/test_file` relative to `C:/Windows/temp` is
 ---   `../../Users/test/test_file` and there's no home directory absolute path
 ---   in this.
+---
+--- - rename returns new path rather than mutating path
 
 local bit = require "plenary.bit"
 local uv = vim.loop
@@ -346,6 +348,7 @@ end
 ---@field relparts string[] path separator separated relative path parts
 ---@field sep string path separator (respects 'shellslash' on Windows)
 ---@field filename string
+---@field name string the final path component (eg. "foo/bar/baz.lua" -> "baz.lua")
 ---@field cwd string
 ---@field private _absolute string? lazy eval'ed fully resolved absolute path
 local Path = { path = path }
@@ -361,6 +364,15 @@ Path.__index = function(t, k)
   if k == "drv" or k == "root" or k == "relparts" then
     t.drv, t.root, t.relparts = parse_parts(t._raw_parts, t._flavor)
     return rawget(t, k)
+  end
+
+  if k == "name" then
+    if #t.relparts > 0 then
+      t.name = t.relparts[#t.relparts]
+    else
+      t.name = ""
+    end
+    return t.name
   end
 
   if k == "anchor" then
@@ -901,7 +913,6 @@ function Path:rm(opts)
 
   for p, dirs, files in self:walk(false) do
     for _, file in ipairs(files) do
-      print("delete file", file, (p / file):absolute())
       local _, err = uv.fs_unlink((p / file):absolute())
       if err then
         error(err)
@@ -909,7 +920,6 @@ function Path:rm(opts)
     end
 
     for _, dir in ipairs(dirs) do
-      print("delete dir", dir, (p / dir):absolute())
       local _, err = uv.fs_rmdir((p / dir):absolute())
       if err then
         error(err)
@@ -918,6 +928,29 @@ function Path:rm(opts)
   end
 
   self:rmdir()
+end
+
+---@class plenary.Path2.renameOpts
+---@field new_name string|plenary.Path2 destination path
+
+---@param opts plenary.Path2.renameOpts
+---@return plenary.Path2
+function Path:rename(opts)
+  if not opts.new_name or opts.new_name == "" then
+    error "Please provide the new name!"
+  end
+
+  local new_path = self:parent() / opts.new_name ---@type plenary.Path2
+
+  if new_path:exists() then
+    error "File or directory already exists!"
+  end
+
+  local _, err = uv.fs_rename(self:absolute(), new_path:absolute())
+  if err ~= nil then
+    error(err)
+  end
+  return new_path
 end
 
 --- read file synchronously or asynchronously
