@@ -1,7 +1,8 @@
 local Path = require "plenary.path2"
 local path = Path.path
 local compat = require "plenary.compat"
-local iswin = vim.loop.os_uname().sysname == "Windows_NT"
+local uv = vim.loop
+local iswin = uv.os_uname().sysname == "Windows_NT"
 
 local hasshellslash = vim.fn.exists "+shellslash" == 1
 
@@ -411,6 +412,12 @@ describe("Path2", function()
   end
 
   describe("mkdir / rmdir", function()
+    after_each(function()
+      uv.fs_rmdir "_dir_not_exist"
+      uv.fs_rmdir "impossible/dir"
+      uv.fs_rmdir "impossible"
+    end)
+
     it_cross_plat("can create and delete directories", function()
       local p = Path:new "_dir_not_exist"
 
@@ -467,52 +474,75 @@ describe("Path2", function()
   end)
 
   describe("touch/rm", function()
-    it("can create and delete new files", function()
-      local p = Path:new "test_file.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      p:rm()
-      assert(not p:exists())
+    after_each(function()
+      uv.fs_unlink "test_file.lua"
+      uv.fs_unlink "nested/nested2/test_file.lua"
+      uv.fs_rmdir "nested/nested2"
+      uv.fs_unlink "nested/asdf/.hidden"
+      uv.fs_rmdir "nested/asdf"
+      uv.fs_unlink "nested/dir/.hidden"
+      uv.fs_rmdir "nested/dir"
+      uv.fs_rmdir "nested"
     end)
 
-    it("does not effect already created files but updates last access", function()
-      local p = Path:new "README.md"
-      local last_atime = p:stat().atime.sec
-      local last_mtime = p:stat().mtime.sec
+    it_cross_plat("can create and delete new files", function()
+      local p = Path:new "test_file.lua"
+      assert.not_error(function()
+        p:touch()
+      end)
+      assert.is_true(p:exists())
 
+      assert.not_error(function()
+        p:rm()
+      end)
+      assert.is_true(not p:exists())
+    end)
+
+    it_cross_plat("does not effect already created files but updates last access", function()
+      local p = Path:new "README.md"
       local lines = p:readlines()
 
-      assert(pcall(p.touch, p))
-      print(p:stat().atime.sec > last_atime)
-      print(p:stat().mtime.sec > last_mtime)
-      assert(p:exists())
+      assert.no_error(function()
+        p:touch()
+      end)
 
+      assert.is_true(p:exists())
       assert.are.same(lines, p:readlines())
     end)
 
-    it("does not create dirs if nested in none existing dirs and parents not set", function()
+    it_cross_plat("does not create dirs if nested in none existing dirs and parents not set", function()
       local p = Path:new { "nested", "nested2", "test_file.lua" }
-      assert(not pcall(p.touch, p, { parents = false }))
-      assert(not p:exists())
+      assert.has_error(function()
+        p:touch { parents = false }
+      end)
+      assert.is_false(p:exists())
     end)
 
-    it("does create dirs if nested in none existing dirs", function()
+    it_cross_plat("does create dirs if nested in none existing dirs", function()
       local p1 = Path:new { "nested", "nested2", "test_file.lua" }
       local p2 = Path:new { "nested", "asdf", ".hidden" }
       local d1 = Path:new { "nested", "dir", ".hidden" }
-      assert(pcall(p1.touch, p1, { parents = true }))
-      assert(pcall(p2.touch, p2, { parents = true }))
-      assert(pcall(d1.mkdir, d1, { parents = true }))
-      assert(p1:exists())
-      assert(p2:exists())
-      assert(d1:exists())
 
-      Path:new({ "nested" }):rm { recursive = true }
-      assert(not p1:exists())
-      assert(not p2:exists())
-      assert(not d1:exists())
-      assert(not Path:new({ "nested" }):exists())
+      assert.no_error(function()
+        p1:touch { parents = true }
+      end)
+      assert.no_error(function()
+        p2:touch { parents = true }
+      end)
+      assert.no_error(function()
+        d1:mkdir { parents = true }
+      end)
+      assert.is_true(p1:exists())
+      assert.is_true(p2:exists())
+      assert.is_true(d1:exists())
+
+      assert.no_error(function()
+        Path:new({ "nested" }):rm { recursive = true }
+      end)
+      assert.is_false(p1:exists())
+      assert.is_false(p2:exists())
+      assert.is_false(d1:exists())
+      assert.is_false(Path:new({ "nested" }):exists())
     end)
   end)
 

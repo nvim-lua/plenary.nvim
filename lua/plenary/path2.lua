@@ -524,9 +524,9 @@ end
 --- Will throw error if path doesn't exist.
 ---@return uv.aliases.fs_stat_table
 function Path:stat()
-  local res, _, err_msg = uv.fs_stat(self:absolute())
+  local res, err = uv.fs_stat(self:absolute())
   if res == nil then
-    error(err_msg)
+    error(err)
   end
   return res
 end
@@ -541,9 +541,9 @@ end
 --- Will throw error if path doesn't exist.
 ---@return uv.aliases.fs_stat_table
 function Path:lstat()
-  local res, _, err_msg = uv.fs_lstat(self:absolute())
+  local res, err = uv.fs_lstat(self:absolute())
   if res == nil then
-    error(err_msg)
+    error(err)
   end
   return res
 end
@@ -797,7 +797,6 @@ end
 
 --- Create directory
 ---@param opts plenary.Path2.mkdirOpts?
----@return boolean success
 function Path:mkdir(opts)
   opts = opts or {}
   opts.mode = vim.F.if_nil(opts.mode, 511)
@@ -812,10 +811,10 @@ function Path:mkdir(opts)
 
   local ok, err_msg, err_code = uv.fs_mkdir(abs_path, opts.mode)
   if ok then
-    return true
+    return
   end
   if err_code == "EEXIST" then
-    return true
+    return
   end
   if err_code == "ENOENT" then
     if not opts.parents or self.parent == self then
@@ -823,7 +822,7 @@ function Path:mkdir(opts)
     end
     self:parent():mkdir { mode = opts.mode }
     uv.fs_mkdir(abs_path, opts.mode)
-    return true
+    return
   end
 
   error(err_msg)
@@ -850,7 +849,6 @@ end
 --- 'touch' file.
 --- If it doesn't exist, creates it including optionally, the parent directories
 ---@param opts plenary.Path2.touchOpts?
----@return boolean success
 function Path:touch(opts)
   opts = opts or {}
   opts.mode = vim.F.if_nil(opts.mode, 438)
@@ -861,29 +859,192 @@ function Path:touch(opts)
   if self:exists() then
     local new_time = os.time()
     uv.fs_utime(abs_path, new_time, new_time)
-    return true
+    return
   end
 
   if not not opts.parents then
-    local mode = type(opts.parents) == "number" and opts.parents ---@cast mode number?
+    local mode = type(opts.parents) == "number" and opts.parents or nil ---@cast mode number?
     _ = Path:new(self:parent()):mkdir { mode = mode, parents = true }
   end
 
-  local fd, _, err_msg = uv.fs_open(self:absolute(), "w", opts.mode)
+  local fd, err = uv.fs_open(self:absolute(), "w", opts.mode)
   if fd == nil then
-    error(err_msg)
+    error(err)
   end
 
   local ok
-  ok, _, err_msg = uv.fs_close(fd)
+  ok, err = uv.fs_close(fd)
   if not ok then
-    error(err_msg)
+    error(err)
   end
-
-  return true
 end
 
+---@class plenary.Path2.rmOpts
+---@field recursive boolean? remove directories and their content recursively (defaul: `false`)
+
+--- rm file or optional recursively remove directories and their content recursively
+---@param opts plenary.Path2.rmOpts?
 function Path:rm(opts)
+  opts = opts or {}
+  opts.recursive = vim.F.if_nil(opts.recursive, false)
+
+  if not opts.recursive or not self:is_dir() then
+    local ok, err = uv.fs_unlink(self:absolute())
+    if ok then
+      return
+    end
+    if self:is_dir() then
+      error(string.format("Cannnot rm director '%s'.", self:absolute()))
+    end
+    error(err)
+  end
+
+  for p, dirs, files in self:walk(false) do
+    for _, file in ipairs(files) do
+      print("delete file", file, (p / file):absolute())
+      local _, err = uv.fs_unlink((p / file):absolute())
+      if err then
+        error(err)
+      end
+    end
+
+    for _, dir in ipairs(dirs) do
+      print("delete dir", dir, (p / dir):absolute())
+      local _, err = uv.fs_rmdir((p / dir):absolute())
+      if err then
+        error(err)
+      end
+    end
+  end
+
+  self:rmdir()
+end
+
+--- read file synchronously or asynchronously
+---@param callback fun(data: string)? callback to use for async version, nil for default
+---@return string? data
+function Path:read(callback)
+  if not self:is_file() then
+    error(string.format("'%s' is not a file", self:absolute()))
+  end
+
+  if callback == nil then
+    return self:_read_sync()
+  end
+  return self:_read_async(callback)
+end
+
+---@private
+---@return string
+function Path:_read_sync()
+  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  if fd == nil then
+    error(err)
+  end
+
+  local stat = self:stat()
+  local data
+  data, err = uv.fs_read(fd, stat.size, 0)
+  if data == nil then
+    error(err)
+  end
+  return data
+end
+
+---@private
+---@param callback fun(data: string) callback to use for async version, nil for default
+function Path:_read_async(callback)
+  uv.fs_open(self:absolute(), "r", 438, function(err_open, fd)
+    if err_open then
+      error(err_open)
+    end
+
+    uv.fs_fstat(fd, function(err_stat, stat)
+      if err_stat or stat == nil then
+        error(err_stat)
+      end
+
+      uv.fs_read(fd, stat.size, 0, function(err_read, data)
+        if err_read or data == nil then
+          error(err_read)
+        end
+        callback(data)
+      end)
+    end)
+  end)
+end
+
+--- read lines of a file into a list
+---@return string[]
+function Path:readlines()
+  local data = assert(self:read())
+  return vim.split(data, "\r?\n")
+end
+
+--- get an iterator for lines text in a file
+---@return fun(): string?
+function Path:iter_lines()
+  local data = assert(self:read())
+  return vim.gsplit(data, "\r?\n")
+end
+
+---@param top_down boolean? walk from current path down (default: `true`)
+---@return fun(): plenary.Path2?, string[]?, string[]? # iterator which yields (dirpath, dirnames, filenames)
+function Path:walk(top_down)
+  top_down = vim.F.if_nil(top_down, true)
+
+  local queue = { self } ---@type plenary.Path2[]
+  local curr_fs = nil ---@type uv_fs_t?
+  local curr_path = nil ---@type plenary.Path2
+
+  local rev_res = {} ---@type [plenary.Path2, string[], string[]]
+
+  return function()
+    while #queue > 0 or curr_fs do
+      if curr_fs == nil then
+        local p = table.remove(queue, 1)
+        local fs, err = uv.fs_scandir(p:absolute())
+
+        if fs == nil then
+          error(err)
+        end
+        curr_path = p
+        curr_fs = fs
+      end
+
+      if curr_fs then
+        local dirs = {}
+        local files = {}
+        while true do
+          local name, ty = uv.fs_scandir_next(curr_fs)
+          if name == nil then
+            curr_fs = nil
+            break
+          end
+
+          if ty == "directory" then
+            table.insert(queue, Path:new { curr_path, name })
+            table.insert(dirs, name)
+          else
+            table.insert(files, name)
+          end
+        end
+
+        if top_down then
+          return curr_path, dirs, files
+        else
+          table.insert(rev_res, { curr_path, dirs, files })
+        end
+      end
+    end
+
+    if not top_down and #rev_res > 0 then
+      local res = table.remove(rev_res)
+      return res[1], res[2], res[3]
+    end
+
+    return nil
+  end
 end
 
 return Path
