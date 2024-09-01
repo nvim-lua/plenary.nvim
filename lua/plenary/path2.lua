@@ -8,7 +8,8 @@
 --- - `Path.new` no longer supported (think it's more confusing that helpful
 ---   and not really used as far as I can tell)
 ---
---- - drop `__concat` metamethod? it was untested, not sure how functional it is
+--- - drop `__concat` metamethod? it was untested and had some todo comment,
+---   not sure how functional it is
 ---
 --- - `Path` objects are now "read-only", I don't think people were ever doing
 ---   things like `path.filename = 'foo'` but now explicitly adding some barrier
@@ -26,6 +27,9 @@
 ---
 ---   eg. `Path:new("foo/bar_baz"):make_relative("foo/bar", true)` => returns
 ---   "../bar_baz"
+---
+--- - error handling is generally more loud, ie. emit errors from libuv rather
+---   than swallowing it
 ---
 --- - remove `Path:normalize`. It doesn't make any sense. eg. this test case
 ---   ```lua
@@ -55,6 +59,9 @@
 ---   - drops interactive mode
 ---   - return value table is pre-flattened
 ---   - return value table value is `{success: boolean, err: string?}` rather than just `boolean`
+---
+--- - drops `check_self` mechanism (ie. doing `Path.read("some/file/path")`)
+---   seems unnecessary... just do `Path:new("some/file/path"):read()`
 
 local bit = require "plenary.bit"
 local uv = vim.loop
@@ -1030,14 +1037,25 @@ function Path:read(callback)
 end
 
 ---@private
+---@return uv.aliases.fs_stat_table
+function Path:_get_readable_stat()
+  local stat = self:stat()
+  if stat.type ~= "file" then
+    error(string.format("Cannot read non-file '%s'.", self:absolute()))
+  end
+  return stat
+end
+
+---@private
 ---@return string
 function Path:_read_sync()
+  local stat = self:_get_readable_stat()
+
   local fd, err = uv.fs_open(self:absolute(), "r", 438)
   if fd == nil then
     error(err)
   end
 
-  local stat = self:stat()
   local data
   data, err = uv.fs_read(fd, stat.size, 0)
   if data == nil then
@@ -1081,6 +1099,106 @@ end
 function Path:iter_lines()
   local data = assert(self:read())
   return vim.gsplit(data, "\r?\n")
+end
+
+--- read the first few lines of a file
+---@param lines integer? number of lines to read from the head of the file (default: `10`)
+---@return string data
+function Path:head(lines)
+  local stat = self:_get_readable_stat()
+
+  lines = vim.F.if_nil(lines, 10)
+  local chunk_size = 256
+
+  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  if fd == nil then
+    error(err)
+  end
+
+  local data = {}
+  local read_chunk ---@type string?
+  local index, count = 0, 0
+  while count < lines and index < stat.size do
+    read_chunk, err = uv.fs_read(fd, chunk_size, index)
+    if read_chunk == nil then
+      error(err)
+    end
+
+    local i = 1
+    while i <= #read_chunk do
+      local ch = read_chunk:byte(i)
+      if ch == 10 then -- `\n`
+        count = count + 1
+        if count >= lines then
+          break
+        end
+      end
+      index = index + 1
+      i = i + 1
+    end
+
+    table.insert(data, read_chunk:sub(1, i))
+  end
+
+  _, err = uv.fs_close(fd)
+  if err ~= nil then
+    error(err)
+  end
+
+  return (table.concat(data):gsub("\n$", ""))
+end
+
+--- read the last few lines of a file
+---@param lines integer? number of lines to read from the tail of the file (default: `10`)
+---@return string data
+function Path:tail(lines)
+  local stat = self:_get_readable_stat()
+
+  lines = vim.F.if_nil(lines, 10)
+  local chunk_size = 256
+
+  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  if fd == nil then
+    error(err)
+  end
+
+  local data = {}
+  local read_chunk ---@type string?
+  local index, count = stat.size - 1, 0
+  while count < lines and index > 0 do
+    local real_index = index - chunk_size
+    if real_index < 0 then
+      chunk_size = chunk_size + real_index
+      real_index = 0
+    end
+
+    read_chunk, err = uv.fs_read(fd, chunk_size, real_index)
+    if read_chunk == nil then
+      error(err)
+    end
+
+    local i = #read_chunk
+    while i > 0 do
+      local ch = read_chunk:byte(i)
+      if ch == 10 then -- `\n`
+        count = count + 1
+        if count >= lines then
+          break
+        end
+      end
+      index = index - 1
+      i = i - 1
+    end
+
+    table.insert(data, 1, read_chunk:sub(i + 1, #read_chunk))
+  end
+
+  _, err = uv.fs_close(fd)
+  if err ~= nil then
+    error(err)
+  end
+
+  return (table.concat(data):gsub("\n$", ""))
 end
 
 ---@param top_down boolean? walk from current path down (default: `true`)
