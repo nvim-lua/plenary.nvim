@@ -62,6 +62,8 @@
 ---
 --- - drops `check_self` mechanism (ie. doing `Path.read("some/file/path")`)
 ---   seems unnecessary... just do `Path:new("some/file/path"):read()`
+---
+--- - renamed `iter` into `iter_lines` for more clarity
 
 local bit = require "plenary.bit"
 local uv = vim.loop
@@ -1115,6 +1117,10 @@ end
 ---@param lines integer? number of lines to read from the head of the file (default: `10`)
 ---@return string data
 function Path:head(lines)
+  vim.validate {
+    lines = { lines, "n", true },
+  }
+
   local stat = self:_get_readable_stat()
 
   lines = vim.F.if_nil(lines, 10)
@@ -1138,11 +1144,17 @@ function Path:head(lines)
     while i <= #read_chunk do
       local ch = read_chunk:byte(i)
       if ch == 10 then -- `\n`
-        count = count + 1
-        if count >= lines then
-          break
+        if read_chunk:byte(i - 1) ~= 13 then
+          count = count + 1
         end
+      elseif ch == 13 then
+        count = count + 1
       end
+
+      if count >= lines then
+        break
+      end
+
       index = index + 1
       i = i + 1
     end
@@ -1155,13 +1167,17 @@ function Path:head(lines)
     error(err)
   end
 
-  return (table.concat(data):gsub("\n$", ""))
+  return (table.concat(data):gsub("[\r\n]$", ""))
 end
 
 --- read the last few lines of a file
 ---@param lines integer? number of lines to read from the tail of the file (default: `10`)
 ---@return string data
 function Path:tail(lines)
+  vim.validate {
+    lines = { lines, "n", true },
+  }
+
   local stat = self:_get_readable_stat()
 
   lines = vim.F.if_nil(lines, 10)
@@ -1174,7 +1190,7 @@ function Path:tail(lines)
 
   local data = {}
   local read_chunk ---@type string?
-  local index, count = stat.size - 1, 0
+  local index, count = stat.size, -1
   while count < lines and index > 0 do
     local real_index = index - chunk_size
     if real_index < 0 then
@@ -1190,12 +1206,18 @@ function Path:tail(lines)
     local i = #read_chunk
     while i > 0 do
       local ch = read_chunk:byte(i)
-      if ch == 10 then -- `\n`
-        count = count + 1
-        if count >= lines then
-          break
+      if ch == 13 then
+        if read_chunk:byte(i + 1) ~= 10 then
+          count = count + 1
         end
+      elseif ch == 10 then
+        count = count + 1
       end
+
+      if count >= lines then
+        break
+      end
+
       index = index - 1
       i = i - 1
     end
@@ -1208,7 +1230,7 @@ function Path:tail(lines)
     error(err)
   end
 
-  return (table.concat(data):gsub("\n$", ""))
+  return (table.concat(data):gsub("[\r\n]$", ""))
 end
 
 --- write to file
@@ -1301,19 +1323,5 @@ function Path:walk(top_down)
     return nil
   end
 end
-
---[[
-Fail    ||      Path2 write write string - windows (noshellslash)
-            ./lua/plenary/path2.lua:896: EPERM: operation not permitted: C:\Users\jtrew\neovim\plenary.nvim\foobar
-
-            stack traceback:
-                ...s/jtrew/neovim/plenary.nvim/tests/plenary/path2_spec.lua:859: in function <...s/jtrew/neovim/plenary.nvim/tests/plenary/path2_spec.lua:857>
-
-]]
-
-vim.o.shellslash = false
-local p = Path:new "foobar"
-p:touch()
-vim.o.shellslash = true
 
 return Path

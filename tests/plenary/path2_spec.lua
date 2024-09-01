@@ -895,7 +895,18 @@ describe("Path2", function()
     end)
   end)
 
+  local function diff_str(a, b)
+    a = a:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+    b = b:gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t")
+    ---@diagnostic disable-next-line: missing-fields
+    return vim.diff(a, b, {})
+  end
+
   describe("head", function()
+    after_each(function()
+      uv.fs_unlink "foobar.txt"
+    end)
+
     it_cross_plat("should read head of file", function()
       local p = Path:new "LICENSE"
       local data = p:head()
@@ -920,7 +931,7 @@ furnished to do so, subject to the following conditions:]]
       assert.are.same(should, data)
     end)
 
-    it_cross_plat("head should max read whole file", function()
+    it_cross_plat("should max read whole file", function()
       local p = Path:new "LICENSE"
       local data = p:head(1000)
       local should = [[MIT License
@@ -946,9 +957,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
       assert.are.same(should, data)
     end)
+
+    it_cross_plat("handles unix lf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\nbar\nbaz"
+      p:write(txt, "w")
+      local data = p:head()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
+
+    it_cross_plat("handles windows crlf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\r\nbar\r\nbaz"
+      p:write(txt, "w")
+      local data = p:head()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
+
+    it_cross_plat("handles mac cr line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\rbar\rbaz"
+      p:write(txt, "w")
+      local data = p:head()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
   end)
 
   describe("tail", function()
+    after_each(function()
+      uv.fs_unlink "foobar.txt"
+    end)
+
     it_cross_plat("should read tail of file", function()
       local p = Path:new "LICENSE"
       local data = p:tail()
@@ -972,7 +1017,7 @@ SOFTWARE.]]
       assert.are.same(should, data)
     end)
 
-    it_cross_plat("tail should max read whole file", function()
+    it_cross_plat("should max read whole file", function()
       local p = Path:new "LICENSE"
       local data = p:tail(1000)
       local should = [[MIT License
@@ -997,6 +1042,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
       assert.are.same(should, data)
+    end)
+
+    it_cross_plat("handles unix lf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\nbar\nbaz"
+      p:write(txt, "w")
+      local data = p:tail()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
+
+    it_cross_plat("handles windows crlf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\r\nbar\r\nbaz"
+      p:write(txt, "w")
+      local data = p:tail()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
+
+    it_cross_plat("handles mac cr line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\rbar\rbaz"
+      p:write(txt, "w")
+      local data = p:tail()
+      assert.are.same(txt, data, diff_str(txt, data))
+    end)
+
+    it_cross_plat("handles extra newlines", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\nbar\nbaz\n\n\n"
+      local expect = "foo\nbar\nbaz\n\n"
+      p:write(txt, "w")
+      local data = p:tail()
+      assert.are.same(expect, data, diff_str(expect, data))
     end)
   end)
 end)
