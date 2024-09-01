@@ -888,7 +888,7 @@ function Path:touch(opts)
 
   if not not opts.parents then
     local mode = type(opts.parents) == "number" and opts.parents or nil ---@cast mode number?
-    _ = Path:new(self:parent()):mkdir { mode = mode, parents = true, exists_ok = true }
+    self:parent():mkdir { mode = mode, parents = true, exists_ok = true }
   end
 
   local fd, err = uv.fs_open(self:absolute(), "w", opts.mode)
@@ -1061,11 +1061,16 @@ function Path:_read_sync()
   if data == nil then
     error(err)
   end
+
+  _, err = uv.fs_close(fd)
+  if err ~= nil then
+    error(err)
+  end
   return data
 end
 
 ---@private
----@param callback fun(data: string) callback to use for async version, nil for default
+---@param callback fun(data: string)
 function Path:_read_async(callback)
   uv.fs_open(self:absolute(), "r", 438, function(err_open, fd)
     if err_open then
@@ -1081,7 +1086,12 @@ function Path:_read_async(callback)
         if err_read or data == nil then
           error(err_read)
         end
-        callback(data)
+        uv.fs_close(fd, function(err_close)
+          if err_close then
+            error(err_close)
+          end
+          callback(data)
+        end)
       end)
     end)
   end)
@@ -1201,6 +1211,38 @@ function Path:tail(lines)
   return (table.concat(data):gsub("\n$", ""))
 end
 
+--- write to file
+---@param data string|string[] data to write
+---@param flags uv.aliases.fs_access_flags|integer  flag used to open file (eg. "w" or "a")
+---@param mode integer? mode used to open file (default: `438`)
+---@return number # bytes written
+function Path:write(data, flags, mode)
+  vim.validate {
+    txt = { data, { "s", "t" } },
+    flags = { flags, { "s", "n" } },
+    mode = { mode, "n", true },
+  }
+
+  mode = vim.F.if_nil(mode, 438)
+  local fd, err = uv.fs_open(self:absolute(), flags, mode)
+  if fd == nil then
+    error(err)
+  end
+
+  local b
+  b, err = uv.fs_write(fd, data, -1)
+  if b == nil then
+    error(err)
+  end
+
+  _, err = uv.fs_close(fd)
+  if err ~= nil then
+    error(err)
+  end
+
+  return b
+end
+
 ---@param top_down boolean? walk from current path down (default: `true`)
 ---@return fun(): plenary.Path2?, string[]?, string[]? # iterator which yields (dirpath, dirnames, filenames)
 function Path:walk(top_down)
@@ -1259,5 +1301,19 @@ function Path:walk(top_down)
     return nil
   end
 end
+
+--[[
+Fail    ||      Path2 write write string - windows (noshellslash)
+            ./lua/plenary/path2.lua:896: EPERM: operation not permitted: C:\Users\jtrew\neovim\plenary.nvim\foobar
+
+            stack traceback:
+                ...s/jtrew/neovim/plenary.nvim/tests/plenary/path2_spec.lua:859: in function <...s/jtrew/neovim/plenary.nvim/tests/plenary/path2_spec.lua:857>
+
+]]
+
+vim.o.shellslash = false
+local p = Path:new "foobar"
+p:touch()
+vim.o.shellslash = true
 
 return Path

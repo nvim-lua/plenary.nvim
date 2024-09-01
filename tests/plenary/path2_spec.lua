@@ -849,6 +849,52 @@ describe("Path2", function()
     end)
   end)
 
+  describe("write", function()
+    after_each(function()
+      uv.fs_unlink "foobar.txt"
+    end)
+
+    it_cross_plat("can write string", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+      assert.no_error(function()
+        p:write("hello world", "w")
+      end)
+
+      local content = p:read()
+      assert.not_nil(content)
+      assert.are.same("hello world", content)
+    end)
+
+    it_cross_plat("can append string", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+      assert.no_error(function()
+        p:write("hello world", "w")
+      end)
+
+      assert.no_error(function()
+        p:write("\ngoodbye", "a")
+      end)
+
+      local content = p:read()
+      assert.not_nil(content)
+      assert.are.same("hello world\ngoodbye", content)
+    end)
+
+    it_cross_plat("can write string list", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+      assert.no_error(function()
+        p:write({ "hello", " ", "world" }, "w")
+      end)
+
+      local content = p:read()
+      assert.not_nil(content)
+      assert.are.same("hello world", content)
+    end)
+  end)
+
   describe("head", function()
     it_cross_plat("should read head of file", function()
       local p = Path:new "LICENSE"
