@@ -537,6 +537,19 @@ function Path.is_path(x)
   return getmetatable(x) == Path
 end
 
+---@param x any
+---@return boolean
+local function is_path_like(x)
+  return type(x) == "string" or Path.is_path(x)
+end
+
+local function is_path_like_opt(x)
+  if x == nil then
+    return true
+  end
+  return is_path_like(x)
+end
+
 ---@return boolean
 function Path:is_absolute()
   if self.root == "" then
@@ -710,6 +723,8 @@ end
 ---@param to plenary.Path2|string path to compare to
 ---@return boolean
 function Path:is_relative(to)
+  vim.validate { to = { to, is_path_like } }
+
   if not Path.is_path(to) then
     to = Path:new(to)
   end
@@ -739,6 +754,11 @@ end
 ---@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
 ---@return string
 function Path:make_relative(to, walk_up)
+  vim.validate {
+    to = { to, is_path_like_opt },
+    walk_up = { walk_up, "b", true },
+  }
+
   -- NOTE: could probably take some shortcuts and avoid some `Path:new` calls
   -- by allowing _WindowsPath/_PosixPath handle this individually.
   -- As always, Windows root complicates things, so generating a new Path often
@@ -800,6 +820,11 @@ end
 ---@param excludes integer[]?
 ---@return string
 function Path:shorten(len, excludes)
+  vim.validate {
+    len = { len, "n", true },
+    excludes = { excludes, "t", true },
+  }
+
   len = vim.F.if_nil(len, 1)
   excludes = vim.F.if_nil(excludes, { #self.relparts })
 
@@ -825,6 +850,12 @@ end
 ---@param opts plenary.Path2.mkdirOpts?
 function Path:mkdir(opts)
   opts = opts or {}
+  vim.validate {
+    mode = { opts.mode, "n", true },
+    parents = { opts.parents, "b", true },
+    exists_ok = { opts.exists_ok, "b", true },
+  }
+
   opts.mode = vim.F.if_nil(opts.mode, 511)
   opts.parents = vim.F.if_nil(opts.parents, false)
   opts.exists_ok = vim.F.if_nil(opts.exists_ok, false)
@@ -877,6 +908,10 @@ end
 ---@param opts plenary.Path2.touchOpts?
 function Path:touch(opts)
   opts = opts or {}
+  vim.validate {
+    mode = { opts.mode, "n", true },
+    parents = { opts.parents, { "n", "b" }, true },
+  }
   opts.mode = vim.F.if_nil(opts.mode, 438)
   opts.parents = vim.F.if_nil(opts.parents, false)
 
@@ -912,6 +947,7 @@ end
 ---@param opts plenary.Path2.rmOpts?
 function Path:rm(opts)
   opts = opts or {}
+  vim.validate { recursive = { opts.recursive, "b", true } }
   opts.recursive = vim.F.if_nil(opts.recursive, false)
 
   if not opts.recursive or not self:is_dir() then
@@ -950,6 +986,8 @@ end
 ---@param opts plenary.Path2.renameOpts
 ---@return plenary.Path2
 function Path:rename(opts)
+  vim.validate { new_name = { opts.new_name, is_path_like } }
+
   if not opts.new_name or opts.new_name == "" then
     error "Please provide the new name!"
   end
@@ -979,6 +1017,12 @@ end
 ---@param opts plenary.Path2.copyOpts
 ---@return {[plenary.Path2]: {success:boolean, err: string?}} # indicating success of copy; nested tables constitute sub dirs
 function Path:copy(opts)
+  vim.validate {
+    destination = { opts.destination, is_path_like },
+    recursive = { opts.recursive, "b", true },
+    override = { opts.override, "b", true },
+  }
+
   opts.recursive = vim.F.if_nil(opts.recursive, false)
   opts.override = vim.F.if_nil(opts.override, true)
 
@@ -995,6 +1039,13 @@ function Path:copy(opts)
   if not opts.recursive then
     error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
   end
+
+  vim.validate {
+    respect_gitignore = { opts.respect_gitignore, "b", true },
+    hidden = { opts.hidden, "b", true },
+    parents = { opts.parents, "b", true },
+    exists_ok = { opts.exists_ok, "b", true },
+  }
 
   opts.respect_gitignore = vim.F.if_nil(opts.respect_gitignore, false)
   opts.hidden = vim.F.if_nil(opts.hidden, true)
@@ -1028,6 +1079,8 @@ end
 ---@param callback fun(data: string)? callback to use for async version, nil for default
 ---@return string? data
 function Path:read(callback)
+  vim.validate { callback = { callback, "f", true } }
+
   if not self:is_file() then
     error(string.format("'%s' is not a file", self:absolute()))
   end
@@ -1117,9 +1170,7 @@ end
 ---@param lines integer? number of lines to read from the head of the file (default: `10`)
 ---@return string data
 function Path:head(lines)
-  vim.validate {
-    lines = { lines, "n", true },
-  }
+  vim.validate { lines = { lines, "n", true } }
 
   local stat = self:_get_readable_stat()
 
@@ -1174,9 +1225,7 @@ end
 ---@param lines integer? number of lines to read from the tail of the file (default: `10`)
 ---@return string data
 function Path:tail(lines)
-  vim.validate {
-    lines = { lines, "n", true },
-  }
+  vim.validate { lines = { lines, "n", true } }
 
   local stat = self:_get_readable_stat()
 
@@ -1265,6 +1314,7 @@ function Path:write(data, flags, mode)
   return b
 end
 
+--- iterate over contents in the current path recursive
 ---@param top_down boolean? walk from current path down (default: `true`)
 ---@return fun(): plenary.Path2?, string[]?, string[]? # iterator which yields (dirpath, dirnames, filenames)
 function Path:walk(top_down)
