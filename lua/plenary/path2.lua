@@ -49,7 +49,12 @@
 ---   `../../Users/test/test_file` and there's no home directory absolute path
 ---   in this.
 ---
---- - rename returns new path rather than mutating path
+--- - `rename` returns new path rather than mutating path
+---
+--- - `copy`
+---   - drops interactive mode
+---   - return value table is pre-flattened
+---   - return value table value is `{success: boolean, err: string?}` rather than just `boolean`
 
 local bit = require "plenary.bit"
 local uv = vim.loop
@@ -876,7 +881,7 @@ function Path:touch(opts)
 
   if not not opts.parents then
     local mode = type(opts.parents) == "number" and opts.parents or nil ---@cast mode number?
-    _ = Path:new(self:parent()):mkdir { mode = mode, parents = true }
+    _ = Path:new(self:parent()):mkdir { mode = mode, parents = true, exists_ok = true }
   end
 
   local fd, err = uv.fs_open(self:absolute(), "w", opts.mode)
@@ -901,8 +906,8 @@ function Path:rm(opts)
   opts.recursive = vim.F.if_nil(opts.recursive, false)
 
   if not opts.recursive or not self:is_dir() then
-    local ok, err = uv.fs_unlink(self:absolute())
-    if ok then
+    local ok, err, code = uv.fs_unlink(self:absolute())
+    if ok or code == "ENOENT" then
       return
     end
     if self:is_dir() then
@@ -913,15 +918,15 @@ function Path:rm(opts)
 
   for p, dirs, files in self:walk(false) do
     for _, file in ipairs(files) do
-      local _, err = uv.fs_unlink((p / file):absolute())
-      if err then
+      local _, err, code = uv.fs_unlink((p / file):absolute())
+      if err and code ~= "ENOENT" then
         error(err)
       end
     end
 
     for _, dir in ipairs(dirs) do
-      local _, err = uv.fs_rmdir((p / dir):absolute())
-      if err then
+      local _, err, code = uv.fs_rmdir((p / dir):absolute())
+      if err and code ~= "ENOENT" then
         error(err)
       end
     end
@@ -951,6 +956,63 @@ function Path:rename(opts)
     error(err)
   end
   return new_path
+end
+
+---@class plenary.Path2.copyOpts
+---@field destination string|plenary.Path2 target file path to copy to
+---@field recursive boolean? whether to copy folders recursively (default: `false`)
+---@field override boolean? whether to override files (default: `true`)
+---@field respect_gitignore boolean? skip folders ignored by all detected `gitignore`s (default: `false`)
+---@field hidden boolean? whether to add hidden files in recursively copying folders (default: `true`)
+---@field parents boolean? whether to create possibly non-existing parent dirs of `opts.destination` (default: `false`)
+---@field exists_ok boolean? whether ok if `opts.destination` exists, if so folders are merged (default: `true`)
+
+---@param opts plenary.Path2.copyOpts
+---@return {[plenary.Path2]: {success:boolean, err: string?}} # indicating success of copy; nested tables constitute sub dirs
+function Path:copy(opts)
+  opts.recursive = vim.F.if_nil(opts.recursive, false)
+  opts.override = vim.F.if_nil(opts.override, true)
+
+  local dest = self:parent() / opts.destination ---@type plenary.Path2
+
+  local success = {} ---@type {[plenary.Path2]: {success: boolean, err: string?}}
+
+  if not self:is_dir() then
+    local ok, err = uv.fs_copyfile(self:absolute(), dest:absolute(), { excl = not opts.override })
+    success[dest] = { success = ok or false, err = err }
+    return success
+  end
+
+  if not opts.recursive then
+    error(string.format("Warning: %s was not copied as `recursive=false`", self:absolute()))
+  end
+
+  opts.respect_gitignore = vim.F.if_nil(opts.respect_gitignore, false)
+  opts.hidden = vim.F.if_nil(opts.hidden, true)
+  opts.parents = vim.F.if_nil(opts.parents, false)
+  opts.exists_ok = vim.F.if_nil(opts.exists_ok, true)
+
+  dest:mkdir { parents = opts.parents, exists_ok = opts.exists_ok }
+
+  local scan = require "plenary.scandir"
+  local data = scan.scan_dir(self.filename, {
+    respect_gitignore = opts.respect_gitignore,
+    hidden = opts.hidden,
+    depth = 1,
+    add_dirs = true,
+  })
+
+  for _, entry in ipairs(data) do
+    local entry_path = Path:new(entry)
+    local new_dest = dest / entry_path.name
+    -- clear destination as it might be Path table otherwise failing w/ extend
+    opts.destination = nil
+    local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
+    -- nil: not overriden if `override = false`
+    local res = entry_path:copy(new_opts)
+    success = vim.tbl_deep_extend("force", success, res)
+  end
+  return success
 end
 
 --- read file synchronously or asynchronously

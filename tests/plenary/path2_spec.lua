@@ -635,6 +635,203 @@ describe("Path2", function()
     end)
   end)
 
+  describe("copy", function()
+    after_each(function()
+      uv.fs_unlink "a_random_filename.rs"
+      uv.fs_unlink "not_a_random_filename.rs"
+      uv.fs_unlink "some_random_filename.rs"
+      uv.fs_unlink "../some_random_filename.rs"
+      Path:new("src"):rm { recursive = true }
+      Path:new("trg"):rm { recursive = true }
+    end)
+
+    it_cross_plat("can copy a file with string destination", function()
+      local p1 = Path:new "a_random_filename.rs"
+      local p2 = Path:new "not_a_random_filename.rs"
+      p1:touch()
+      assert.is_true(p1:exists())
+
+      assert.no_error(function()
+        p1:copy { destination = "not_a_random_filename.rs" }
+      end)
+      assert.is_true(p1:exists())
+      assert.are.same(p1.filename, "a_random_filename.rs")
+      assert.are.same(p2.filename, "not_a_random_filename.rs")
+    end)
+
+    it_cross_plat("can copy a file with Path destination", function()
+      local p1 = Path:new "a_random_filename.rs"
+      local p2 = Path:new "not_a_random_filename.rs"
+      p1:touch()
+      assert.is_true(p1:exists())
+
+      assert.no_error(function()
+        p1:copy { destination = p2 }
+      end)
+      assert.is_true(p1:exists())
+      assert.is_true(p2:exists())
+      assert.are.same(p1.filename, "a_random_filename.rs")
+      assert.are.same(p2.filename, "not_a_random_filename.rs")
+    end)
+
+    it_cross_plat("can copy to parent dir", function()
+      local p = Path:new "some_random_filename.rs"
+      p:touch()
+      assert.is_true(p:exists())
+
+      assert.no_error(function()
+        p:copy { destination = "../some_random_filename.rs" }
+      end)
+      assert.is_true(p:exists())
+    end)
+
+    it_cross_plat("cannot copy an existing file if override false", function()
+      local p1 = Path:new "a_random_filename.rs"
+      local p2 = Path:new "not_a_random_filename.rs"
+      p1:touch()
+      p2:touch()
+      assert.is_true(p1:exists())
+      assert.is_true(p2:exists())
+
+      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs", override = false }))
+      assert.no_error(function()
+        p1:copy { destination = "not_a_random_filename.rs", override = false }
+      end)
+      assert.are.same(p1.filename, "a_random_filename.rs")
+      assert.are.same(p2.filename, "not_a_random_filename.rs")
+    end)
+
+    it_cross_plat("fails when copying folders non-recursively", function()
+      local src_dir = Path:new "src"
+      src_dir:mkdir()
+      src_dir:joinpath("file1.lua"):touch()
+
+      local trg_dir = Path:new "trg"
+      assert.has_error(function()
+        src_dir:copy { destination = trg_dir, recursive = false }
+      end)
+    end)
+
+    describe("can copy directories recursively", function()
+      local src_dir = Path:new "src"
+      local trg_dir = Path:new "trg"
+
+      local files = { "file1", "file2", ".file3" }
+      -- set up sub directory paths for creation and testing
+      local sub_dirs = { "sub_dir1", "sub_dir1/sub_dir2" }
+      local src_dirs = { src_dir }
+      local trg_dirs = { trg_dir }
+      -- {src, trg}_dirs is a table with all directory levels by {src, trg}
+      for _, dir in ipairs(sub_dirs) do
+        table.insert(src_dirs, src_dir:joinpath(dir))
+        table.insert(trg_dirs, trg_dir:joinpath(dir))
+      end
+
+      -- vim.tbl_flatten doesn't work here as copy doesn't return a list
+      local function flatten(ret, t)
+        for _, v in pairs(t) do
+          if type(v) == "table" then
+            flatten(ret, v)
+          else
+            table.insert(ret, v)
+          end
+        end
+      end
+
+      before_each(function()
+        -- generate {file}_{level}.lua on every directory level in src
+        -- src
+        -- ├── file1_1.lua
+        -- ├── file2_1.lua
+        -- ├── .file3_1.lua
+        -- └── sub_dir1
+        --     ├── file1_2.lua
+        --     ├── file2_2.lua
+        --     ├── .file3_2.lua
+        --     └── sub_dir2
+        --         ├── file1_3.lua
+        --         ├── file2_3.lua
+        --         └── .file3_3.lua
+
+        src_dir:mkdir()
+
+        for _, file in ipairs(files) do
+          for level, dir in ipairs(src_dirs) do
+            local p = dir:joinpath(file .. "_" .. level .. ".lua")
+            p:touch { parents = true, exists_ok = true }
+            assert.is_true(p:exists())
+          end
+        end
+      end)
+
+      it_cross_plat("hidden=true, override=true", function()
+        local success
+        assert.no_error(function()
+          success = src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+        end)
+
+        assert.not_nil(success)
+        assert.are.same(9, vim.tbl_count(success))
+        for _, res in pairs(success) do
+          assert.is_true(res.success)
+        end
+      end)
+
+      it_cross_plat("hidden=true, override=false", function()
+        -- setup
+        assert.no_error(function()
+          src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+        end)
+
+        local success
+        assert.no_error(function()
+          success = src_dir:copy { destination = trg_dir, recursive = true, override = false, hidden = true }
+        end)
+
+        assert.not_nil(success)
+        assert.are.same(9, vim.tbl_count(success))
+        for _, res in pairs(success) do
+          assert.is_false(res.success)
+          assert.not_nil(res.err)
+          assert.not_nil(res.err:match "^EEXIST:")
+        end
+      end)
+
+      it_cross_plat("hidden=false, override=true", function()
+        local success
+        assert.no_error(function()
+          success = src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = false }
+        end)
+
+        assert.not_nil(success)
+        assert.are.same(6, vim.tbl_count(success))
+        for _, res in pairs(success) do
+          assert.is_true(res.success)
+        end
+      end)
+
+      it_cross_plat("hidden=false, override=false", function()
+        -- setup
+        assert.no_error(function()
+          src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+        end)
+
+        local success
+        assert.no_error(function()
+          success = src_dir:copy { destination = trg_dir, recursive = true, override = false, hidden = false }
+        end)
+
+        assert.not_nil(success)
+        assert.are.same(6, vim.tbl_count(success))
+        for _, res in pairs(success) do
+          assert.is_false(res.success)
+          assert.not_nil(res.err)
+          assert.not_nil(res.err:match "^EEXIST:")
+        end
+      end)
+    end)
+  end)
+
   describe("parents", function()
     it_cross_plat("should extract the ancestors of the path", function()
       local p = Path:new(vim.fn.getcwd())
