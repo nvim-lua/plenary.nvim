@@ -1282,6 +1282,53 @@ function Path:tail(lines)
   return (table.concat(data):gsub("[\r\n]$", ""))
 end
 
+---@param offset integer
+---@param length integer
+---@return string
+function Path:readbyterange(offset, length)
+  vim.validate {
+    offset = { offset, "n" },
+    length = { length, "n" },
+  }
+
+  local stat = self:_get_readable_stat()
+  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  if fd == nil then
+    error(err)
+  end
+
+  if offset < 0 then
+    offset = stat.size + offset
+    -- Windows fails if offset is < 0 even though offset is defined as signed
+    -- http://docs.libuv.org/en/v1.x/fs.html#c.uv_fs_read
+    if offset < 0 then
+      offset = 0
+    end
+  end
+
+  local data = ""
+  local read_chunk
+  while #data < length do
+    -- local read_chunk = assert(uv.fs_read(fd, length - #data, offset))
+    read_chunk, err = uv.fs_read(fd, length - #data, offset)
+    if read_chunk == nil then
+      error(err)
+    end
+    if #read_chunk == 0 then
+      break
+    end
+    data = data .. read_chunk
+    offset = offset + #read_chunk
+  end
+
+  _, err = uv.fs_close(fd)
+  if err ~= nil then
+    error(err)
+  end
+
+  return data
+end
+
 --- write to file
 ---@param data string|string[] data to write
 ---@param flags uv.aliases.fs_access_flags|integer  flag used to open file (eg. "w" or "a")
