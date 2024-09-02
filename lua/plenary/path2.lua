@@ -67,6 +67,14 @@
 ---
 --- - `find_upwards` returns `nil` if file not found rather than an empty string
 
+
+-- TODO: could probably do with more `make_relative` tests
+--        - walk up close to root
+--        - add "walk_up" in test name
+-- TODO: shorten: i think `vim.list_contains` is not nvim-0.7 compat (maybe use like a set?)
+-- TODO: verify unix tests pass
+-- TODO: add windows test for path2_spec only?
+
 local bit = require "plenary.bit"
 local uv = vim.loop
 local iswin = uv.os_uname().sysname == "Windows_NT"
@@ -80,6 +88,7 @@ local hasshellslash = vim.fn.exists "+shellslash" == 1
 ---@field convert_altsep fun(self: plenary._Path, p:string): string
 ---@field split_root fun(self: plenary._Path, part:string): string, string, string
 ---@field join fun(self: plenary._Path, path: string, ...: string): string
+---@field expand fun(self: plenary._Path, parts: string[], sep: string?): string[]
 
 ---@class plenary._WindowsPath : plenary._Path
 local _WindowsPath = {
@@ -200,6 +209,38 @@ function _WindowsPath:join(path, ...)
   return result_drive .. result_root .. table.concat(parts)
 end
 
+---@param parts string[]
+---@param sep string
+---@return string[] new_path
+function _WindowsPath:expand(parts, sep)
+  -- Variables have a percent sign on both sides: %ThisIsAVariable%
+  -- The variable name can include spaces, punctuation and mixed case:
+  -- %_Another Ex.ample%
+  -- But they aren't case sensitive
+  --
+  -- A variable name may include any of the following characters:
+  -- A-Z, a-z, 0-9, # $ ' ( ) * + , - . ? @ [ ] _  { } ~
+  -- The first character of the name must not be numeric.
+
+  -- this would be MUCH cleaner to implement with LPEG but backwards compatibility...
+  local pattern = "%%[A-Za-z#$'()*+,%-.?@[%]_{}~][A-Za-z0-9#$'()*+,%-.?@[%]_{}~]*%%"
+
+  local new_parts = {}
+  for _, part in ipairs(parts) do
+    part = part:gsub(pattern, function(m)
+      local var_name = m:sub(2):sub(1, -2)
+
+      ---@diagnostic disable-next-line: missing-parameter
+      local var = uv.os_getenv(var_name)
+      return var and (var:gsub("\\", sep)) or m
+    end)
+
+    table.insert(new_parts, part)
+  end
+
+  return new_parts
+end
+
 ---@class plenary._PosixPath : plenary._Path
 local _PosixPath = {
   sep = "/",
@@ -247,6 +288,34 @@ function _PosixPath:join(path, ...)
     end
   end
   return table.concat(parts)
+end
+
+---@param parts string[]
+---@return string[] new_path
+function _PosixPath:expand(parts)
+  -- Environment variable names used by the utilities in the Shell and
+  -- Utilities volume of IEEE Std 1003.1-2001 consist solely of uppercase
+  -- letters, digits, and the '_' (underscore) from the characters defined in
+  -- Portable Character Set and do not begin with a digit. Other characters may
+  -- be permitted by an implementation; applications shall tolerate the
+  -- presence of such names.
+
+  local pattern = "%$[A-Z_][A-Z0-9_]*"
+
+  local new_parts = {}
+  for _, part in ipairs(parts) do
+    part = part:gsub(pattern, function(m)
+      local var_name = m:sub(2)
+
+      ---@diagnostic disable-next-line: missing-parameter
+      local var = uv.os_getenv(var_name)
+      return var or m
+    end)
+
+    table.insert(new_parts, part)
+  end
+
+  return new_parts
 end
 
 local S_IF = {
@@ -650,6 +719,9 @@ end
 --- if given path doesn't exists and isn't already an absolute path, creates
 --- one using the cwd
 ---
+--- DOES NOT expand environment variables and home/user constructs (`~` and `~user`).
+--- Use `expand` for this.
+---
 --- respects 'shellslash' on Windows
 ---@return string
 function Path:absolute()
@@ -673,6 +745,18 @@ function Path:absolute()
     end
   end
   return self._absolute
+end
+
+--- get the environment variable expanded filename
+---@return string
+function Path:expand()
+  local relparts = self._flavor:expand(self.relparts, self.sep)
+  local filename = self:_filename(nil, nil, relparts)
+
+  filename = filename:gsub("^~([^" .. self.sep .. "]+)" .. self.sep, function(m)
+    return Path:new(self.path.home):parent().filename .. self.sep .. m .. self.sep
+  end)
+  return (filename:gsub("^~", self.path.home))
 end
 
 ---@param ... plenary.Path2Args

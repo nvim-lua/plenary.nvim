@@ -13,21 +13,25 @@ local function set_shellslash(bool)
   end
 end
 
+local function it_win(name, test_fn)
+  if not hasshellslash then
+    it(name, test_fn)
+  else
+    local orig = vim.o.shellslash
+    vim.o.shellslash = true
+    it(name .. " (shellslash)", test_fn)
+
+    vim.o.shellslash = false
+    it(name .. " (noshellslash)", test_fn)
+    vim.o.shellslash = orig
+  end
+end
+
 local function it_cross_plat(name, test_fn)
   if not iswin then
     it(name .. " - unix", test_fn)
   else
-    if not hasshellslash then
-      it(name .. " - windows", test_fn)
-    else
-      local orig = vim.o.shellslash
-      vim.o.shellslash = true
-      it(name .. " - windows (shellslash)", test_fn)
-
-      vim.o.shellslash = false
-      it(name .. " - windows (noshellslash)", test_fn)
-      vim.o.shellslash = orig
-    end
+    it_win(name .. " - windows", test_fn)
   end
 end
 
@@ -1121,6 +1125,56 @@ SOFTWARE.]]
       local p = Path:new "."
       local res = p:find_upwards "aisohtenaishoetnaishoetnasihoetnashitoen"
       assert.is_nil(res)
+    end)
+  end)
+
+  describe("expand", function()
+    uv.os_setenv("BARVAR", "bar")
+
+    describe("unix", function()
+      if iswin then
+        return
+      end
+
+      it("match valid env var", function()
+        local p = Path:new "foo/$BARVAR/baz"
+        assert.are.same("foo/bar/baz", p:expand())
+      end)
+
+      it_win("ignore invalid env var", function()
+        local p = Path:new "foo/$NOT_A_REAL_ENV_VAR/baz"
+        assert.are.same(p.filename, p:expand())
+      end)
+    end)
+
+    describe("windows", function()
+      if not iswin then
+        return
+      end
+
+      it_win("match valid env var", function()
+        local p = Path:new "foo/%BARVAR%/baz"
+        local expect = Path:new "foo/bar/baz"
+        assert.are.same(expect.filename, p:expand())
+      end)
+
+      it_win("ignore invalid env var", function()
+        local p = Path:new "foo/%NOT_A_REAL_ENV_VAR%/baz"
+        assert.are.same(p.filename, p:expand())
+      end)
+    end)
+
+    it_cross_plat("matches ~", function()
+      local p = Path:new "~/hello"
+      local expect = Path:new { path.home, "hello" }
+      assert.are.same(expect.filename, p:expand())
+    end)
+
+    it_cross_plat("matches ~user", function()
+      local p = Path:new "~otheruser/hello"
+      local home = Path:new(path.home):parent() / "otheruser"
+      local expect = home / "hello"
+      assert.are.same(expect.filename, p:expand())
     end)
   end)
 end)
