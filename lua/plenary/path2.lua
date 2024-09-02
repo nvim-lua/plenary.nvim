@@ -67,12 +67,9 @@
 ---
 --- - `find_upwards` returns `nil` if file not found rather than an empty string
 
-
 -- TODO: could probably do with more `make_relative` tests
 --        - walk up close to root
 --        - add "walk_up" in test name
--- TODO: shorten: i think `vim.list_contains` is not nvim-0.7 compat (maybe use like a set?)
--- TODO: verify unix tests pass
 -- TODO: add windows test for path2_spec only?
 
 local bit = require "plenary.bit"
@@ -388,20 +385,21 @@ path.root = (function()
 end)()
 
 ---@param parts string[]
----@param _flavor plenary._Path
+---@param flavor plenary._Path
 ---@return string drv
 ---@return string root
 ---@return string[]
-local function parse_parts(parts, _flavor)
-  local drv, root, rel, parsed = "", "", "", {}
+local function parse_parts(parts, flavor)
+  local rel
+  local drv, root, parsed = "", "", {}
 
   if #parts == 0 then
     return drv, root, parsed
   end
 
-  local sep = _flavor.sep
-  local p = _flavor:join(unpack(parts))
-  drv, root, rel = _flavor:split_root(p)
+  local sep = flavor.sep
+  local p = flavor:join(unpack(parts))
+  drv, root, rel = flavor:split_root(p)
 
   if root == "" and drv:sub(1, 1) == sep and drv:sub(-1) ~= sep then
     local drv_parts = vim.split(drv, sep)
@@ -422,6 +420,8 @@ local function parse_parts(parts, _flavor)
 
   return drv, root, parsed
 end
+
+local FILE_MODE = 438 -- o666 (aka -rw-rw-rw-)
 
 ---@class plenary.Path2
 ---@field path plenary.path2
@@ -546,7 +546,9 @@ function Path:new(...)
     elseif type(arg) ~= "string" and not self.is_path(arg) then
       error(
         string.format(
-          "Invalid type passed to 'Path:new'. Expects any number of 'string' or 'Path' objects. Got type '%s', shape '%s'",
+          "Invalid type passed to 'Path:new'. "
+            .. "Expects any number of 'string' or 'Path' objects. "
+            .. "Got type '%s', shape '%s'",
           type(arg),
           vim.inspect(arg)
         )
@@ -582,13 +584,13 @@ end
 ---@param relparts string[]?
 ---@return string
 function Path:_filename(drv, root, relparts)
-  drv = vim.F.if_nil(drv, self.drv)
+  drv = vim.F.if_nil(drv, self.drv) -- luacheck: ignore
   drv = self.drv ~= "" and self.drv:gsub(self._flavor.sep, self.sep) or ""
 
   if self._flavor.has_drv and drv == "" then
     root = ""
   else
-    root = vim.F.if_nil(root, self.root)
+    root = vim.F.if_nil(root, self.root) -- luacheck: ignore
     root = self.root ~= "" and self.sep:rep(#self.root) or ""
   end
 
@@ -658,7 +660,7 @@ function Path:lstat()
   return res
 end
 
----@return integer
+---@return integer # numeric mode in octal values
 function Path:permission()
   local stat = self:stat()
   local perm = bit.band(stat.mode, 0x1FF)
@@ -914,11 +916,15 @@ function Path:shorten(len, excludes)
   len = vim.F.if_nil(len, 1)
   excludes = vim.F.if_nil(excludes, { #self.relparts })
 
-  local new_parts = {}
+  local excl_set = {}
+  for _, idx in ipairs(excludes) do
+    excl_set[idx] = true
+  end
 
+  local new_parts = {}
   for i, part in ipairs(self.relparts) do
     local neg_i = -(#self.relparts + 1) + i
-    if #part > len and not vim.list_contains(excludes, i) and not vim.list_contains(excludes, neg_i) then
+    if #part > len and not excl_set[i] and not excl_set[neg_i] then
       part = part:sub(1, len)
     end
     table.insert(new_parts, part)
@@ -928,7 +934,10 @@ function Path:shorten(len, excludes)
 end
 
 ---@class plenary.Path2.mkdirOpts
----@field mode integer? permission to give to the directory, no umask effect will be applied (default: `o777`)
+--- permission to give to the directory, this is modified by the process's umask
+--- (default: `o777`)
+--- (currently not implemented in Windows by libuv)
+---@field mode integer?
 ---@field parents boolean? creates parent directories if true and necessary (default: `false`)
 ---@field exists_ok boolean? ignores error if true and target directory exists (default: `false`)
 
@@ -942,7 +951,7 @@ function Path:mkdir(opts)
     exists_ok = { opts.exists_ok, "b", true },
   }
 
-  opts.mode = vim.F.if_nil(opts.mode, 511)
+  opts.mode = vim.F.if_nil(opts.mode, 511) -- o777
   opts.parents = vim.F.if_nil(opts.parents, false)
   opts.exists_ok = vim.F.if_nil(opts.exists_ok, false)
 
@@ -998,7 +1007,7 @@ function Path:touch(opts)
     mode = { opts.mode, "n", true },
     parents = { opts.parents, { "n", "b" }, true },
   }
-  opts.mode = vim.F.if_nil(opts.mode, 438)
+  opts.mode = vim.F.if_nil(opts.mode, FILE_MODE) -- o666
   opts.parents = vim.F.if_nil(opts.parents, false)
 
   local abs_path = self:absolute()
@@ -1101,7 +1110,9 @@ end
 ---@field exists_ok boolean? whether ok if `opts.destination` exists, if so folders are merged (default: `true`)
 
 ---@param opts plenary.Path2.copyOpts
----@return {[plenary.Path2]: {success:boolean, err: string?}} # indicating success of copy; nested tables constitute sub dirs
+--- a flat dictionary of destination paths and their copy result.
+--- if successful, `{ success = true }`, else `{ success = false, err = "some msg" }`
+---@return {[plenary.Path2]: {success:boolean, err: string?}}
 function Path:copy(opts)
   vim.validate {
     destination = { opts.destination, is_path_like },
@@ -1192,7 +1203,7 @@ end
 function Path:_read_sync()
   local stat = self:_get_readable_stat()
 
-  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  local fd, err = uv.fs_open(self:absolute(), "r", FILE_MODE)
   if fd == nil then
     error(err)
   end
@@ -1213,7 +1224,7 @@ end
 ---@private
 ---@param callback fun(data: string)
 function Path:_read_async(callback)
-  uv.fs_open(self:absolute(), "r", 438, function(err_open, fd)
+  uv.fs_open(self:absolute(), "r", FILE_MODE, function(err_open, fd)
     if err_open then
       error(err_open)
     end
@@ -1263,7 +1274,7 @@ function Path:head(lines)
   lines = vim.F.if_nil(lines, 10)
   local chunk_size = 256
 
-  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  local fd, err = uv.fs_open(self:absolute(), "r", FILE_MODE)
   if fd == nil then
     error(err)
   end
@@ -1318,7 +1329,7 @@ function Path:tail(lines)
   lines = vim.F.if_nil(lines, 10)
   local chunk_size = 256
 
-  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  local fd, err = uv.fs_open(self:absolute(), "r", FILE_MODE)
   if fd == nil then
     error(err)
   end
@@ -1378,7 +1389,7 @@ function Path:readbyterange(offset, length)
   }
 
   local stat = self:_get_readable_stat()
-  local fd, err = uv.fs_open(self:absolute(), "r", 438)
+  local fd, err = uv.fs_open(self:absolute(), "r", FILE_MODE)
   if fd == nil then
     error(err)
   end
@@ -1427,7 +1438,7 @@ function Path:write(data, flags, mode)
     mode = { mode, "n", true },
   }
 
-  mode = vim.F.if_nil(mode, 438)
+  mode = vim.F.if_nil(mode, FILE_MODE)
   local fd, err = uv.fs_open(self:absolute(), flags, mode)
   if fd == nil then
     error(err)

@@ -431,7 +431,7 @@ describe("Path2", function()
       p:mkdir()
       assert.is_true(p:exists())
       assert.is_true(p:is_dir())
-      assert_permission(0777, p:permission())
+      assert_permission(755, p:permission()) -- umask dependent, probably bad test
 
       p:rmdir()
       assert.is_false(p:exists())
@@ -468,9 +468,9 @@ describe("Path2", function()
     it_cross_plat("can set different modes", function()
       local p = Path:new "_dir_not_exist"
       assert.has_no_error(function()
-        p:mkdir { mode = 0755 }
+        p:mkdir { mode = 292 }  -- o444
       end)
-      assert_permission(0755, p:permission())
+      assert_permission(444, p:permission())
 
       p:rmdir()
       assert.is_false(p:exists())
