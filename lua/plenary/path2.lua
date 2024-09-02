@@ -64,6 +64,8 @@
 ---   seems unnecessary... just do `Path:new("some/file/path"):read()`
 ---
 --- - renamed `iter` into `iter_lines` for more clarity
+---
+--- - `find_upwards` returns `nil` if file not found rather than an empty string
 
 local bit = require "plenary.bit"
 local uv = vim.loop
@@ -1418,6 +1420,30 @@ function Path:walk(top_down)
     end
 
     return nil
+  end
+end
+
+--- Search for a filename up from the current path, including the current
+--- directory, searching up to the root directory.
+--- Returns the `Path` of the first item found.
+--- Returns `nil` if filename is not found.
+---@param filename string
+---@return plenary.Path2?
+function Path:find_upwards(filename)
+  vim.validate { filename = { filename, "s" } }
+
+  if self:is_dir() then
+    local target = self / filename
+    if target:exists() then
+      return target
+    end
+  end
+
+  for parent in self:iter_parents() do
+    local target = Path:new { parent, filename }
+    if target:exists() then
+      return target
+    end
   end
 end
 

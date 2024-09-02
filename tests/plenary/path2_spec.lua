@@ -1101,4 +1101,26 @@ SOFTWARE.]]
       assert.are.same(should, data)
     end)
   end)
+
+  describe("find_upwards", function()
+    it_cross_plat("finds file in current dir", function()
+      local p = Path:new "lua/plenary"
+      local res = assert(p:find_upwards "busted.lua")
+      local expect = Path:new "lua/plenary/busted.lua"
+      assert.are.same(expect, res)
+    end)
+
+    it_cross_plat("finds file in parent dir", function()
+      local p = Path:new "lua/plenary"
+      local res = assert(p:find_upwards "say.lua")
+      local expect = Path:new "lua/say.lua"
+      assert.are.same(expect, res)
+    end)
+
+    it_cross_plat("doesn't find file", function()
+      local p = Path:new "."
+      local res = p:find_upwards "aisohtenaishoetnaishoetnasihoetnashitoen"
+      assert.is_nil(res)
+    end)
+  end)
 end)
