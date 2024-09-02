@@ -21,10 +21,10 @@ jobs:
           - os: ubuntu-22.04
             rev: v0.10.0/nvim-linux64.tar.gz
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: date +%F > todays-date
       - name: Restore cache for today's nightly.
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: _neovim
           key: ${{ runner.os }}-${{ matrix.rev }}-${{ hashFiles('todays-date') }}
@@ -42,12 +42,31 @@ jobs:
           nvim --version
           make test
 
+  run_tests_windows:
+    name: unit tests (Windows)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022]
+        rev: [nightly, v0.7.2, v0.8.3, v0.9.5, v0.10.0]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.rev }}
+      - name: Run tests
+        run: |
+          nvim --version
+          nvim --headless --noplugin -u scripts/minimal.vim -c "PlenaryBustedFile tests/plenary/path2_spec.lua"
+
   stylua:
     name: stylua
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: JohnnyMorganz/stylua-action@v2
+      - uses: actions/checkout@v4
+      - uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
@@ -58,7 +77,7 @@ jobs:
     name: Luacheck
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare
         run: |
