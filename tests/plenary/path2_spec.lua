@@ -341,10 +341,17 @@ describe("Path2", function()
       end)
     end)
 
-    it_cross_plat("can walk upwards out of current subpath", function()
+    it_cross_plat("can walk_up out of current subpath", function()
       local p = Path:new { "foo", "bar", "baz" }
       local cwd = Path:new { "foo", "foo_inner" }
       local expect = Path:new { "..", "bar", "baz" }
+      assert.are.same(expect.filename, p:make_relative(cwd, true))
+    end)
+
+    it_cross_plat("can walk_up to root", function()
+      local p = Path:new { root(), "foo", "bar", "baz" }
+      local cwd = Path:new { root(), "def" }
+      local expect = Path:new { "..", "foo", "bar", "baz" }
       assert.are.same(expect.filename, p:make_relative(cwd, true))
     end)
   end)

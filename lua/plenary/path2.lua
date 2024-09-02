@@ -67,9 +67,6 @@
 ---
 --- - `find_upwards` returns `nil` if file not found rather than an empty string
 
--- TODO: could probably do with more `make_relative` tests
---        - walk up close to root
---        - add "walk_up" in test name
 -- TODO: add windows test for path2_spec only?
 
 local bit = require "plenary.bit"
