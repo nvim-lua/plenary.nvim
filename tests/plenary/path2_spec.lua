@@ -468,7 +468,7 @@ describe("Path2", function()
     it_cross_plat("can set different modes", function()
       local p = Path:new "_dir_not_exist"
       assert.has_no_error(function()
-        p:mkdir { mode = 292 }  -- o444
+        p:mkdir { mode = 292 } -- o444
       end)
       assert_permission(444, p:permission())
 
