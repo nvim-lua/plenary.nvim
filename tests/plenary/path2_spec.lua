@@ -46,7 +46,6 @@ local function plat_path(p)
   return p:gsub("/", "\\")
 end
 
-
 -- set up mock file with consistent eol regardless of system (git autocrlf settings)
 -- simplifies reading tests
 local licence_lines = {
@@ -158,11 +157,6 @@ describe("Path2", function()
 
         return paths
       end
-
-      it("custom sep", function()
-        local p = Path:new { "foo\\bar/baz", sep = "/" }
-        assert.are.same(p.filename, "foo/bar/baz")
-      end)
 
       describe("noshellslash", function()
         set_shellslash(false)

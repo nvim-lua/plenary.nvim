@@ -8,6 +8,8 @@
 --- - `Path.new` no longer supported (think it's more confusing that helpful
 ---   and not really used as far as I can tell)
 ---
+--- - `Path.new` drops `sep` table param (eg. `Path:new {"foo\\bar/baz", sep = "/"}`)
+---
 --- - drop `__concat` metamethod? it was untested and had some todo comment,
 ---   not sure how functional it is
 ---
