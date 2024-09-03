@@ -46,6 +46,38 @@ local function plat_path(p)
   return p:gsub("/", "\\")
 end
 
+
+-- set up mock file with consistent eol regardless of system (git autocrlf settings)
+-- simplifies reading tests
+local licence_lines = {
+  "MIT License",
+  "",
+  "Copyright (c) 2020 TJ DeVries",
+  "",
+  "Permission is hereby granted, free of charge, to any person obtaining a copy",
+  'of this software and associated documentation files (the "Software"), to deal',
+  "in the Software without restriction, including without limitation the rights",
+  "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+  "copies of the Software, and to permit persons to whom the Software is",
+  "furnished to do so, subject to the following conditions:",
+  "",
+  "The above copyright notice and this permission notice shall be included in all",
+  "copies or substantial portions of the Software.",
+  "",
+  'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR',
+  "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+  "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+  "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+  "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+  "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+  "SOFTWARE.",
+  "",
+}
+
+local license_str = table.concat(licence_lines, "\n")
+local tmp_license = Path:new "TMP_LICENSE"
+tmp_license:write(license_str, "w")
+
 describe("Path2", function()
   describe("filename", function()
     local function get_paths()
@@ -919,7 +951,7 @@ describe("Path2", function()
     end)
 
     it_cross_plat("should read head of file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:head()
       local should = [[MIT License
 
@@ -936,14 +968,14 @@ furnished to do so, subject to the following conditions:]]
     end)
 
     it_cross_plat("should read the first line of file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:head(1)
       local should = [[MIT License]]
       assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should max read whole file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:head(1000)
       local should = [[MIT License
 
@@ -1006,7 +1038,7 @@ SOFTWARE.]]
     end)
 
     it_cross_plat("should read tail of file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:tail()
       local should = [[The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
@@ -1022,14 +1054,14 @@ SOFTWARE.]]
     end)
 
     it_cross_plat("should read the last line of file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:tail(1)
       local should = [[SOFTWARE.]]
       assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should max read whole file", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:tail(1000)
       local should = [[MIT License
 
@@ -1103,14 +1135,14 @@ SOFTWARE.]]
     end)
 
     it_cross_plat("should read bytes at given offset", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:readbyterange(13, 10)
       local should = "Copyright "
       assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("supports negative offset", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:readbyterange(-10, 10)
       local should = "SOFTWARE.\n"
       assert.are.same(should, data, diff_str(should, data))
@@ -1160,7 +1192,7 @@ SOFTWARE.]]
     end)
 
     it_cross_plat("no offset", function()
-      local p = Path:new "LICENSE"
+      local p = Path:new "TMP_LICENSE"
       local data = p:readbyterange(0, 11)
       local should = "MIT License"
       assert.are.same(should, data, diff_str(should, data))
@@ -1240,3 +1272,5 @@ SOFTWARE.]]
     end)
   end)
 end)
+
+tmp_license:rm()
