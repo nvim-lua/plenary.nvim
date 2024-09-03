@@ -932,14 +932,14 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:]]
 
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should read the first line of file", function()
       local p = Path:new "LICENSE"
       local data = p:head(1)
       local should = [[MIT License]]
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should max read whole file", function()
@@ -966,7 +966,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("handles unix lf line endings", function()
@@ -1018,14 +1018,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should read the last line of file", function()
       local p = Path:new "LICENSE"
       local data = p:tail(1)
       local should = [[SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("should max read whole file", function()
@@ -1052,7 +1052,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("handles unix lf line endings", function()
@@ -1098,18 +1098,72 @@ SOFTWARE.]]
   end)
 
   describe("readbyterange", function()
+    after_each(function()
+      uv.fs_unlink "foobar.txt"
+    end)
+
     it_cross_plat("should read bytes at given offset", function()
       local p = Path:new "LICENSE"
       local data = p:readbyterange(13, 10)
       local should = "Copyright "
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
     end)
 
     it_cross_plat("supports negative offset", function()
       local p = Path:new "LICENSE"
       local data = p:readbyterange(-10, 10)
       local should = "SOFTWARE.\n"
-      assert.are.same(should, data)
+      assert.are.same(should, data, diff_str(should, data))
+    end)
+
+    it_cross_plat("handles unix lf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\nbar\nbaz"
+      p:write(txt, "w")
+      local data = p:readbyterange(3, 5)
+      local expect = "\nbar\n"
+      assert.are.same(expect, data, diff_str(expect, data))
+    end)
+
+    it_cross_plat("handles windows crlf line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\r\nbar\r\nbaz"
+      p:write(txt, "w")
+      local data = p:readbyterange(3, 5)
+      local expect = "\r\nbar"
+      assert.are.same(expect, data, diff_str(expect, data))
+    end)
+
+    it_cross_plat("handles mac cr line endings", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "foo\rbar\rbaz"
+      p:write(txt, "w")
+      local data = p:readbyterange(3, 5)
+      local expect = "\rbar\r"
+      assert.are.same(expect, data, diff_str(expect, data))
+    end)
+
+    it_cross_plat("offset larger than size", function()
+      local p = Path:new "foobar.txt"
+      p:touch()
+
+      local txt = "hello"
+      p:write(txt, "w")
+      local data = p:readbyterange(10, 3)
+      assert.are.same("", data)
+    end)
+
+    it_cross_plat("no offset", function()
+      local p = Path:new "LICENSE"
+      local data = p:readbyterange(0, 11)
+      local should = "MIT License"
+      assert.are.same(should, data, diff_str(should, data))
     end)
   end)
 
@@ -1129,13 +1183,14 @@ SOFTWARE.]]
     end)
 
     it_cross_plat("doesn't find file", function()
-      local p = Path:new "."
+      local p = Path:new(path.root())
       local res = p:find_upwards "aisohtenaishoetnaishoetnasihoetnashitoen"
       assert.is_nil(res)
     end)
   end)
 
   describe("expand", function()
+    uv.os_setenv("FOOVAR", "foo")
     uv.os_setenv("BARVAR", "bar")
 
     describe("unix", function()
@@ -1144,7 +1199,7 @@ SOFTWARE.]]
       end
 
       it("match valid env var", function()
-        local p = Path:new "foo/$BARVAR/baz"
+        local p = Path:new "$FOOVAR/$BARVAR/baz"
         assert.are.same("foo/bar/baz", p:expand())
       end)
 
@@ -1160,7 +1215,7 @@ SOFTWARE.]]
       end
 
       it_win("match valid env var", function()
-        local p = Path:new "foo/%BARVAR%/baz"
+        local p = Path:new "%foovar%/%BARVAR%/baz"
         local expect = Path:new "foo/bar/baz"
         assert.are.same(expect.filename, p:expand())
       end)

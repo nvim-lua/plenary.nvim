@@ -222,7 +222,7 @@ function _WindowsPath:expand(parts, sep)
   local new_parts = {}
   for _, part in ipairs(parts) do
     part = part:gsub(pattern, function(m)
-      local var_name = m:sub(2):sub(1, -2)
+      local var_name = m:sub(2, -2)
 
       ---@diagnostic disable-next-line: missing-parameter
       local var = uv.os_getenv(var_name)
@@ -1376,8 +1376,8 @@ function Path:tail(lines)
   return (table.concat(data):gsub("[\r\n]$", ""))
 end
 
----@param offset integer
----@param length integer
+---@param offset integer byte offset from which the file is read, supports negative index
+---@param length integer number of bytes to read from the offset
 ---@return string
 function Path:readbyterange(offset, length)
   vim.validate {
@@ -1403,7 +1403,6 @@ function Path:readbyterange(offset, length)
   local data = ""
   local read_chunk
   while #data < length do
-    -- local read_chunk = assert(uv.fs_read(fd, length - #data, offset))
     read_chunk, err = uv.fs_read(fd, length - #data, offset)
     if read_chunk == nil then
       error(err)
