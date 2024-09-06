@@ -14,6 +14,10 @@ local function set_shellslash(bool)
 end
 
 local function it_win(name, test_fn)
+  if not iswin then
+    return
+  end
+
   if not hasshellslash then
     it(name, test_fn)
   else
@@ -1250,7 +1254,7 @@ SOFTWARE.]]
         assert.are.same("foo/bar/baz", p:expand())
       end)
 
-      it_win("ignore invalid env var", function()
+      it("ignore invalid env var", function()
         local p = Path:new "foo/$NOT_A_REAL_ENV_VAR/baz"
         assert.are.same(p.filename, p:expand())
       end)
