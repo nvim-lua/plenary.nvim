@@ -13,13 +13,14 @@ local hasshellslash = vim.fn.exists "+shellslash" == 1
 ---@field split_root fun(self: plenary._Path, part:string): string, string, string
 ---@field join fun(self: plenary._Path, path: string, ...: string): string
 ---@field expand fun(self: plenary._Path, parts: string[], sep: string?): string[]
+---@field is_relative fun(self: plenary._Path, path: plenary.Path2, to: plenary.Path2): boolean
 
 ---@class plenary._WindowsPath : plenary._Path
 local _WindowsPath = {
   sep = "\\",
   altsep = "/",
   has_drv = true,
-  case_sensitive = true,
+  case_sensitive = false,
 }
 
 setmetatable(_WindowsPath, { __index = _WindowsPath })
@@ -165,12 +166,28 @@ function _WindowsPath:expand(parts, sep)
   return new_parts
 end
 
+---@param path plenary.Path2
+---@param to plenary.Path2
+---@return boolean
+function _WindowsPath:is_relative(path, to)
+  if path.anchor:lower() ~= to.anchor:lower() then
+    return false
+  end
+
+  for i, to_part in ipairs(to.relparts) do
+    if to_part:lower() ~= path.relparts[i]:lower() then
+      return false
+    end
+  end
+  return true
+end
+
 ---@class plenary._PosixPath : plenary._Path
 local _PosixPath = {
   sep = "/",
   altsep = "",
   has_drv = false,
-  case_sensitive = false,
+  case_sensitive = true,
 }
 setmetatable(_PosixPath, { __index = _PosixPath })
 
@@ -240,6 +257,22 @@ function _PosixPath:expand(parts)
   end
 
   return new_parts
+end
+
+---@param path plenary.Path2
+---@param to plenary.Path2
+---@return boolean
+function _PosixPath:is_relative(path, to)
+  if path.root ~= to.root then
+    return false
+  end
+
+  for i, to_part in ipairs(to.relparts) do
+    if to_part ~= path.relparts[i] then
+      return false
+    end
+  end
+  return true
 end
 
 local S_IF = {
@@ -437,7 +470,14 @@ Path.__eq = function(self, other)
   end
   ---@cast other plenary.Path2
 
-  return self:absolute() == other:absolute()
+  if self._flavor ~= other._flavor then
+    return false
+  end
+
+  if self._flavor.case_sensitive then
+    return self.filename == other.filename
+  end
+  return self.filename:lower() == other.filename:lower()
 end
 
 local _readonly_mt = {
@@ -544,10 +584,7 @@ local function is_path_like(x)
 end
 
 local function is_path_like_opt(x)
-  if x == nil then
-    return true
-  end
-  return is_path_like(x)
+  return x == nil or is_path_like(x)
 end
 
 ---@return boolean
@@ -749,41 +786,21 @@ function Path:is_relative(to)
     return true
   end
 
-  -- NOTE: could probably be optimized by letting _WindowsPath/_WindowsPath
-  -- handle this.
-
-  local to_abs = to:absolute()
-  for parent in self:iter_parents() do
-    if to_abs == parent then
-      return true
-    end
-  end
-
-  return false
+  return self._flavor:is_relative(self, to)
 end
 
---- makes a path relative to another (by default the cwd).
---- if path is already a relative path, it will first be turned absolute using
---- the cwd then made relative to the `to` path.
----@param to string|plenary.Path2? absolute path to make relative to (default: cwd)
----@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
----@return string
-function Path:make_relative(to, walk_up)
+---@return plenary.Path2
+function Path:_make_relative(to, walk_up)
   vim.validate {
     to = { to, is_path_like_opt },
     walk_up = { walk_up, "b", true },
   }
 
-  -- NOTE: could probably take some shortcuts and avoid some `Path:new` calls
-  -- by allowing _WindowsPath/_PosixPath handle this individually.
-  -- As always, Windows root complicates things, so generating a new Path often
-  -- easier/less error prone than manual string manipulate but at the cost of
-  -- perf.
   walk_up = vim.F.if_nil(walk_up, false)
 
   if to == nil then
     if not self:is_absolute() then
-      return "."
+      return Path:new "."
     end
 
     to = Path:new(self.cwd)
@@ -793,11 +810,11 @@ function Path:make_relative(to, walk_up)
 
   local abs = self:absolute()
   if abs == to:absolute() then
-    return "."
+    return Path:new "."
   end
 
   if self:is_relative(to) then
-    return Path:new((abs:sub(#to:absolute() + 1):gsub("^" .. self.sep, ""))).filename
+    return Path:new((abs:sub(#to:absolute() + 1):gsub("^" .. self.sep, "")))
   end
 
   if not walk_up then
@@ -820,7 +837,35 @@ function Path:make_relative(to, walk_up)
 
   local res_path = abs:sub(#common_path + 1):gsub("^" .. self.sep, "")
   table.insert(steps, res_path)
-  return Path:new(steps).filename
+  return Path:new(steps)
+end
+
+--- makes a path relative to another (by default the cwd).
+--- if path is already a relative path, it will first be turned absolute using
+--- the cwd then made relative to the `to` path.
+---@param to string|plenary.Path2? path to make relative to (default: cwd)
+---@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
+---@return string
+function Path:make_relative(to, walk_up)
+  return self:_make_relative(to, walk_up).filename
+end
+
+--- Normalize path, resolving any intermediate ".."
+--- eg. `a//b`, `a/./b`, `a/foo/../b` will all become `a/b`
+--- Can optionally convert a path to relative to another.
+---@param relative_to string|plenary.Path2|nil path to make relative to, if nil path isn't made relative
+---@param walk_up boolean? walk up to the make relative path (if provided) using '..' (default: `false`)
+---@return string
+function Path:normalize(relative_to, walk_up)
+  local p
+  if relative_to == nil then
+    p = self
+  else
+    p = self:_make_relative(relative_to, walk_up)
+  end
+
+  local relparts = resolve_dots(p.relparts)
+  return p:_filename(nil, nil, relparts)
 end
 
 --- Shorten path parts.

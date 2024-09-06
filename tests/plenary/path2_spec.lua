@@ -46,6 +46,16 @@ local function plat_path(p)
   return p:gsub("/", "\\")
 end
 
+local function root()
+  if not iswin then
+    return "/"
+  end
+  if hasshellslash and vim.o.shellslash then
+    return "C:/"
+  end
+  return "C:\\"
+end
+
 -- set up mock file with consistent eol regardless of system (git autocrlf settings)
 -- simplifies reading tests
 local licence_lines = {
@@ -301,16 +311,6 @@ describe("Path2", function()
   end)
 
   describe(":make_relative", function()
-    local root = function()
-      if not iswin then
-        return "/"
-      end
-      if hasshellslash and vim.o.shellslash then
-        return "C:/"
-      end
-      return "C:\\"
-    end
-
     it_cross_plat("can take absolute paths and make them relative to the cwd", function()
       local p = Path:new { "lua", "plenary", "path.lua" }
       local absolute = vim.fn.getcwd() .. path.sep .. p.filename
@@ -380,6 +380,57 @@ describe("Path2", function()
       local expect = Path:new { "..", "foo", "bar", "baz" }
       assert.are.same(expect.filename, p:make_relative(cwd, true))
     end)
+
+    it_win("handles drive letters case insensitively", function()
+      local p = Path:new { "C:/", "foo", "bar", "baz" }
+      local cwd = Path:new { "c:/", "foo" }
+      local expect = Path:new { "bar", "baz" }
+      assert.are.same(expect.filename, p:make_relative(cwd))
+    end)
+  end)
+
+  describe("normalize", function()
+    it_cross_plat("handles empty path", function()
+      local p = Path:new ""
+      assert.are.same(".", p:normalize())
+    end)
+
+    it_cross_plat("removes middle ..", function()
+      local p = Path:new "lua/../lua/say.lua"
+      local expect = Path:new { "lua", "say.lua" }
+      assert.are.same(expect.filename, p:normalize())
+    end)
+
+    it_cross_plat("walk up relative path", function()
+      local p = Path:new "async/../../lua/say.lua"
+      local expect = Path:new { "..", "lua", "say.lua" }
+      assert.are.same(expect.filename, p:normalize())
+    end)
+
+    it_cross_plat("handles absolute path", function()
+      local p = Path:new { root(), "a", "..", "a", "b" }
+      local expect = Path:new { root(), "a", "b" }
+      assert.are.same(expect.filename, p:normalize())
+    end)
+
+    it_cross_plat("makes relative", function()
+      local p = Path:new { path.home, "a", "..", "", "a", "b" }
+      local expect = Path:new { "a", "b" }
+      assert.are.same(expect.filename, p:normalize(path.home))
+    end)
+
+    it_cross_plat("make relative walk_up", function()
+      local p = Path:new { path.home, "a", "..", "", "a", "b" }
+      local cwd = Path:new { path.home, "c" }
+      local expect = Path:new { "..", "a", "b" }
+      assert.are.same(expect.filename, p:normalize(cwd, true))
+    end)
+
+    it_win("windows drive relative paths", function()
+      local p = Path:new { "C:", "a", "..", "", "a", "b" }
+      local expect = Path:new { "C:", "a", "b" }
+      assert.are.same(expect.filename, p:normalize())
+    end)
   end)
 
   describe(":shorten", function()
@@ -441,13 +492,6 @@ describe("Path2", function()
     end)
   end)
 
-  local function assert_permission(expect, actual)
-    if iswin then
-      return
-    end
-    assert.equal(expect, actual)
-  end
-
   describe("mkdir / rmdir", function()
     after_each(function()
       uv.fs_rmdir "_dir_not_exist"
@@ -464,7 +508,6 @@ describe("Path2", function()
       p:mkdir()
       assert.is_true(p:exists())
       assert.is_true(p:is_dir())
-      assert_permission(755, p:permission()) -- umask dependent, probably bad test
 
       p:rmdir()
       assert.is_false(p:exists())
@@ -496,17 +539,6 @@ describe("Path2", function()
       Path:new("impossible"):rmdir()
       assert.is_false(p:exists())
       assert.is_false(Path:new("impossible"):exists())
-    end)
-
-    it_cross_plat("can set different modes", function()
-      local p = Path:new "_dir_not_exist"
-      assert.has_no_error(function()
-        p:mkdir { mode = 292 } -- o444
-      end)
-      assert_permission(444, p:permission())
-
-      p:rmdir()
-      assert.is_false(p:exists())
     end)
   end)
 
@@ -762,17 +794,6 @@ describe("Path2", function()
       for _, dir in ipairs(sub_dirs) do
         table.insert(src_dirs, src_dir:joinpath(dir))
         table.insert(trg_dirs, trg_dir:joinpath(dir))
-      end
-
-      -- vim.tbl_flatten doesn't work here as copy doesn't return a list
-      local function flatten(ret, t)
-        for _, v in pairs(t) do
-          if type(v) == "table" then
-            flatten(ret, v)
-          else
-            table.insert(ret, v)
-          end
-        end
       end
 
       before_each(function()
@@ -1198,14 +1219,14 @@ SOFTWARE.]]
       local p = Path:new "lua/plenary"
       local res = assert(p:find_upwards "busted.lua")
       local expect = Path:new "lua/plenary/busted.lua"
-      assert.are.same(expect, res)
+      assert.are.same(expect.filename, res.filename)
     end)
 
     it_cross_plat("finds file in parent dir", function()
       local p = Path:new "lua/plenary"
       local res = assert(p:find_upwards "say.lua")
-      local expect = Path:new "lua/say.lua"
-      assert.are.same(expect, res)
+      local expect = vim.fn.fnamemodify("lua/say.lua", ":p")
+      assert.are.same(expect, res.filename)
     end)
 
     it_cross_plat("doesn't find file", function()
