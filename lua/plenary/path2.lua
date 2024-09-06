@@ -861,7 +861,9 @@ function Path:normalize(relative_to, walk_up)
   if relative_to == nil then
     p = self
   else
-    p = self:_make_relative(relative_to, walk_up)
+    local ok
+    ok, p = pcall(Path._make_relative, self, relative_to, walk_up)
+    p = ok and assert(p) or self
   end
 
   local relparts = resolve_dots(p.relparts)

@@ -435,6 +435,11 @@ describe("Path2", function()
       local expect = Path:new { "C:", "a", "b" }
       assert.are.same(expect.filename, p:normalize())
     end)
+
+    it_cross_plat("ignores bad make_relative", function()
+      local p = Path:new "foobar"
+      assert.are.same(p.filename, p:normalize(path.home))
+    end)
   end)
 
   describe(":shorten", function()
