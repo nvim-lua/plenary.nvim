@@ -1294,6 +1294,9 @@ SOFTWARE.]]
       local expect = home / "hello"
       assert.are.same(expect.filename, p:expand())
     end)
+
+    uv.os_unsetenv("FOOVAR")
+    uv.os_unsetenv("BARVAR")
   end)
 end)
 
