@@ -1295,8 +1295,8 @@ SOFTWARE.]]
       assert.are.same(expect.filename, p:expand())
     end)
 
-    uv.os_unsetenv("FOOVAR")
-    uv.os_unsetenv("BARVAR")
+    uv.os_unsetenv "FOOVAR"
+    uv.os_unsetenv "BARVAR"
   end)
 end)
 
