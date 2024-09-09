@@ -1249,20 +1249,32 @@ SOFTWARE.]]
     uv.os_setenv("FOOVAR", "foo")
     uv.os_setenv("BARVAR", "bar")
 
-    describe("unix", function()
-      if iswin then
-        return
-      end
+    it_cross_plat("match simple valid $ env vars", function()
+      assert.are.same("foo", Path:new("$FOOVAR"):expand())
+      assert.are.same("foo$", Path:new("$FOOVAR$"):expand())
+      assert.are.same(Path:new("foo/bar/baz").filename, Path:new("$FOOVAR/$BARVAR/baz"):expand())
+      assert.are.same(Path:new("foo/bar baz").filename, Path:new("$FOOVAR/$BARVAR baz"):expand())
+      assert.are.same(Path:new("foo/$BARVARbaz").filename, Path:new("$FOOVAR/$BARVARbaz"):expand())
+    end)
 
-      it("match valid env var", function()
-        local p = Path:new "$FOOVAR/$BARVAR/baz"
-        assert.are.same("foo/bar/baz", p:expand())
-      end)
+    it_cross_plat("match simple valid $ env vars with braces", function()
+      assert.are.same(Path:new("foo/bar/baz").filename, Path:new("${FOOVAR}/${BARVAR}/baz"):expand())
+      assert.are.same(Path:new("foo/bar baz").filename, Path:new("${FOOVAR}/${BARVAR} baz"):expand())
+    end)
 
-      it("ignore invalid env var", function()
-        local p = Path:new "foo/$NOT_A_REAL_ENV_VAR/baz"
-        assert.are.same(p.filename, p:expand())
-      end)
+    it_cross_plat("ignore unset $ env var", function()
+      local p = Path:new "foo/$NOT_A_REAL_ENV_VAR/baz"
+      assert.are.same(p.filename, p:expand())
+    end)
+
+    it_cross_plat("ignore empty $", function()
+      local p = Path:new "foo/$/bar$baz$"
+      assert.are.same(p.filename, p:expand())
+    end)
+
+    it_cross_plat("ignore empty ${}", function()
+      local p = Path:new "foo/${}/bar${}"
+      assert.are.same(p.filename, p:expand())
     end)
 
     describe("windows", function()
@@ -1270,15 +1282,38 @@ SOFTWARE.]]
         return
       end
 
-      it_win("match valid env var", function()
-        local p = Path:new "%foovar%/%BARVAR%/baz"
-        local expect = Path:new "foo/bar/baz"
-        assert.are.same(expect.filename, p:expand())
+      uv.os_setenv("{foovar", "foo1")
+      uv.os_setenv("{foovar}", "foo2")
+
+      it_win("match valid %% env var", function()
+        assert.are.same(Path:new("foo/bar/baz").filename, Path:new("%foovar%/%BARVAR%/baz"):expand())
+        assert.are.same(Path:new("foo1/bar/baz").filename, Path:new("%{foovar%/%BARVAR%/baz"):expand())
+        assert.are.same(Path:new("foo2/bar/baz").filename, Path:new("%{foovar}%/%BARVAR%/baz"):expand())
+        assert.are.same(Path:new("foo/bar baz").filename, Path:new("%foovar%/%BARVAR% baz"):expand())
       end)
 
-      it_win("ignore invalid env var", function()
+      it_win("empty %%", function()
+        local p = Path:new "foo/%%/baz%%"
+        assert.are.same(p.filename, p:expand())
+      end)
+
+      it_win("match special char env var with ${}", function()
+        assert.are.same(Path:new("foo1/bar/baz").filename, Path:new("${{foovar}/%BARVAR%/baz"):expand())
+        assert.are.same(Path:new("foo1}/bar/baz").filename, Path:new("${{foovar}}/%BARVAR%/baz"):expand())
+      end)
+
+      it_win("ignore unset %% env var", function()
         local p = Path:new "foo/%NOT_A_REAL_ENV_VAR%/baz"
         assert.are.same(p.filename, p:expand())
+      end)
+
+      it_win("ignore quoted vars", function()
+        local paths = { "'%foovar%'", "'${foovar}'", "'$foovar'" }
+        for _, p in ipairs(paths) do
+          ---@diagnostic disable-next-line: cast-local-type
+          p = Path:new(p)
+          assert.are.same(p.filename, p:expand())
+        end
       end)
     end)
 
@@ -1288,11 +1323,9 @@ SOFTWARE.]]
       assert.are.same(expect.filename, p:expand())
     end)
 
-    it_cross_plat("matches ~user", function()
+    it_cross_plat("does not matches ~user", function()
       local p = Path:new "~otheruser/hello"
-      local home = Path:new(path.home):parent() / "otheruser"
-      local expect = home / "hello"
-      assert.are.same(expect.filename, p:expand())
+      assert.are.same(p.filename, p:expand())
     end)
 
     uv.os_unsetenv "FOOVAR"

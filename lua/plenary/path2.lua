@@ -136,31 +136,70 @@ end
 
 ---@param parts string[]
 ---@param sep string
----@return string[] new_path
+---@return string[] new_parts
 function _WindowsPath:expand(parts, sep)
-  -- Variables have a percent sign on both sides: %ThisIsAVariable%
-  -- The variable name can include spaces, punctuation and mixed case:
-  -- %_Another Ex.ample%
-  -- But they aren't case sensitive
-  --
-  -- A variable name may include any of the following characters:
-  -- A-Z, a-z, 0-9, # $ ' ( ) * + , - . ? @ [ ] _  { } ~
-  -- The first character of the name must not be numeric.
-
-  -- this would be MUCH cleaner to implement with LPEG but backwards compatibility...
-  local pattern = "%%[A-Za-z#$'()*+,%-.?@[%]_{}~][A-Za-z0-9#$'()*+,%-.?@[%]_{}~]*%%"
-
   local new_parts = {}
+
+  local function add_expand(sub_parts, var, part, start, end_)
+    ---@diagnostic disable-next-line: missing-parameter
+    local val = uv.os_getenv(var)
+    if val then
+      table.insert(sub_parts, (val:gsub("\\", sep)))
+    else
+      table.insert(sub_parts, part:sub(start, end_))
+    end
+  end
+
   for _, part in ipairs(parts) do
-    part = part:gsub(pattern, function(m)
-      local var_name = m:sub(2, -2)
+    local sub_parts = {}
+    local i = 1
 
-      ---@diagnostic disable-next-line: missing-parameter
-      local var = uv.os_getenv(var_name)
-      return var and (var:gsub("\\", sep)) or m
-    end)
+    while i <= #part do
+      local ch = part:sub(i, i)
+      if ch == "'" then -- no expansion inside single quotes
+        local end_ = part:find("'", i + 1, true)
+        if end_ then
+          table.insert(sub_parts, part:sub(i, end_))
+          i = end_
+        else
+          table.insert(sub_parts, ch)
+        end
+      elseif ch == "%" then
+        local end_ = part:find("%", i + 1, true)
+        if end_ then
+          local var = part:sub(i + 1, end_ - 1)
+          add_expand(sub_parts, var, part, i, end_)
+          i = end_
+        else
+          table.insert(sub_parts, ch)
+        end
+      elseif ch == "$" then
+        local nextch = part:sub(i + 1, i + 1)
+        if nextch == "$" then
+          i = i + 1
+          table.insert(sub_parts, ch)
+        elseif nextch == "{" then
+          local end_ = part:find("}", i + 2, true)
+          if end_ then
+            local var = part:sub(i + 2, end_ - 1)
+            add_expand(sub_parts, var, part, i, end_)
+            i = end_
+          else
+            table.insert(sub_parts, ch)
+          end
+        else
+          local end_ = part:find("[^%w_]", i + 1, false) or #part + 1
+          local var = part:sub(i + 1, end_ - 1)
+          add_expand(sub_parts, var, part, i, end_ - 1)
+          i = end_ - 1
+        end
+      else
+        table.insert(sub_parts, ch)
+      end
+      i = i + 1
+    end
 
-    table.insert(new_parts, part)
+    table.insert(new_parts, table.concat(sub_parts))
   end
 
   return new_parts
@@ -232,28 +271,47 @@ function _PosixPath:join(path, ...)
 end
 
 ---@param parts string[]
----@return string[] new_path
+---@return string[] new_parts
 function _PosixPath:expand(parts)
-  -- Environment variable names used by the utilities in the Shell and
-  -- Utilities volume of IEEE Std 1003.1-2001 consist solely of uppercase
-  -- letters, digits, and the '_' (underscore) from the characters defined in
-  -- Portable Character Set and do not begin with a digit. Other characters may
-  -- be permitted by an implementation; applications shall tolerate the
-  -- presence of such names.
-
-  local pattern = "%$[A-Z_][A-Z0-9_]*"
+  local function add_expand(sub_parts, var, part, start, end_)
+    ---@diagnostic disable-next-line: missing-parameter
+    local val = uv.os_getenv(var)
+    if val then
+      table.insert(sub_parts, val)
+    else
+      table.insert(sub_parts, part:sub(start, end_))
+    end
+  end
 
   local new_parts = {}
   for _, part in ipairs(parts) do
-    part = part:gsub(pattern, function(m)
-      local var_name = m:sub(2)
+    local i = 1
+    local sub_parts = {}
+    while i <= #part do
+      local ch = part:sub(i, i)
+      if ch == "$" then
+        if part:sub(i + 1, i + 1) == "{" then
+          local end_ = part:find("}", i + 2, true)
+          if end_ then
+            local var = part:sub(i + 2, end_ - 1)
+            add_expand(sub_parts, var, part, i, end_)
+            i = end_
+          else
+            table.insert(sub_parts, ch)
+          end
+        else
+          local end_ = part:find("[^%w_]", i + 1, false) or #part + 1
+          local var = part:sub(i + 1, end_ - 1)
+          add_expand(sub_parts, var, part, i, end_ - 1)
+          i = end_ - 1
+        end
+      else
+        table.insert(sub_parts, ch)
+      end
+      i = i + 1
+    end
 
-      ---@diagnostic disable-next-line: missing-parameter
-      local var = uv.os_getenv(var_name)
-      return var or m
-    end)
-
-    table.insert(new_parts, part)
+    table.insert(new_parts, table.concat(sub_parts))
   end
 
   return new_parts
@@ -714,15 +772,17 @@ function Path:absolute()
 end
 
 --- get the environment variable expanded filename
+--- also expand ~/ but NOT ~user/ constructs
 ---@return string
 function Path:expand()
   local relparts = self._flavor:expand(self.relparts, self.sep)
   local filename = self:_filename(nil, nil, relparts)
 
-  filename = filename:gsub("^~([^" .. self.sep .. "]+)" .. self.sep, function(m)
-    return Path:new(self.path.home):parent().filename .. self.sep .. m .. self.sep
-  end)
-  return (filename:gsub("^~", self.path.home))
+  if filename:sub(1, 2) == "~" .. self.sep then
+    filename = self.path.home .. filename:sub(2)
+  end
+
+  return filename
 end
 
 ---@param ... plenary.Path2Args
