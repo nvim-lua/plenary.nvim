@@ -849,14 +849,20 @@ function Path:is_relative(to)
   return self._flavor:is_relative(self, to)
 end
 
+---@class plenary.Path2.make_relative.Opts
+---@field walk_up boolean? walk up to the provided path using '..' (default: `false`)
+
+---@param to string|plenary.Path2?
+---@param opts plenary.Path2.make_relative.Opts?
 ---@return plenary.Path2
-function Path:_make_relative(to, walk_up)
+function Path:_make_relative(to, opts)
+  opts = opts or {}
   vim.validate {
     to = { to, is_path_like_opt },
-    walk_up = { walk_up, "b", true },
+    walk_up = { opts.walk_up, "b", true },
   }
 
-  walk_up = vim.F.if_nil(walk_up, false)
+  opts.walk_up = vim.F.if_nil(opts.walk_up, false)
 
   if to == nil then
     if not self:is_absolute() then
@@ -877,7 +883,7 @@ function Path:_make_relative(to, walk_up)
     return Path:new((abs:sub(#to:absolute() + 1):gsub("^" .. self.sep, "")))
   end
 
-  if not walk_up then
+  if not opts.walk_up then
     error(string.format("'%s' is not in the subpath of '%s'", self, to))
   end
 
@@ -904,25 +910,25 @@ end
 --- if path is already a relative path, it will first be turned absolute using
 --- the cwd then made relative to the `to` path.
 ---@param to string|plenary.Path2? path to make relative to (default: cwd)
----@param walk_up boolean? walk up to the provided path using '..' (default: `false`)
+---@param opts plenary.Path2.make_relative.Opts?
 ---@return string
-function Path:make_relative(to, walk_up)
-  return self:_make_relative(to, walk_up).filename
+function Path:make_relative(to, opts)
+  return self:_make_relative(to, opts).filename
 end
 
 --- Normalize path, resolving any intermediate ".."
 --- eg. `a//b`, `a/./b`, `a/foo/../b` will all become `a/b`
 --- Can optionally convert a path to relative to another.
----@param relative_to string|plenary.Path2|nil path to make relative to, if nil path isn't made relative
----@param walk_up boolean? walk up to the make relative path (if provided) using '..' (default: `false`)
+---@param relative_to string|plenary.Path2? path to make relative to, if nil path isn't made relative
+---@param opts plenary.Path2.make_relative.Opts?
 ---@return string
-function Path:normalize(relative_to, walk_up)
+function Path:normalize(relative_to, opts)
   local p
   if relative_to == nil then
     p = self
   else
     local ok
-    ok, p = pcall(Path._make_relative, self, relative_to, walk_up)
+    ok, p = pcall(Path._make_relative, self, relative_to, opts)
     p = ok and assert(p) or self
   end
 
@@ -967,7 +973,7 @@ function Path:shorten(len, excludes)
   return self:_filename(nil, nil, new_parts)
 end
 
----@class plenary.Path2.mkdirOpts
+---@class plenary.Path2.mkdir.Opts
 --- permission to give to the directory, this is modified by the process's umask
 --- (default: `o777`)
 --- (currently not implemented in Windows by libuv)
@@ -976,7 +982,7 @@ end
 ---@field exists_ok boolean? ignores error if true and target directory exists (default: `false`)
 
 --- Create directory
----@param opts plenary.Path2.mkdirOpts?
+---@param opts plenary.Path2.mkdir.Opts?
 function Path:mkdir(opts)
   opts = opts or {}
   vim.validate {
@@ -1026,7 +1032,7 @@ function Path:rmdir()
   end
 end
 
----@class plenary.Path2.touchOpts
+---@class plenary.Path2.touch.Opts
 ---@field mode integer? permissions to give to the file if created (default: `o666`)
 --- create parent directories if true and necessary. can optionally take a mode value
 --- for the mkdir function (default: `false`)
@@ -1034,7 +1040,7 @@ end
 
 --- 'touch' file.
 --- If it doesn't exist, creates it including optionally, the parent directories
----@param opts plenary.Path2.touchOpts?
+---@param opts plenary.Path2.touch.Opts?
 function Path:touch(opts)
   opts = opts or {}
   vim.validate {
@@ -1069,11 +1075,11 @@ function Path:touch(opts)
   end
 end
 
----@class plenary.Path2.rmOpts
+---@class plenary.Path2.rm.Opts
 ---@field recursive boolean? remove directories and their content recursively (defaul: `false`)
 
 --- rm file or optional recursively remove directories and their content recursively
----@param opts plenary.Path2.rmOpts?
+---@param opts plenary.Path2.rm.Opts?
 function Path:rm(opts)
   opts = opts or {}
   vim.validate { recursive = { opts.recursive, "b", true } }
@@ -1109,19 +1115,16 @@ function Path:rm(opts)
   self:rmdir()
 end
 
----@class plenary.Path2.renameOpts
----@field new_name string|plenary.Path2 destination path
-
----@param opts plenary.Path2.renameOpts
+---@param new_name string|plenary.Path2 destination path
 ---@return plenary.Path2
-function Path:rename(opts)
-  vim.validate { new_name = { opts.new_name, is_path_like } }
+function Path:rename(new_name)
+  vim.validate { new_name = { new_name, is_path_like } }
 
-  if not opts.new_name or opts.new_name == "" then
+  if not new_name or new_name == "" then
     error "Please provide the new name!"
   end
 
-  local new_path = self:parent() / opts.new_name ---@type plenary.Path2
+  local new_path = self:parent() / new_name ---@type plenary.Path2
 
   if new_path:exists() then
     error "File or directory already exists!"
@@ -1134,8 +1137,7 @@ function Path:rename(opts)
   return new_path
 end
 
----@class plenary.Path2.copyOpts
----@field destination string|plenary.Path2 target file path to copy to
+---@class plenary.Path2.copy.Opts
 ---@field recursive boolean? whether to copy folders recursively (default: `false`)
 ---@field override boolean? whether to override files (default: `true`)
 ---@field respect_gitignore boolean? skip folders ignored by all detected `gitignore`s (default: `false`)
@@ -1143,13 +1145,15 @@ end
 ---@field parents boolean? whether to create possibly non-existing parent dirs of `opts.destination` (default: `false`)
 ---@field exists_ok boolean? whether ok if `opts.destination` exists, if so folders are merged (default: `true`)
 
----@param opts plenary.Path2.copyOpts
+---@param destination string|plenary.Path2 target file path to copy to
+---@param opts plenary.Path2.copy.Opts?
 --- a flat dictionary of destination paths and their copy result.
 --- if successful, `{ success = true }`, else `{ success = false, err = "some msg" }`
 ---@return {[plenary.Path2]: {success:boolean, err: string?}}
-function Path:copy(opts)
+function Path:copy(destination, opts)
+  opts = opts or {}
   vim.validate {
-    destination = { opts.destination, is_path_like },
+    destination = { destination, is_path_like },
     recursive = { opts.recursive, "b", true },
     override = { opts.override, "b", true },
   }
@@ -1157,7 +1161,7 @@ function Path:copy(opts)
   opts.recursive = vim.F.if_nil(opts.recursive, false)
   opts.override = vim.F.if_nil(opts.override, true)
 
-  local dest = self:parent() / opts.destination ---@type plenary.Path2
+  local dest = self:parent() / destination ---@type plenary.Path2
 
   local success = {} ---@type {[plenary.Path2]: {success: boolean, err: string?}}
 
@@ -1196,11 +1200,7 @@ function Path:copy(opts)
   for _, entry in ipairs(data) do
     local entry_path = Path:new(entry)
     local new_dest = dest / entry_path.name
-    -- clear destination as it might be Path table otherwise failing w/ extend
-    opts.destination = nil
-    local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
-    -- nil: not overriden if `override = false`
-    local res = entry_path:copy(new_opts)
+    local res = entry_path:copy(new_dest, opts)
     success = vim.tbl_deep_extend("force", success, res)
   end
   return success

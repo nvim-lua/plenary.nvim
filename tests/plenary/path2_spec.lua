@@ -375,14 +375,14 @@ describe("Path2", function()
       local p = Path:new { "foo", "bar", "baz" }
       local cwd = Path:new { "foo", "foo_inner" }
       local expect = Path:new { "..", "bar", "baz" }
-      assert.are.same(expect.filename, p:make_relative(cwd, true))
+      assert.are.same(expect.filename, p:make_relative(cwd, { walk_up = true }))
     end)
 
     it_cross_plat("can walk_up to root", function()
       local p = Path:new { root(), "foo", "bar", "baz" }
       local cwd = Path:new { root(), "def" }
       local expect = Path:new { "..", "foo", "bar", "baz" }
-      assert.are.same(expect.filename, p:make_relative(cwd, true))
+      assert.are.same(expect.filename, p:make_relative(cwd, { walk_up = true }))
     end)
 
     it_win("handles drive letters case insensitively", function()
@@ -427,7 +427,7 @@ describe("Path2", function()
       local p = Path:new { path.home, "a", "..", "", "a", "b" }
       local cwd = Path:new { path.home, "c" }
       local expect = Path:new { "..", "a", "b" }
-      assert.are.same(expect.filename, p:normalize(cwd, true))
+      assert.are.same(expect.filename, p:normalize(cwd, { walk_up = true }))
     end)
 
     it_win("windows drive relative paths", function()
@@ -641,7 +641,7 @@ describe("Path2", function()
 
       local new_p
       assert.no_error(function()
-        new_p = p:rename { new_name = "not_a_random_filename.lua" }
+        new_p = p:rename "not_a_random_filename.lua"
       end)
       assert.not_nil(new_p)
       assert.are.same("not_a_random_filename.lua", new_p.name)
@@ -655,7 +655,7 @@ describe("Path2", function()
       assert.is_true(p:exists())
 
       assert.has_error(function()
-        p:rename { new_name = "" }
+        p:rename ""
       end)
       assert.has_error(function()
         ---@diagnostic disable-next-line: missing-fields
@@ -674,7 +674,7 @@ describe("Path2", function()
 
       local new_p
       assert.no_error(function()
-        new_p = p:rename { new_name = "../some_random_filename.lua" }
+        new_p = p:rename "../some_random_filename.lua"
       end)
       assert.not_nil(new_p)
       assert.are.same(Path:new("../some_random_filename.lua"):absolute(), new_p:absolute())
@@ -691,7 +691,7 @@ describe("Path2", function()
       assert.is_true(p2:exists())
 
       assert.has_error(function()
-        p1:rename { new_name = "not_a_random_filename.lua" }
+        p1:rename "not_a_random_filename.lua"
       end)
       assert.are.same(p1.filename, "a_random_filename.lua")
     end)
@@ -706,7 +706,7 @@ describe("Path2", function()
 
       local new_p
       assert.no_error(function()
-        new_p = p1:rename { new_name = p2 }
+        new_p = p1:rename(p2)
       end)
       assert.not_nil(new_p)
       assert.are.same("not_a_random_filename.lua", new_p.name)
@@ -730,7 +730,7 @@ describe("Path2", function()
       assert.is_true(p1:exists())
 
       assert.no_error(function()
-        p1:copy { destination = "not_a_random_filename.rs" }
+        p1:copy "not_a_random_filename.rs"
       end)
       assert.is_true(p1:exists())
       assert.are.same(p1.filename, "a_random_filename.rs")
@@ -744,7 +744,7 @@ describe("Path2", function()
       assert.is_true(p1:exists())
 
       assert.no_error(function()
-        p1:copy { destination = p2 }
+        p1:copy(p2)
       end)
       assert.is_true(p1:exists())
       assert.is_true(p2:exists())
@@ -758,7 +758,7 @@ describe("Path2", function()
       assert.is_true(p:exists())
 
       assert.no_error(function()
-        p:copy { destination = "../some_random_filename.rs" }
+        p:copy "../some_random_filename.rs"
       end)
       assert.is_true(p:exists())
     end)
@@ -771,9 +771,8 @@ describe("Path2", function()
       assert.is_true(p1:exists())
       assert.is_true(p2:exists())
 
-      assert(pcall(p1.copy, p1, { destination = "not_a_random_filename.rs", override = false }))
       assert.no_error(function()
-        p1:copy { destination = "not_a_random_filename.rs", override = false }
+        p1:copy("not_a_random_filename.rs", { override = false })
       end)
       assert.are.same(p1.filename, "a_random_filename.rs")
       assert.are.same(p2.filename, "not_a_random_filename.rs")
@@ -786,7 +785,7 @@ describe("Path2", function()
 
       local trg_dir = Path:new "trg"
       assert.has_error(function()
-        src_dir:copy { destination = trg_dir, recursive = false }
+        src_dir:copy(trg_dir, { recursive = false })
       end)
     end)
 
@@ -834,7 +833,7 @@ describe("Path2", function()
       it_cross_plat("hidden=true, override=true", function()
         local success
         assert.no_error(function()
-          success = src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+          success = src_dir:copy(trg_dir, { recursive = true, override = true, hidden = true })
         end)
 
         assert.not_nil(success)
@@ -847,12 +846,12 @@ describe("Path2", function()
       it_cross_plat("hidden=true, override=false", function()
         -- setup
         assert.no_error(function()
-          src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+          src_dir:copy(trg_dir, { recursive = true, override = true, hidden = true })
         end)
 
         local success
         assert.no_error(function()
-          success = src_dir:copy { destination = trg_dir, recursive = true, override = false, hidden = true }
+          success = src_dir:copy(trg_dir, { recursive = true, override = false, hidden = true })
         end)
 
         assert.not_nil(success)
@@ -867,7 +866,7 @@ describe("Path2", function()
       it_cross_plat("hidden=false, override=true", function()
         local success
         assert.no_error(function()
-          success = src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = false }
+          success = src_dir:copy(trg_dir, { recursive = true, override = true, hidden = false })
         end)
 
         assert.not_nil(success)
@@ -880,12 +879,12 @@ describe("Path2", function()
       it_cross_plat("hidden=false, override=false", function()
         -- setup
         assert.no_error(function()
-          src_dir:copy { destination = trg_dir, recursive = true, override = true, hidden = true }
+          src_dir:copy(trg_dir, { recursive = true, override = true, hidden = true })
         end)
 
         local success
         assert.no_error(function()
-          success = src_dir:copy { destination = trg_dir, recursive = true, override = false, hidden = false }
+          success = src_dir:copy(trg_dir, { recursive = true, override = false, hidden = false })
         end)
 
         assert.not_nil(success)
