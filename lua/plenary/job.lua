@@ -13,7 +13,7 @@ local F = require "plenary.functional"
 ---@field detached? boolean Spawn the child in a detached state making it a process group leader
 ---@field skip_validation? boolean Skip validating the arguments
 ---@field enable_handlers? boolean If set to false, disables all callbacks associated with output (default: true)
----@field enabled_recording? boolean
+---@field enable_recording? boolean
 ---@field on_start? fun()
 ---@field on_stdout? fun(error: string, data: string, self?: Job)
 ---@field on_stderr? fun(error: string, data: string, self?: Job)
@@ -457,12 +457,12 @@ function Job:sync(timeout, wait_interval)
 end
 
 function Job:result()
-  assert(self.enable_recording, "'enabled_recording' is not enabled for this job.")
+  assert(self.enable_recording, "'enable_recording' is not enabled for this job.")
   return self._stdout_results
 end
 
 function Job:stderr_result()
-  assert(self.enable_recording, "'enabled_recording' is not enabled for this job.")
+  assert(self.enable_recording, "'enable_recording' is not enabled for this job.")
   return self._stderr_results
 end
 
