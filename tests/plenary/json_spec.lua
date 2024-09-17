@@ -67,4 +67,21 @@ describe("json", function()
       [[{"x":"x \"sed -e \\\"s/^.\\\\{46\\\\}T//\\\" -e \\\"s/#033/\\\\x1b/g\\\"\""}]]
     )
   end)
+
+  it("trailing commas", function()
+    eq(json.json_strip_comments '{"a":"b",}', '{"a":"b"}')
+    eq(json.json_strip_comments '{"a":{"b":"c",},}', '{"a":{"b":"c"}}')
+    eq(json.json_strip_comments '{"a":["b","c",],}', '{"a":["b","c"]}')
+  end)
+
+  it("trailing commas - ignored in strings and comments", function()
+    eq(json.json_strip_comments '{"a":"b,}"}', '{"a":"b,}"}')
+  end)
+
+  it("trailing commas - left when disabled in options", function()
+    local options = { trailing_commas = true }
+    eq(json.json_strip_comments('{"a":"b",}', options), '{"a":"b",}')
+    eq(json.json_strip_comments('{"a":{"b":"c",},}', options), '{"a":{"b":"c",},}')
+    eq(json.json_strip_comments('{"a":["b","c",],}', options), '{"a":["b","c",],}')
+  end)
 end)

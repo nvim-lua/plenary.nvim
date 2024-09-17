@@ -33,20 +33,26 @@ local M = {}
 -- The resulting string can then be used by `vim.fn.json_decode`
 --
 ---@param jsonString string
----@param options table
+---@param options? table
 ---  * whitespace:
 ---     - defaults to true
 ---     - when true, comments will be replaced by whitespace
 ---     - when false, comments will be stripped
+---  * trailing_commas:
+---     - defaults to false
+---     - when true, trailing commas will be included
+---     - when false, trailing commas will be removed
 function M.json_strip_comments(jsonString, options)
   options = options or {}
   local strip = options.whitespace == false and stripWithoutWhitespace or stripWithWhitespace
+  local omitTrailingCommas = not options.trailing_commas
 
   local insideString = false
   local insideComment = false
   local offset = 1
   local result = ""
   local skip = false
+  local lastComma = 0
 
   for i = 1, #jsonString, 1 do
     if skip then
@@ -89,6 +95,16 @@ function M.json_strip_comments(jsonString, options)
           insideComment = false
           result = result .. strip(jsonString, offset, i)
           offset = i + 1
+        elseif omitTrailingCommas and not insideComment then
+          if currentCharacter == "," then
+            lastComma = i
+          elseif (currentCharacter == "]" or currentCharacter == "}") and lastComma > 0 then
+            result = result .. slice(jsonString, offset, lastComma - 1) .. slice(jsonString, lastComma + 1, i)
+            offset = i + 1
+            lastComma = 0
+          elseif currentCharacter:match "%S" then
+            lastComma = 0
+          end
         end
       end
     end
