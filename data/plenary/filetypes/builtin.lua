@@ -21,6 +21,7 @@ return {
   extension = {
     ['_coffee'] = 'coffee',
     ['astro'] = 'astro',
+    ['cairo'] = 'cairo',
     ['cts'] = 'typescript',
     ['cljd'] = 'clojure',
     ['coffee'] = 'coffee',
