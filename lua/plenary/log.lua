@@ -27,7 +27,7 @@ local default_config = {
   highlights = true,
 
   -- Should write to a file.
-  -- Default output for logging file is `stdpath("cache")/plugin`.
+  -- Default output for logging file is `stdpath("log")/plugin.log`.
   use_file = true,
 
   -- Output file has precedence over plugin, if not nil.
@@ -81,7 +81,7 @@ log.new = function(config, standalone)
 
   local outfile = vim.F.if_nil(
     config.outfile,
-    Path:new(vim.api.nvim_call_function("stdpath", { "cache" }), config.plugin .. ".log").filename
+    Path:new(vim.api.nvim_call_function("stdpath", { "log" }), config.plugin .. ".log").filename
   )
 
   local obj
