@@ -2,6 +2,38 @@ local Path = require "plenary.path"
 local path = Path.path
 local compat = require "plenary.compat"
 
+---Construct a temporary environment which keeps track of which Paths have
+---been created for easier cleanup. Use `new_path()` to construct a Path.
+local function new_env()
+  local env, trash = {}, {}
+
+  ---Create and return a new Path instance with a non-existing temporary filename,
+  ---or `opts.filename` if provided. The temporary filename will be an absolute path.
+  ---Pass `opts.touch` to create the file as well.
+  function env.new_path(opts)
+    opts = opts or {}
+    local ret = Path:new(opts.filename or vim.fn.tempname())
+    if opts.touch then
+      ret:touch()
+      assert(ret:exists())
+    end
+    table.insert(trash, ret)
+    return ret
+  end
+
+  ---Remove from the filesystem all paths created by `new_path()`. A
+  ---reference to this function may be passed directly to `after_each()`.
+  function env.cleanup()
+    for _, v in ipairs(trash) do
+      if type((v or {}).rm) == "function" then
+        pcall(v.rm, v)
+      end
+    end
+  end
+
+  return env
+end
+
 describe("Path", function()
   it("should find valid files", function()
     local p = Path:new "README.md"
@@ -391,53 +423,130 @@ describe("Path", function()
   end)
 
   describe("rename", function()
+    local env = new_env()
+    after_each(env.cleanup)
+
     it("can rename a file", function()
-      local p = Path:new "a_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      assert(pcall(p.rename, p, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same("not_a_random_filename.lua", p.filename)
-
-      p:rm()
+      local before, after = env.new_path { touch = true }, env.new_path()
+      -- Can pass another Path object
+      before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
+      before, after = env.new_path { touch = true }, env.new_path()
+      -- Also works with string
+      before:rename { new_name = after.filename }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
     end)
 
-    it("can handle an invalid filename", function()
-      local p = Path:new "some_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
+    it("should throw on invalid args", function()
+      local before = env.new_path { touch = true }
+      assert.errors(function()
+        before:rename { new_name = "" }
+      end)
+      assert.errors(function()
+        before:rename {}
+      end)
+      assert.errors(function()
+        before:rename()
+      end)
+      assert.is.True(before:exists())
+    end)
 
-      assert(not pcall(p.rename, p, { new_name = "" }))
-      assert(not pcall(p.rename, p))
-      assert.are.same("some_random_filename.lua", p.filename)
-
-      p:rm()
+    it("should throw if old name doesn't exist", function()
+      local before, after = env.new_path { touch = false }, env.new_path { touch = false }
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
     end)
 
     it("can move to parent dir", function()
-      local p = Path:new "some_random_filename.lua"
-      assert(pcall(p.touch, p))
-      assert(p:exists())
-
-      assert(pcall(p.rename, p, { new_name = "../some_random_filename.lua" }))
-      assert.are.same(vim.loop.fs_realpath(Path:new("../some_random_filename.lua"):absolute()), p:absolute())
-
-      p:rm()
+      local before, after = env.new_path { filename = "random_file" }, env.new_path { filename = "../random_file" }
+      assert.is.False(before:exists())
+      assert.is.False(after:exists())
+      before:touch()
+      assert.is.True(before:exists())
+      before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
     end)
 
-    it("cannot rename to an existing filename", function()
-      local p1 = Path:new "a_random_filename.lua"
-      local p2 = Path:new "not_a_random_filename.lua"
-      assert(pcall(p1.touch, p1))
-      assert(pcall(p2.touch, p2))
-      assert(p1:exists())
-      assert(p2:exists())
+    it("should throw on rename to existing filename", function()
+      local before, after = env.new_path { touch = true }, env.new_path { touch = true }
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
+    end)
 
-      assert(not pcall(p1.rename, p1, { new_name = "not_a_random_filename.lua" }))
-      assert.are.same(p1.filename, "a_random_filename.lua")
+    it("shouldn't throw on rename to same filename", function()
+      local before = env.new_path { touch = true }
+      assert.does.Not.error(function()
+        before:rename { new_name = before }
+      end)
+    end)
 
-      p1:rm()
-      p2:rm()
+    it("should handle . or .. or ./ or ../ prefix", function()
+      for _, pre in ipairs { ".", "..", "./", "../" } do
+        local before, after =
+          env.new_path { filename = "random_file" }, env.new_path { filename = pre .. "random_file2" }
+        assert.is.False(before:exists())
+        assert.is.False(after:exists())
+        before:touch()
+        assert.is.True(before:exists())
+        before:rename { new_name = after }
+        assert.is.False(before:exists())
+        assert.is.True(after:exists())
+      end
+    end)
+
+    it("should consider bad symlink as existing, and throw", function()
+      local before, after, non_existing = env.new_path { touch = true }, env.new_path(), env.new_path()
+      assert(vim.loop.fs_symlink(non_existing.filename, after.filename))
+      assert.is.True(not not vim.loop.fs_lstat(after.filename))
+      assert.errors(function()
+        before:rename { new_name = after }
+      end)
+    end)
+
+    it("should return result as new Path instance with the new filename", function()
+      local before, after = env.new_path { touch = true }, env.new_path()
+      local before_filename = before.filename
+      local new = before:rename { new_name = after }
+      assert.is.False(before:exists())
+      assert.is.True(after:exists())
+      assert.is.True(Path.is_path(new))
+      assert.is.True(new:exists())
+      assert.are.equal(before.filename, before_filename)
+      assert.are.equal(after.filename, new.filename)
+    end)
+
+    it("should allow changing only case of filename, regardless of fs case-sensitivity", function()
+      local before = env.new_path { filename = ".__some_file" }
+      assert.is.False(before:exists())
+      before:touch()
+      local before_filename_realpath = assert(vim.loop.fs_realpath(before.filename))
+      local after = env.new_path { filename = before.filename:upper() }
+      assert.does.Not.error(function()
+        before:rename { new_name = after }
+      end)
+      assert.are.equal(
+        before_filename_realpath:sub(1, #before_filename_realpath - #before.filename) .. after.filename,
+        assert(vim.loop.fs_realpath(after.filename))
+      )
+    end)
+
+    it("rename to hardlink of the same file should be a successful no-op", function()
+      local before, after = env.new_path { touch = true }, env.new_path {}
+      assert(vim.loop.fs_link(before.filename, after.filename))
+      assert.is.True(after:exists())
+      local new
+      assert.does.Not.error(function()
+        new = before:rename { new_name = after }
+      end)
+      assert.is.True(before:exists())
+      assert.is.True(after:exists())
+      assert.is.True(Path.is_path(new))
+      assert.are.equal(new.filename, after.filename)
     end)
   end)
 
