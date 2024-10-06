@@ -3,8 +3,8 @@ local uv = vim.loop
 
 local M = {}
 
-local function add(name, argc)
-  local success, ret = pcall(a.wrap, uv[name], argc)
+local function add(name, argc, custom)
+  local success, ret = pcall(a.wrap, custom or uv[name], argc)
 
   if not success then
     error("Failed to add function with name " .. name)
@@ -48,7 +48,9 @@ add("fs_chown", 4)
 add("fs_fchown", 4)
 -- 'fs_lchown',
 add("fs_copyfile", 4)
--- add('fs_opendir', 3) -- TODO: fix this one
+add("fs_opendir", 3, function(path, entries, callback)
+  return uv.fs_opendir(path, callback, entries)
+end)
 add("fs_readdir", 2)
 add("fs_closedir", 2)
 -- 'fs_statfs',
