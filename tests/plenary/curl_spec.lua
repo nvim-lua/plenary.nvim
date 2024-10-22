@@ -145,7 +145,7 @@ describe("CURL Wrapper:", function()
       local res = curl.post("https://postman-echo.com/post", {
         body = vim.fn.json_encode(json),
         headers = {
-          content_type = "application/json",
+          ["content-type"] = "application/json",
         },
       }).body
       eq(json, vim.fn.json_decode(res).json)
@@ -157,7 +157,7 @@ describe("CURL Wrapper:", function()
       local res = curl.post("https://postman-echo.com/post", {
         body = body,
         headers = {
-          content_type = "application/json",
+          ["content-type"] = "application/json",
         },
         dry_run = true,
       })
