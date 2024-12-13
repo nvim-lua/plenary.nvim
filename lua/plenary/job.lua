@@ -361,7 +361,7 @@ local on_output = function(self, result_key, cb)
         cb(err, result_line, self)
       end
 
-      if data == nil or is_complete then
+      if is_complete then
         return
       end
 
