@@ -99,7 +99,7 @@ describe("Job", function()
       assert.are.same(job:result(), results)
     end)
 
-    pending("should split stdin across newlines with no ending newline", function()
+    it("should split stdin across newlines with no ending newline", function()
       local results = {}
       local job = Job:new {
         -- writer = "hello\nword\nthis is\ntj",
@@ -113,6 +113,8 @@ describe("Job", function()
       job:start()
       job:send "hello\nwor"
       job:send "ld"
+
+      wait_for_result(job, { "hello", "world" })
       job:shutdown()
 
       assert.are.same(job:result(), { "hello", "world" })
@@ -137,7 +139,7 @@ describe("Job", function()
       assert.are.same(job:result(), results)
     end)
 
-    pending("should return last line when there is no ending newline", function()
+    it("should return last line when there is no ending newline", function()
       local results = {}
       local job = Job:new {
         command = "printf",
