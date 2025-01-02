@@ -9,10 +9,13 @@
 
 local Path = require "plenary.path"
 
-local p_debug = vim.fn.getenv "DEBUG_PLENARY"
-if p_debug == vim.NIL then
+local p_debug = vim.fn.getenv("DEBUG_PLENARY")
+if p_debug == vim.NIL or p_debug == "" then
   p_debug = false
+else
+  p_debug = (p_debug:lower() == "true")
 end
+
 
 -- User configuration section
 local default_config = {
