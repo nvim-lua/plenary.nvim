@@ -251,15 +251,25 @@ end
 ------------------------------------------------------------
 parse.response = function(lines, dump_path, code)
   local headers = P.readlines(dump_path)
-  local status = tonumber(string.match(headers[1], "([%w+]%d+)"))
-  local body = F.join(lines, "\n")
+  local status = nil
+  local processed_headers = {}
 
+  -- Process headers in a single pass
+  for _, line in ipairs(headers) do
+    local status_match = line:match "^HTTP/%S*%s+(%d+)"
+    if status_match then
+      status = tonumber(status_match)
+    elseif line ~= "" then
+      table.insert(processed_headers, line)
+    end
+  end
+
+  local body = F.join(lines, "\n")
   vim.loop.fs_unlink(dump_path)
-  table.remove(headers, 1)
 
   return {
-    status = status,
-    headers = headers,
+    status = status or 0,
+    headers = processed_headers,
     body = body,
     exit = code,
   }
