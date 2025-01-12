@@ -51,6 +51,7 @@ return {
     ['resi'] = 'rescript',
     ['rkt'] = 'racket',
     ['svelte'] = 'svelte',
+    ['swift'] = 'swift',
     ['tres'] = 'gdresource',
     ['tscn'] = 'gdresource',
     ['tsx'] = 'typescriptreact',
