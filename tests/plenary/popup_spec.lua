@@ -130,6 +130,82 @@ describe("plenary.popup", function()
     })
   end)
 
+  describe("callback option", function()
+    local callback_result
+    local function callback(wid, result)
+      callback_result = result
+    end
+
+    it("without a callback", function()
+      callback_result = nil
+      local popup_wid = popup.create("hello there", {})
+      vim.api.nvim_win_close(popup_wid, true)
+
+      eq(nil, callback_result)
+    end)
+
+    it("with a callback", function()
+      callback_result = nil
+      local popup_wid = popup.create("hello there", {
+        callback = callback,
+      })
+      vim.api.nvim_win_close(popup_wid, true)
+
+      eq(-1, callback_result)
+    end)
+  end)
+
+  describe("enter option", function()
+    it("enter not specified", function()
+      local main_wid = vim.fn.win_getid()
+      -- same as enter = false
+      local popup_wid = popup.create("hello there", {})
+      cur_wid = vim.fn.win_getid()
+      -- current window should still be the main window
+      eq(main_wid, cur_wid)
+      vim.api.nvim_win_close(popup_wid, true)
+    end)
+
+    it("enter = false", function()
+      local main_wid = vim.fn.win_getid()
+      local popup_wid = popup.create("hello there", {
+        enter = false,
+      })
+      cur_wid = vim.fn.win_getid()
+      -- current window should still be the main window
+      eq(main_wid, cur_wid)
+      vim.api.nvim_win_close(popup_wid, true)
+    end)
+
+    it("enter = true", function()
+      local main_wid = vim.fn.win_getid()
+      local popup_wid = popup.create("hello there", {
+        enter = true,
+      })
+      cur_wid = vim.fn.win_getid()
+      -- current window should be the popup
+      eq(popup_wid, cur_wid)
+      vim.api.nvim_win_close(popup_wid, true)
+    end)
+  end)
+
+  describe("moved option", function()
+    local callback_result
+    local function callback(wid, result)
+      callback_result = result
+    end
+
+    it("with moved but not used", function()
+      callback_result = nil
+      local popup_wid = popup.create("hello there", {
+        moved = "any",
+        callback = callback,
+      })
+      vim.api.nvim_win_close(popup_wid, true)
+      eq(-1, callback_result)
+    end)
+  end)
+
   describe("what", function()
     it("can be an existing bufnr", function()
       local bufnr = vim.api.nvim_create_buf(false, false)
