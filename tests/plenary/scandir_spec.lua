@@ -126,6 +126,38 @@ describe("scandir", function()
       eq(false, contains(dirs, "./asdf/asdf/adsf.lua"))
     end)
 
+    it("with respect_gitignore on mixed paths", function()
+      vim.cmd ":silent !mkdir -p test_path_root/projectdir"
+      vim.cmd(
+        ":silent !touch "
+          .. "test_path_root/projectdir/README.md "
+          .. "test_path_root/projectdir/LICENSE "
+          .. "test_path_root/projectdir/test.so "
+          .. "test_path_root/external_file.txt"
+      )
+      vim.cmd ":silent !cp .gitignore test_path_root/projectdir/"
+      vim.cmd ":cd test_path_root/projectdir/"
+
+      local dirs = scan.scan_dir({ ".", ".." }, { respect_gitignore = true })
+
+      vim.cmd ":cd ../../"
+      vim.cmd(
+        ":silent !rm "
+          .. "test_path_root/projectdir/README.md "
+          .. "test_path_root/projectdir/LICENSE "
+          .. "test_path_root/projectdir/test.so "
+          .. "test_path_root/external_file.txt "
+          .. "test_path_root/projectdir/.gitignore"
+      )
+      vim.cmd ":silent !rmdir test_path_root/projectdir test_path_root"
+
+      eq("table", type(dirs))
+      eq(true, contains(dirs, "./README.md"))
+      eq(true, contains(dirs, "./LICENSE"))
+      eq(true, contains(dirs, "../external_file.txt"))
+      eq(false, contains(dirs, "./test.so"))
+    end)
+
     it("with search pattern", function()
       local dirs = scan.scan_dir(".", { search_pattern = "filetype" })
       eq("table", type(dirs))
