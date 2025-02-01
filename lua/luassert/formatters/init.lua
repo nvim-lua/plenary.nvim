@@ -5,7 +5,12 @@ local util = require('luassert.util')
 
 local isatty, colors do
   local ok, term = pcall(require, 'term')
-  isatty = io.type(io.stdout) == 'file' and ok and term.isatty(io.stdout)
+  if ok and term.isatty then
+    isatty = io.type(io.stdout) == 'file' and term.isatty(io.stdout)
+  else
+    isatty = false
+  end
+
   if not isatty then
     local isWindows = package.config:sub(1,1) == '\\'
     if isWindows and os.getenv("ANSICON") then
