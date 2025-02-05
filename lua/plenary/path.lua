@@ -523,30 +523,69 @@ function Path:rmdir()
   uv.fs_rmdir(self:absolute())
 end
 
+---Rename this file or directory to the provided path (`opts.new_name`),
+---returning a new Path instance upon success.  The rename is aborted if the
+---new path already exists. Relative paths are interpreted relative to the
+---current working directory.
+---@param opts { new_name: Path|string } options table containing the new name
+---@return Path # Path representing the new name
 function Path:rename(opts)
-  opts = opts or {}
-  if not opts.new_name or opts.new_name == "" then
-    error "Please provide the new name!"
-  end
+  -- TODO: For reference, Python's `Path.rename()` actually says/does this:
+  --
+  -- > On Unix, if target exists and is a file, it will be replaced silently
+  -- > if the user has permission.
+  -- >
+  -- > On Windows, if target exists, FileExistsError will be raised. target
+  -- > can be either a string or another path object.
+  --
+  -- The behavior here may differ, as an error will be thrown regardless.
 
-  -- handles `.`, `..`, `./`, and `../`
-  if opts.new_name:match "^%.%.?/?\\?.+" then
-    opts.new_name = {
-      uv.fs_realpath(opts.new_name:sub(1, 3)),
-      opts.new_name:sub(4, #opts.new_name),
-    }
-  end
+  local self_lstat, new_lstat, status, errmsg
+  vim.validate { opts = { opts, "t" } }
+  vim.validate {
+    ["opts.new_name"] = {
+      opts.new_name,
+      function(val)
+        return Path.is_path(val) or (type(val) == "string" and val ~= "")
+      end,
+      "string or Path object",
+    },
+  }
+  opts = opts or {}
+  self_lstat, errmsg = uv.fs_lstat(self.filename)
+
+  -- Cannot rename a non-existing path (lstat is needed here, `Path:exists()`
+  -- uses stat)
+  assert(self_lstat, ("%s: %s"):format(errmsg, self.filename))
 
   local new_path = Path:new(opts.new_name)
-
-  if new_path:exists() then
-    error "File or directory already exists!"
+  new_lstat, errmsg = uv.fs_lstat(new_path.filename)
+  local same_inode = false
+  if new_lstat then
+    same_inode = self_lstat.ino == new_lstat.ino and self_lstat.dev == new_lstat.dev and self_lstat.gen == new_lstat.gen
   end
 
-  local status = uv.fs_rename(self:absolute(), new_path:absolute())
-  self.filename = new_path.filename
+  -- The following allows changing only case (e.g. fname -> Fname) on
+  -- case-insensitive file systems, otherwise throwing if `new_name` exists as
+  -- a different file.
+  --
+  -- NOTE: To elaborate, `uv.fs_rename()` won't/shouldn't do anything if old
+  -- and new both exist and are both hard links to the same file (inode),
+  -- however, it appears to still allow you to change the case of a filename
+  -- on case-insensitive file systems (i.e. if `new_name` doesn't _actually_
+  -- exist as a separate file but would otherwise appear to via an lstat call;
+  -- if it does actually exist — in which case the fs must be case-sensitive —
+  -- idk for certain what happens b/c it needs to be tested on a case-sensitive
+  -- fs, but it should simply result in a successful no-op according to the
+  -- `rename(2)` docs, at least on Linux anyway).
+  assert(not new_lstat or same_inode, "File or directory already exists!")
 
-  return status
+  status, errmsg = uv.fs_rename(tostring(self), tostring(new_path))
+  assert(status, ("%s: Rename failed!"):format(errmsg))
+
+  -- NOTE: `uv.fs_rename()` _can_ return success even if no rename actually
+  -- occurred (see rename(2)), and this is not an error.
+  return Path:new(new_path)
 end
 
 --- Copy files or folders with defaults akin to GNU's `cp`.
@@ -568,11 +607,14 @@ function Path:copy(opts)
   local dest = opts.destination
   -- handles `.`, `..`, `./`, and `../`
   if not Path.is_path(dest) then
-    if type(dest) == "string" and dest:match "^%.%.?/?\\?.+" then
-      dest = {
-        uv.fs_realpath(dest:sub(1, 3)),
-        dest:sub(4, #dest),
-      }
+    if type(dest) == "string" then
+      local m = dest:match "^%.%.?/?\\?.+"
+      if m then
+        dest = {
+          uv.fs_realpath(dest:sub(1, #m)),
+          dest:sub(#m + 1),
+        }
+      end
     end
     dest = Path:new(dest)
   end
