@@ -721,6 +721,34 @@ SOFTWARE.]]
       assert.are.same(should, data)
     end)
   end)
+
+  describe(":find_upwards", function()
+    it("finds files that exist", function()
+      local p = Path:new(debug.getinfo(1, "S").source:sub(2))
+      local found = p:find_upwards "README.md"
+      assert.are.same(found:absolute(), Path:new("README.md"):absolute())
+    end)
+
+    it("finds files that exist at the root", function()
+      local p = Path:new(debug.getinfo(1, "S").source:sub(2))
+
+      -- Temporarily set path.root to the root of this repository
+      local root = p.path.root
+      p.path.root = function(_)
+        return p:parent():parent():parent().filename
+      end
+
+      local found = p:find_upwards "README.md"
+      assert.are.same(found:absolute(), Path:new("README.md"):absolute())
+      p.path.root = root
+    end)
+
+    it("returns nil if no file is found", function()
+      local p = Path:new(debug.getinfo(1, "S").source:sub(2))
+      local found = p:find_upwards "MISSINGNO.md"
+      assert.are.same(found, nil)
+    end)
+  end)
 end)
 
 -- function TestPath:testIsDir()
