@@ -11,7 +11,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            rev: nightly/nvim-linux64.tar.gz
+            rev: nightly/nvim-linux-x86_64.tar.gz
           - os: ubuntu-22.04
             rev: v0.7.2/nvim-linux64.tar.gz
           - os: ubuntu-22.04
@@ -19,12 +19,12 @@ jobs:
           - os: ubuntu-22.04
             rev: v0.9.5/nvim-linux64.tar.gz
           - os: ubuntu-22.04
-            rev: v0.10.0/nvim-linux64.tar.gz
+            rev: v0.10.4/nvim-linux-x86_64.tar.gz
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: date +%F > todays-date
       - name: Restore cache for today's nightly.
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: _neovim
           key: ${{ runner.os }}-${{ matrix.rev }}-${{ hashFiles('todays-date') }}
@@ -46,7 +46,7 @@ jobs:
     name: stylua
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: JohnnyMorganz/stylua-action@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +58,7 @@ jobs:
     name: Luacheck
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare
         run: |
