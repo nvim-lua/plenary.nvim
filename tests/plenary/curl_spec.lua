@@ -196,10 +196,26 @@ describe("CURL Wrapper:", function()
     end)
   end)
 
-  describe("DEPUG", function() --------------------------------------------------
+  describe("DEBUG", function() --------------------------------------------------
     it("dry_run return the curl command to be ran.", function()
       local res = curl.delete("https://jsonplaceholder.typicode.com/posts/8", { dry_run = true })
       assert(type(res) == "table")
+    end)
+  end)
+
+  describe("Issue #601", function() --------------------------------------------
+    it("should not use URL from previous call", function()
+      local url = "https://example.com"
+      local opts = { dry_run = true, dump = "" } -- dump would be random each time
+      local first = curl.get(url, opts)
+      eq(table.remove(first, #first), url, "expected url last")
+
+      local success, second = pcall(curl.get, opts)
+      if success then
+        eq(first, second, "should be same, but without url")
+      else
+        -- Failure is also acceptable
+      end
     end)
   end)
 end)
