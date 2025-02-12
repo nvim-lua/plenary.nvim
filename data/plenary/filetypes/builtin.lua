@@ -10,6 +10,7 @@ local shebang_fts = {
   ['zsh'] = 'zsh',
 }
 
+---@type table<string, string>
 local shebang = {}
 for _, prefix in ipairs(shebang_prefixes) do
   for k, v in pairs(shebang_fts) do
@@ -17,6 +18,7 @@ for _, prefix in ipairs(shebang_prefixes) do
   end
 end
 
+---@type PlenaryFiletypeTable
 return {
   extension = {
     ['_coffee'] = 'coffee',

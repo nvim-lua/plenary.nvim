@@ -4,21 +4,23 @@ local vararg = require "plenary.vararg"
 local control = require "plenary.async.control"
 local channel = control.channel
 
+---@class PlenaryAsyncUtil
 local M = {}
 
+---@param timeout integer Number of milliseconds to wait before calling `fn`
+---@param callback function Callback to call once `timeout` expires
 local defer_swapped = function(timeout, callback)
   vim.defer_fn(callback, timeout)
 end
 
 ---Sleep for milliseconds
----@param ms number
-M.sleep = a.wrap(defer_swapped, 2)
+M.sleep = a.wrap(defer_swapped, 2) --[[@as async fun(timeout: integer): nil]]
 
 ---This will COMPLETELY block neovim
 ---please just use a.run unless you have a very special usecase
 ---for example, in plenary test_harness you must use this
----@param async_function Future
----@param timeout number: Stop blocking if the timeout was surpassed. Default 2000.
+---@param async_function PlenaryAsyncFunction
+---@param timeout? integer Stop blocking if the timeout was surpassed. Default 2000.
 M.block_on = function(async_function, timeout)
   async_function = M.protected(async_function)
 
@@ -42,14 +44,16 @@ M.block_on = function(async_function, timeout)
 end
 
 ---@see M.block_on
----@param async_function Future
----@param timeout number
+---@param async_function PlenaryAsyncFunction
+---@param timeout? integer
 M.will_block = function(async_function, timeout)
   return function()
     M.block_on(async_function, timeout)
   end
 end
 
+---@param async_fns PlenaryAsyncFunction[]
+---@return table
 M.join = function(async_fns)
   local len = #async_fns
   local results = {}
@@ -81,8 +85,9 @@ M.join = function(async_fns)
 end
 
 ---Returns a result from the future that finishes at the first
----@param async_functions table: The futures that you want to select
----@return ...
+---* param async_functions table: The futures that you want to select
+---@param async_functions PlenaryAsyncFunction[]
+---@param step fun(...: any): ...: any
 M.run_first = a.wrap(function(async_functions, step)
   local ran = false
 
@@ -98,12 +103,13 @@ M.run_first = a.wrap(function(async_functions, step)
 
     async_function(callback)
   end
-end, 2)
+end, 2) --[[@as async fun(async_functions: PlenaryAsyncFunction[]): ...]]
 
 ---Returns a result from the functions that finishes at the first
----@param funcs table: The async functions that you want to select
+---@param funcs function[]: The async functions that you want to select
 ---@return ...
 M.race = function(funcs)
+  ---@type PlenaryAsyncFunction[]
   local async_functions = vim.tbl_map(function(func)
     return function(callback)
       a.run(func, callback)
@@ -112,27 +118,36 @@ M.race = function(funcs)
   return M.run_first(async_functions)
 end
 
+---@param async_fns PlenaryAsyncFunction[]
+---@param callback fun(...: any): ...: any
 M.run_all = function(async_fns, callback)
   a.run(function()
     M.join(async_fns)
   end, callback)
 end
 
-function M.apcall(async_fn, ...)
-  local nargs = a.get_leaf_function_argc(async_fn)
+---@async
+---@param leaf PlenaryAsyncLeaf|function
+---@param ... any
+---@return boolean, ...
+function M.apcall(leaf, ...)
+  local nargs = a.get_leaf_function_argc(leaf)
   if nargs then
     local tx, rx = channel.oneshot()
-    local stat, ret = pcall(async_fn, vararg.rotate(nargs, tx, ...))
+    local stat, ret = pcall(leaf, vararg.rotate(nargs, tx, ...))
     if not stat then
       return stat, ret
     else
       return stat, rx()
     end
   else
-    return pcall(async_fn, ...)
+    return pcall(leaf, ...)
   end
 end
 
+---comment
+---@param async_fn PlenaryAsyncFunction
+---@return PlenaryAsyncFunction
 function M.protected(async_fn)
   return function()
     return M.apcall(async_fn)
@@ -140,6 +155,6 @@ function M.protected(async_fn)
 end
 
 ---An async function that when called will yield to the neovim scheduler to be able to call the api.
-M.scheduler = a.wrap(vim.schedule, 1)
+M.scheduler = a.wrap(vim.schedule, 1) --[[@as async fun(): nil]]
 
 return M

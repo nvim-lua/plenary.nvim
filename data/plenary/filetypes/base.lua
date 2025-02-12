@@ -1,3 +1,4 @@
+---@type PlenaryFiletypeTable
 return {
   extension = {
     ['ncl'] = [[text]],
