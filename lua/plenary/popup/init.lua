@@ -26,6 +26,12 @@ popup._hidden = {}
 -- Keep track of popup borders, so we don't have to pass them between functions
 popup._borders = {}
 
+-- Callbacks to be called later by popup.execute_callback. Indexed by win_id.
+popup._callback_fn = {}
+
+-- Result is passed to the callback. Indexed by win_id. See popup_win_closed.
+popup._result = {}
+
 local function dict_default(options, key, default)
   if options[key] == nil then
     return default[key]
@@ -33,9 +39,6 @@ local function dict_default(options, key, default)
     return options[key]
   end
 end
-
--- Callbacks to be called later by popup.execute_callback
-popup._callbacks = {}
 
 -- Convert the positional {vim_options} to compatible neovim options and add them to {win_opts}
 -- If an option is not given in {vim_options}, fall back to {default_opts}
@@ -110,6 +113,69 @@ local function add_position_config(win_opts, vim_options, default_opts)
   -- ,        the screen, then
   -- ,     the popup is moved to the left so as to fit the
   -- ,     contents on the screen.  Set to TRUE to disable this.
+end
+
+--- Closes the popup window
+--- Adapted from vim.lsp.util.close_preview_autocmd
+---
+---@param winnr integer window id of popup window
+---@param bufnrs table|nil optional list of ignored buffers
+local function close_window(winnr, bufnrs)
+  vim.schedule(function()
+    -- exit if we are in one of ignored buffers
+    if bufnrs and vim.list_contains(bufnrs, vim.api.nvim_get_current_buf()) then
+      return
+    end
+
+    local augroup = "popup_window_" .. winnr
+    pcall(vim.api.nvim_del_augroup_by_name, augroup)
+    pcall(vim.api.nvim_win_close, winnr, true)
+  end)
+end
+
+--- Creates autocommands to close a popup window when events happen.
+---
+---@param events table list of events
+---@param winnr integer window id of popup window
+---@param bufnrs table list of buffers where the popup window will remain visible, {popup, parent}
+---@see autocmd-events
+local function close_window_autocmd(events, winnr, bufnrs)
+  local augroup = vim.api.nvim_create_augroup("popup_window_" .. winnr, {
+    clear = true,
+  })
+
+  -- close the popup window when entered a buffer that is not
+  -- the floating window buffer or the buffer that spawned it
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = augroup,
+    callback = function()
+      close_window(winnr, bufnrs)
+    end,
+  })
+
+  if #events > 0 then
+    vim.api.nvim_create_autocmd(events, {
+      group = augroup,
+      buffer = bufnrs[2],
+      callback = function()
+        close_window(winnr)
+      end,
+    })
+  end
+end
+--- End of code adapted from vim.lsp.util.close_preview_autocmd
+
+--- Only used from 'WinClosed' autocommand
+--- Cleanup after popup window closes.
+---@param win_id integer window id of popup window
+local function popup_win_closed(win_id)
+  -- Invoke the callback with the win_id and result.
+  if popup._callback_fn[win_id] then
+    pcall(popup._callback_fn[win_id], win_id, popup._result[win_id])
+    popup._callback_fn[win_id] = nil
+  end
+  -- Forget about this window.
+  popup._result[win_id] = nil
 end
 
 function popup.create(what, vim_options)
@@ -236,19 +302,38 @@ function popup.create(what, vim_options)
 
   local win_id
   if vim_options.hidden then
-    assert(false, "I have not implemented this yet and don't know how")
+    assert(false, "hidden: not implemented yet and don't know how")
   else
     win_id = vim.api.nvim_open_win(bufnr, false, win_opts)
   end
 
+  -- Set the default result. Also serves to indicate active popups.
+  popup._result[win_id] = -1
+  -- Always catch the popup's close
+  local augroup = vim.api.nvim_create_augroup("popup_close_" .. win_id, {
+    clear = true,
+  })
+  vim.api.nvim_create_autocmd("WinClosed", {
+    group = augroup,
+    pattern = tostring(win_id),
+    callback = function()
+      pcall(vim.api.nvim_del_augroup_by_name, augroup)
+      popup_win_closed(win_id)
+    end,
+  })
+
   -- Moved, handled after since we need the window ID
   if vim_options.moved then
     if vim_options.moved == "any" then
-      vim.lsp.util.close_preview_autocmd({ "CursorMoved", "CursorMovedI" }, win_id)
-      -- elseif vim_options.moved == "word" then
-      --   TODO: Handle word, WORD, expr, and the range functions... which seem hard?
+      close_window_autocmd({ "CursorMoved", "CursorMovedI" }, win_id, { bufnr, vim.fn.bufnr() })
+      --[[
+      else
+        --   TODO: Handle word, WORD, expr, and the range functions... which seem hard?
+        assert(false, "moved ~= 'any': not implemented yet and don't know how")
+      ]]
     end
   else
+    -- TODO: If the buffer's deleted close the window. Is this needed?
     local silent = false
     vim.cmd(
       string.format(
@@ -397,7 +482,7 @@ function popup.create(what, vim_options)
   -- enter
   local should_enter = vim_options.enter
   if should_enter == nil then
-    should_enter = true
+    should_enter = false
   end
 
   if should_enter then
@@ -412,22 +497,10 @@ function popup.create(what, vim_options)
 
   -- callback
   if vim_options.callback then
-    popup._callbacks[bufnr] = function()
-      -- (jbyuki): Giving win_id is pointless here because it's closed right afterwards
-      -- but it might make more sense once hidden is implemented
-      local row, _ = unpack(vim.api.nvim_win_get_cursor(win_id))
-      vim_options.callback(win_id, what[row])
-      vim.api.nvim_win_close(win_id, true)
-    end
-    vim.api.nvim_buf_set_keymap(
-      bufnr,
-      "n",
-      "<CR>",
-      '<cmd>lua require"plenary.popup".execute_callback(' .. bufnr .. ")<CR>",
-      { noremap = true }
-    )
+    popup._callback_fn[win_id] = vim_options.callback
   end
 
+  -- TODO: Wonder what this is about? Debug? Convenience to get bufnr?
   if vim_options.finalize_callback then
     vim_options.finalize_callback(win_id, bufnr)
   end
@@ -475,14 +548,6 @@ function popup.move(win_id, vim_options)
   local border = popup._borders[win_id]
   if border ~= nil then
     border:move(win_opts, border._border_win_options)
-  end
-end
-
-function popup.execute_callback(bufnr)
-  if popup._callbacks[bufnr] then
-    local wrapper = popup._callbacks[bufnr]
-    wrapper()
-    popup._callbacks[bufnr] = nil
   end
 end
 

@@ -10,6 +10,7 @@ stablization and any required features are merged into Neovim, we can upstream
 this and expose the API in vimL to create better compatibility.
 
 ## Notices
+- **2024-09-19:** change `enter` default to false to follow Vim.
 - **2021-09-19:** we now follow Vim's convention of the first line/column of the screen being indexed 1, so that 0 can be used for centering.
 - **2021-08-19:** we now follow Vim's default to `noautocmd` on popup creation. This can be overriden with `vim_options.noautocmd=false`
 
@@ -34,19 +35,26 @@ Unlikely (due to technical difficulties):
     - textprop
     - textpropwin
     - textpropid
-- [ ] "close"
-    - But this is mostly because I don't know how to use mouse APIs in nvim. If someone knows. please make an issue in the repo, and maybe we can get it sorted out.
 
 Unlikely (due to not sure if people are using):
 - [ ] tabpage
 
 ## Progress
 
+Suported Functions:
+
+- [x] popup.create
+- [x] popup.move
+- [ ] popup.close
+- [ ] popup.clear
+
+
 Suported Features:
 
 - [x] what
     - string
     - list of strings
+    - bufnr
 - [x] popup_create-arguments
     - [x] border
     - [x] borderchars
@@ -69,6 +77,25 @@ Suported Features:
     - [x] title
     - [x] wrap
     - [x] zindex
+    - [x] callback
+    - [ ] mousemoved
+        - [ ] "any"
+        - [ ] "word"
+        - [ ] "WORD"
+        - [ ] "expr"
+        - [ ] (list options)
+    - [?] close
+        - [ ] "button"
+        - [ ] "click"
+        - [x] "none"
+
+
+Additional Features:
+
+- [x] enter
+- [x] focusable
+- [x] noautocmd
+- [x] finalize_callback
 
 ## All known unimplemented vim features at the moment
 
@@ -79,10 +106,7 @@ Suported Features:
 - filter
 - filtermode
 - mapping
-- callback
 - mouse:
-    - mousemoved
-    - close
     - drag
     - resize
 
