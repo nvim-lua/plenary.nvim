@@ -31,6 +31,15 @@ local get_nvim_output = function(job_id)
   end)
 end
 
+function harness.test_file_command(command)
+  local split_string = vim.split(command, " ")
+  local file = vim.fn.expand(table.remove(split_string, 1))
+
+  local opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
+
+  return harness.test_file(file, opts)
+end
+
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
   local directory = vim.fn.expand(table.remove(split_string, 1))
@@ -193,8 +202,8 @@ function harness.test_directory(directory, opts)
   test_paths(paths, opts)
 end
 
-function harness.test_file(filepath)
-  test_paths { Path:new(filepath) }
+function harness.test_file(filepath, opts)
+  test_paths({ Path:new(filepath) }, opts)
 end
 
 function harness._find_files_to_run(directory)
