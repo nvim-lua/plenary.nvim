@@ -242,9 +242,6 @@ parse.request = function(opts)
   append(parse.accept_header(opts.accept))
   append(parse.raw_body(opts.raw_body))
   append(parse.data_body(opts.data))
-  if opts.form ~= nil then
-    Snacks.notifier.notify(vim.inspect(parse.form(opts.form, opts.default_key)))
-  end
   append(parse.form(opts.form, opts.default_key))
   append(parse.file(opts.in_file))
   append(parse.auth(opts.auth))
