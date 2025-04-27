@@ -55,7 +55,14 @@ util.url_encode = function(str)
 end
 
 util.kv_to_list = function(kv, prefix, sep)
+  util.kv_to_list_with_default_key(kv, prefix, sep, nil)
+end
+
+util.kv_to_list_with_default_key = function(kv, prefix, sep, default_key)
   return compat.flatten(F.kv_map(function(kvp)
+    if default_key ~= nil and tonumber(kvp[1]) ~= nil then
+      kvp[1] = default_key
+    end
     return { prefix, kvp[1] .. sep .. kvp[2] }
   end, kv))
 end
@@ -125,11 +132,11 @@ parse.raw_body = function(xs)
   end
 end
 
-parse.form = function(t)
+parse.form = function(t, default_key)
   if not t then
     return
   end
-  return util.kv_to_list(t, "-F", "=")
+  return util.kv_to_list_with_default_key(t, "-F", "=", default_key)
 end
 
 parse.curl_query = function(t)
@@ -235,7 +242,10 @@ parse.request = function(opts)
   append(parse.accept_header(opts.accept))
   append(parse.raw_body(opts.raw_body))
   append(parse.data_body(opts.data))
-  append(parse.form(opts.form))
+  if opts.form ~= nil then
+    Snacks.notifier.notify(vim.inspect(parse.form(opts.form, opts.default_key)))
+  end
+  append(parse.form(opts.form, opts.default_key))
   append(parse.file(opts.in_file))
   append(parse.auth(opts.auth))
   append(parse.http_version(opts.http_version))
