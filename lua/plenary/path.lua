@@ -221,7 +221,7 @@ function Path:new(...)
 
   if type(self) == "string" then
     table.insert(args, 1, self)
-    self = Path     -- luacheck: ignore
+    self = Path -- luacheck: ignore
   end
 
   local path_input
@@ -419,8 +419,8 @@ local function shorten_len(filename, len, exclude)
     count = count + 1
   end
 
-  local l = #final_path_components         -- so that we don't need to keep calculating length
-  table.remove(final_path_components, l)   -- remove final slash
+  local l = #final_path_components -- so that we don't need to keep calculating length
+  table.remove(final_path_components, l) -- remove final slash
 
   -- add back empty positions
   for i = #empty_pos, 1, -1 do
@@ -472,7 +472,7 @@ end
 function Path:mkdir(opts)
   opts = opts or {}
 
-  local mode = opts.mode or 448   -- 0700 -> decimal
+  local mode = opts.mode or 448 -- 0700 -> decimal
   local parents = F.if_nil(opts.parents, false, opts.parents)
   local exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok)
 
@@ -687,7 +687,6 @@ end
 function Path:is_absolute()
   return is_absolute(self.filename, self._sep)
 end
-
 -- }}}
 
 function Path:_split()
@@ -745,7 +744,7 @@ end
 function Path:_read()
   self = check_self(self)
 
-  local fd = assert(uv.fs_open(self:_fs_filename(), "r", 438))   -- for some reason test won't pass with absolute
+  local fd = assert(uv.fs_open(self:_fs_filename(), "r", 438)) -- for some reason test won't pass with absolute
   local stat = assert(uv.fs_fstat(fd))
   local data = assert(uv.fs_read(fd, stat.size, 0))
   assert(uv.fs_close(fd))
