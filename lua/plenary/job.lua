@@ -80,7 +80,7 @@ end
 --- Map-like table
 
 ---Create a new job
----@param o JobOptions
+---@param o JobOptions | string[]
 ---@return Job
 function Job:new(o)
   if not o then
