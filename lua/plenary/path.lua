@@ -88,7 +88,10 @@ local function _normalize_path(filename, cwd)
     return filename
   end
 
-  -- handles redundant `./` in the middle
+  -- Handle leading `./` and redundant `./` in the middle
+  if filename:sub(1, 2) == "./" or filename:sub(1, 2) == ".\\" then
+    filename = filename:sub(3)
+  end
   local redundant = path.sep .. "%." .. path.sep
   if filename:match(redundant) then
     filename = filename:gsub(redundant, path.sep)
@@ -301,9 +304,9 @@ end
 
 function Path:absolute()
   if self:is_absolute() then
-    return _normalize_path(self.filename, self._cwd)
+    return clean(_normalize_path(self.filename, self._cwd))
   else
-    return _normalize_path(self._absolute or table.concat({ self._cwd, self.filename }, self._sep), self._cwd)
+    return clean(_normalize_path(self._absolute or table.concat({ self._cwd, self.filename }, self._sep), self._cwd))
   end
 end
 
@@ -480,18 +483,23 @@ function Path:mkdir(opts)
   if not exists_ok and exists then
     error("FileExistsError:" .. self:absolute())
   end
-
   -- fs_mkdir returns nil if folder exists
   if not uv.fs_mkdir(self:_fs_filename(), mode) and not exists then
-    if parents then
-      local dirs = self:_split()
+    if parents then      local dirs = self:_split()
       local processed = ""
-      for _, dir in ipairs(dirs) do
+      for i, dir in ipairs(dirs) do
         if dir ~= "" then
-          local joined = concat_paths(processed, dir)
-          if processed == "" and self._sep == "\\" then
-            joined = dir
+          local joined
+          if processed == "" then
+            if self._sep == "\\" and dir:match("^[A-Za-z]:$") then
+              joined = dir .. "\\"
+            else
+              joined = dir
+            end
+          else
+            joined = concat_paths(processed, dir)
           end
+          
           local stat = uv.fs_stat(joined) or {}
           local file_mode = stat.mode or 0
           if band(S_IF.REG, file_mode) then
@@ -635,7 +643,10 @@ function Path:touch(opts)
   end
 
   if parents then
-    Path:new(self:parent()):mkdir { parents = true }
+    local parent_path = self:parent()
+    if not parent_path:exists() then
+      parent_path:mkdir { parents = true }
+    end
   end
 
   local fd = uv.fs_open(self:_fs_filename(), "w", mode)
@@ -696,7 +707,9 @@ end
 local _get_parent = (function()
   local formatted = string.format("^(.+)%s[^%s]+", path.sep, path.sep)
   return function(abs_path)
-    local parent = abs_path:match(formatted)
+    -- Normalize path separators first
+    local normalized_path = abs_path:gsub("[/\\]", path.sep)
+    local parent = normalized_path:match(formatted)
     if parent ~= nil and not parent:find(path.sep) then
       return parent .. path.sep
     end
