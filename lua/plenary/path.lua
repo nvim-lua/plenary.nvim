@@ -38,7 +38,7 @@ path.sep = (function()
     else
       --qqq
       --vim.notify("os: " .. vim.inspect(os) .. ", U.is_msys: " .. vim.inspect(U.is_msys2), vim.log.levels.ERROR)
-      -- msys2 works fine with backslashes as well as cmd.exe/powershell.exe
+      -- msys2 works fine with forward slashes as well as cmd.exe/powershell.exe
       -- but not UNC paths if the paths will ever be supported.
       -- Maybe returning "/" as path separator can break something in existing logic.
       --return "/"
@@ -138,15 +138,23 @@ local function _normalize_path(filename, cwd)
 
   local has = string.find(filename, path.sep .. "..", 1, true) or string.find(filename, ".." .. path.sep, 1, true)
 
+  --qqq
+  --vim.notify("_normalize_path: has = " .. vim.inspect(has), vim.log.levels.WARN)
+  --!qqq
+
   if has then
     local is_abs = is_absolute(filename, path.sep)
+    --qqq
+    --vim.notify("_normalize_path: is_abs = " .. vim.inspect(is_abs), vim.log.levels.WARN)
+    --!qqq
     local split_without_disk_name = function(filename_local)
       local parts = _split_by_separator(filename_local)
       -- Remove disk name part on Windows
       if is_abs and (path.sep == "\\" or U.is_msys2) then
+        --qqq
+        --vim.notify("_normalize_path: parts = " .. vim.inspect(parts), vim.log.levels.WARN)
+        --!qqq
         table.remove(parts, 1)
-        table.remove(parts, 1)
-        --table.remove(parts, 1)
       end
       return parts
     end
@@ -187,6 +195,10 @@ local function _normalize_path(filename, cwd)
 
   return out_file
 end
+
+--qqq
+--vim.notify("_normalize_path: call returned " .. vim.inspect(_normalize_path("C:\\msys64\\home\\..\\123", "C:\\msys64\\123")), vim.log.levels.WARN)
+--!qqq
 
 local clean = function(pathname)
   if is_uri(pathname) then

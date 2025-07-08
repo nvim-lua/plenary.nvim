@@ -59,7 +59,7 @@ function M.posix_to_windows(posix_path)
 
 
   -- For edgy-ephemeral cases when vim.fn.expand() eats posix-style path.
-  -- In that case we get forward slashes everywhere which we don't need
+  -- In that case we get backslashes everywhere which we don't need
   -- when working with libuv which uses WinAPI under the hood.
   -- E.g. vim.fn.expand("/home/User") gives "\home\User".
   posix_path = posix_path:gsub("\\", "/")
@@ -89,29 +89,31 @@ function M.posix_to_windows(posix_path)
 
   -- Drive letter paths /c/Users -> C:\\Users (+edge case on fast pane split in WezTerm /C:/Users -> C:\\Users).
   -- It is possible to have only "/c" (w/o trailing "/") but not "/C:" (WezTerm internally trails it with "/").
-  -- Idk if WezTerm paths behaviour leaks to msys2 actually...
+  -- Idk if WezTerm paths behaviour leaks to msys2 actually cause even in regular cmd.exe/powershell.exe it uses
+  -- "/<DRIVE>:/" notation internally for panes.
   if not prefix_changed then
     if #posix_path == 2 and posix_path:find("/[A-Za-z]") then
-      --vim.notify("Only '[A-Za-z]:' case: " .. posix_path, vim.log.levels.WARN)
+      --vim.notify("Only '/[A-Za-z]' case: " .. posix_path, vim.log.levels.WARN)
       posix_path = posix_path:gsub("^/([A-Za-z])", "%1:\\")
       prefix_changed = true
     else
-      --vim.notify("'[A-Za-z]:?/' case: " .. posix_path, vim.log.levels.WARN)
+      --vim.notify("'/[A-Za-z]:?/' case: " .. posix_path, vim.log.levels.WARN)
       posix_path = posix_path:gsub("^/([A-Za-z]):?/", "%1:\\")
       prefix_changed = true
     end
   end
 
-  -- Lets try to be msys2 compliant for testing.
+  -- Lets try to use posix-style paths for testing.
   --posix_path = posix_path:gsub("^/([A-Za-z]):?([^0-9A-Za-z_-]?)", "/%1%2")
 
 
   -- Replace remaining forward slashes with backslashes.
   posix_path = posix_path:gsub("/", "\\")
 
-  -- For bash.exe (nvim shell) it is better to use backslashes
-  -- cause forward slashes must be escaped. Need to come up with something
-  -- cause nvim for windows (even clang64 binary) prefers windows-style paths (with backslashes?).
+  -- For bash.exe (nvim shell) it is better to use forward slashes
+  -- cause backslashes must to be escaped. Need to come up with something
+  -- cause nvim for windows (even clang64 binary) prefers windows-style paths (but works with forward slashes as well?).
+  -- UPD. "set shellslash" makes the trick by converting backslashes to forward slashes in shell invocations.
   --posix_path = posix_path:gsub("\\", "/")
 
 
