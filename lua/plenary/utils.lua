@@ -96,9 +96,15 @@ function M.posix_to_windows(posix_path)
       --vim.notify("Only '/[A-Za-z]' case: " .. posix_path, vim.log.levels.WARN)
       posix_path = posix_path:gsub("^/([A-Za-z])", "%1:\\")
       prefix_changed = true
-    else
+    elseif posix_path:find("/[A-Za-z]:?/") then
       --vim.notify("'/[A-Za-z]:?/' case: " .. posix_path, vim.log.levels.WARN)
       posix_path = posix_path:gsub("^/([A-Za-z]):?/", "%1:\\")
+      prefix_changed = true
+    else
+      -- The code path can be taken only in specific cases
+      -- like a custom folder under msys2 root (/abc).
+      --vim.notify("General mapping case for given path: " .. posix_path, vim.log.levels.WARN)
+      posix_path = posix_path:gsub("^/", M.msys2_root .. "\\")
       prefix_changed = true
     end
   end
@@ -122,6 +128,8 @@ function M.posix_to_windows(posix_path)
     posix_path = posix_path:sub(1, 1):upper() .. posix_path:sub(2)
   end
 
+
+  --vim.notify("posix_to_windows will return " .. posix_path, vim.log.levels.WARN)
 
   return posix_path
 end
