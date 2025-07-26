@@ -231,6 +231,7 @@ function Border:__align_calc_config(content_win_options, border_win_options)
     zindex = content_win_options.zindex or 50,
     noautocmd = content_win_options.noautocmd,
     focusable = vim.F.if_nil(border_win_options.focusable, false),
+    border = "none",
   }
 
   return nvim_win_config

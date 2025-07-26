@@ -191,6 +191,7 @@ function popup.create(what, vim_options)
   local win_opts = {}
   win_opts.relative = "editor"
   win_opts.style = "minimal"
+  win_opts.border = "none"
 
   -- Add positional and sizing config to win_opts
   add_position_config(win_opts, vim_options, { width = 1, height = 1 })
