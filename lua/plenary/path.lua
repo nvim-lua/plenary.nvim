@@ -8,6 +8,10 @@ local uv = vim.loop
 
 local F = require "plenary.functional"
 
+--qqq
+local U = require "plenary.utils"
+--!qqq
+
 local S_IF = {
   -- S_IFDIR  = 0o040000  # directory
   DIR = 0x4000,
@@ -16,14 +20,29 @@ local S_IF = {
 }
 
 local path = {}
-path.home = vim.loop.os_homedir()
+--qqq
+-- vim.loop.os_homedir() ignores HOME env var in msys2
+if U.is_msys2 then
+  path.home = U.posix_to_windows(vim.fn.expand("~"))
+else
+  path.home = vim.loop.os_homedir()
+end
+--!qqq
+--path.home = vim.loop.os_homedir()
 
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
-    if os ~= "windows" then
+    if os ~= "windows" and not U.is_msys2 then
       return "/"
     else
+      --qqq
+      --vim.notify("os: " .. vim.inspect(os) .. ", U.is_msys: " .. vim.inspect(U.is_msys2), vim.log.levels.ERROR)
+      -- msys2 works fine with forward slashes as well as cmd.exe/powershell.exe
+      -- but not UNC paths if the paths will ever be supported.
+      -- Maybe returning "/" as path separator can break something in existing logic.
+      --return "/"
+      --!qqq
       return "\\"
     end
   else
@@ -39,7 +58,17 @@ path.root = (function()
   else
     return function(base)
       base = base or vim.loop.cwd()
-      return base:sub(1, 1) .. ":\\"
+      --qqq
+      if U.is_msys2 then
+        base = U.posix_to_windows(base)
+        --if not base:find("^[A-Za-z]:" .. path.sep) then
+        --  vim.notify("path.root IIFE: base has incorrect path style for msys2!", vim.log.levels.ERROR)
+        --end
+      end
+      return base:sub(1, 1) .. ":" .. path.sep
+      --return base:sub(1, 3)
+      --!qqq
+      --return base:sub(1, 1) .. ":\\"
     end
   end
 end)()
@@ -55,8 +84,14 @@ local concat_paths = function(...)
 end
 
 local function is_root(pathname)
-  if path.sep == "\\" then
-    return string.match(pathname, "^[A-Z]:\\?$")
+  if path.sep == "\\" or U.is_msys2 then
+    --qqq
+    if U.is_msys2 then
+      pathname = U.posix_to_windows(pathname)
+    end
+    return string.match(pathname, "^[A-Za-z]:[\\/]?$")
+    --!qqq
+    --return string.match(pathname, "^[A-Z]:\\?$")
   end
   return pathname == "/"
 end
@@ -77,7 +112,12 @@ local is_uri = function(filename)
 end
 
 local is_absolute = function(filename, sep)
-  if sep == "\\" then
+  if sep == "\\" or U.is_msys2 then
+    --qqq
+    if U.is_msys2 then
+      filename = U.posix_to_windows(filename)
+    end
+    --!qqq
     return string.match(filename, "^[%a]:[\\/].*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
@@ -98,12 +138,22 @@ local function _normalize_path(filename, cwd)
 
   local has = string.find(filename, path.sep .. "..", 1, true) or string.find(filename, ".." .. path.sep, 1, true)
 
+  --qqq
+  --vim.notify("_normalize_path: has = " .. vim.inspect(has), vim.log.levels.WARN)
+  --!qqq
+
   if has then
     local is_abs = is_absolute(filename, path.sep)
+    --qqq
+    --vim.notify("_normalize_path: is_abs = " .. vim.inspect(is_abs), vim.log.levels.WARN)
+    --!qqq
     local split_without_disk_name = function(filename_local)
       local parts = _split_by_separator(filename_local)
       -- Remove disk name part on Windows
-      if path.sep == "\\" and is_abs then
+      if is_abs and (path.sep == "\\" or U.is_msys2) then
+        --qqq
+        --vim.notify("_normalize_path: parts = " .. vim.inspect(parts), vim.log.levels.WARN)
+        --!qqq
         table.remove(parts, 1)
       end
       return parts
@@ -137,8 +187,18 @@ local function _normalize_path(filename, cwd)
     out_file = prefix .. table.concat(parts, path.sep)
   end
 
+  --qqq
+  if U.is_msys2 then
+    out_file = U.posix_to_windows(out_file)
+  end
+  --!qqq
+
   return out_file
 end
+
+--qqq
+--vim.notify("_normalize_path: call returned " .. vim.inspect(_normalize_path("C:\\msys64\\home\\..\\123", "C:\\msys64\\123")), vim.log.levels.WARN)
+--!qqq
 
 local clean = function(pathname)
   if is_uri(pathname) then
@@ -182,12 +242,22 @@ Path.__index = function(t, k)
 
   if k == "_cwd" then
     local cwd = uv.fs_realpath "."
+    --qqq
+    if U.is_msys2 then
+      cwd = U.posix_to_windows(cwd)
+    end
+    --!qqq
     t._cwd = cwd
     return cwd
   end
 
   if k == "_absolute" then
     local absolute = uv.fs_realpath(t.filename)
+    --qqq
+    if U.is_msys2 then
+      absolute = U.posix_to_windows(absolute)
+    end
+    --!qqq
     t._absolute = absolute
     return absolute
   end
@@ -234,6 +304,13 @@ function Path:new(...)
   -- If we already have a Path, it's fine.
   --   Just return it
   if Path.is_path(path_input) then
+    --qqq
+    -- Maybe we should fix fields with paths here as well
+    --if U.is_msys2 then
+    --  vim.notify("Path:new(...): returning already defined Path object " .. vim.inspect(path_input), vim.log.levels.ERROR)
+    --  path_input.filename = U.posix_to_windows(path_input.filename)
+    --end
+    --!qqq
     return path_input
   end
 
@@ -259,8 +336,18 @@ function Path:new(...)
     end
 
     path_string = table.concat(path_objs, sep)
+    --qqq
+    if U.is_msys2 then
+      path_string = U.posix_to_windows(path_string)
+    end
+    --!qqq
   else
     assert(type(path_input) == "string", vim.inspect(path_input))
+    --qqq
+    if U.is_msys2 then
+      path_input = U.posix_to_windows(path_input)
+    end
+    --!qqq
     path_string = path_input
   end
 
@@ -319,7 +406,15 @@ function Path:expand()
   -- TODO support windows
   local expanded
   if string.find(self.filename, "~") then
-    expanded = string.gsub(self.filename, "^~", vim.loop.os_homedir())
+    --qqq
+    -- vim.loop.os_homedir() ignores HOME env variable in msys2
+    if U.is_msys2 then
+      expanded = string.gsub(self.filename, "^~", vim.fn.expand("~"))
+    else
+      expanded = string.gsub(self.filename, "^~", vim.loop.os_homedir())
+    end
+    --!qqq
+    --expanded = string.gsub(self.filename, "^~", vim.loop.os_homedir())
   elseif string.find(self.filename, "^%.") then
     expanded = vim.loop.fs_realpath(self.filename)
     if expanded == nil then
@@ -336,9 +431,22 @@ function Path:expand()
   else
     expanded = self.filename
   end
+  --qqq
+  if expanded and U.is_msys2 then
+    --vim.notify("Path:expand(): " .. "vim.inspect(expanded), vim.log.levels.ERROR")
+    expanded = U.posix_to_windows(expanded)
+  end
+  --!qqq
   return expanded and expanded or error "Path not valid"
 end
 
+--qqq
+-- Can be tough to achieve in msys2 for posix-style paths.
+-- Like from C:\\msys64\\home\\User\\personal\\project\\src\\file.lua (rel. src\\file.lua)
+-- to /home/User/personal/project/src/file.lua (rel. src/file.lua).
+-- This will probably require back-and-forth path conversions.
+-- But do we actually need to bother about that instead of leaving Windows-style rel. path?
+--!qqq
 function Path:make_relative(cwd)
   if is_uri(self.filename) then
     return self.filename
@@ -357,6 +465,12 @@ function Path:make_relative(cwd)
       self.filename = self.filename:sub(#cwd + 1, -1)
     end
   end
+
+  --qqq
+  if U.is_msys2 then
+    self.filename = U.posix_to_windows(self.filename)
+  end
+  --!qqq
 
   return self.filename
 end
@@ -435,7 +549,7 @@ local shorten = (function()
     return shorten_len(filename, 1)
   end
 
-  if jit and path.sep ~= "\\" then
+  if jit and path.sep ~= "\\" then --and not U.is_msys2 then
     local ffi = require "ffi"
     ffi.cdef [[
     typedef unsigned char char_u;
@@ -489,7 +603,7 @@ function Path:mkdir(opts)
       for _, dir in ipairs(dirs) do
         if dir ~= "" then
           local joined = concat_paths(processed, dir)
-          if processed == "" and self._sep == "\\" then
+          if processed == "" and (self._sep == "\\") then -- or U.is_msys2) then
             joined = dir
           end
           local stat = uv.fs_stat(joined) or {}

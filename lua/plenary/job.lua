@@ -4,6 +4,10 @@ local compat = require "plenary.compat"
 
 local F = require "plenary.functional"
 
+--qqq
+local U = require "plenary.utils"
+--!qqq
+
 ---@class Job
 ---@field command string Command to run
 ---@field args? string[] List of arguments to pass
@@ -64,8 +68,24 @@ end
 
 local function expand(path)
   if vim.in_fast_event() then
+    --qqq
+    if U.is_msys2 then
+      path = U.posix_to_windows(path)
+      -- Experiments with "{}" escaping.
+      --path = U.posix_to_windows(vim.fn.expand(vim.fn.escape(path, "{}[]$"), true))
+    end
     return assert(uv.fs_realpath(path), string.format("Path must be valid: %s", path))
+    --!qqq
+    --return assert(uv.fs_realpath(path), string.format("Path must be valid: %s", path))
   else
+    --qqq
+    if U.is_msys2 then
+      path = U.posix_to_windows(vim.fn.expand(vim.fn.escape(path, "[]$"), true))
+      --path = U.posix_to_windows(vim.fn.expand(vim.fn.escape(path, "{}[]$"), true))
+      --path = U.posix_to_windows(vim.fn.expand(path), true)
+      return path
+    end
+    --!qqq
     -- TODO: Probably want to check that this is valid here... otherwise that's weird.
     return vim.fn.expand(vim.fn.escape(path, "[]$"), true)
   end
@@ -112,6 +132,18 @@ function Job:new(o)
 
   obj.command = command
   obj.args = args
+  --qqq
+  -- This is so annoying that path can be in posix style even here.
+  --vim.notify("Job:new(): " .. vim.inspect(obj), vim.log.levels.ERROR)
+  if U.is_msys2 and o.cwd then
+    -- "git_apply_stash" from Telescope does not work here possibly due to nil "o.cwd".
+    -- NVM. This was caused by curly braces expansion in stash@{0}.
+    --if not o.cwd then
+    --  o.cwd = vim.loop.cwd()
+    --end
+    o.cwd = U.posix_to_windows(o.cwd)
+  end
+  --!qqq
   obj._raw_cwd = o.cwd
   if o.env then
     if type(o.env) ~= "table" then
@@ -269,6 +301,12 @@ function Job:_create_uv_options()
   options.stdio = { self.stdin, self.stdout, self.stderr }
 
   if self._raw_cwd then
+    --qqq
+    if U.is_msys2 then
+      --vim.notify("Job:_create_uv_options(): " .. vim.inspect(self), vim.log.levels.ERROR)
+      self._raw_cwd = U.posix_to_windows(self._raw_cwd)
+    end
+    --!qqq
     options.cwd = expand(self._raw_cwd)
   end
   if self.env then
@@ -399,6 +437,15 @@ function Job:_execute()
   if self._user_on_start then
     self:_user_on_start()
   end
+
+  --qqq
+  -- Path can be in posix style even here
+  -- UPD. Making the path transformation in Job:new() solves "nvim ."->":Telescope git_commits"
+  --if U.is_msys2 then
+  --  vim.notify("Job:_execute(): " .. vim.inspect(self) .. ", " .. vim.inspect(options), vim.log.levels.ERROR)
+  --  self._raw_cwd = U.posix_to_windows(self._raw_cwd)
+  --end
+  --!qqq
 
   self.handle, self.pid = uv.spawn(options.command, options, shutdown_factory(self, options))
 
