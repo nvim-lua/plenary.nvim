@@ -227,6 +227,9 @@ parse.request = function(opts)
   if opts.proxy then
     table.insert(result, { "--proxy", opts.proxy })
   end
+  if opts.timeout then
+    table.insert(result, { "-m", opts.timeout/1000 })
+  end
   if opts.compressed then
     table.insert(result, "--compressed")
   end
