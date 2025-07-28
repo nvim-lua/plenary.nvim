@@ -20,8 +20,8 @@ local default_config = {
   plugin = "plenary",
 
   -- Should print the output to neovim while running.
-  -- values: 'sync','async',false
-  use_console = "async",
+  -- values: 'sync','async','notify',false
+  use_console = "notify",
 
   -- Should highlighting be used in console (using echohl).
   highlights = true,
@@ -132,8 +132,20 @@ log.new = function(config, standalone)
     local info = debug.getinfo(config.info_level or 2, "Sl")
     local src_path = info.source:sub(2)
     local src_line = info.currentline
+    -- Notify
+    if config.use_console == "notify" then
+      local level = vim.log.levels[level_config.name:upper()]
+      if level == nil then
+        level = vim.log.levels.ERROR
+      end
+      vim.notify(msg, level, {
+        title = config.plugin,
+        filename = src_path,
+        lnum = src_line,
+        col = 1,
+      })
     -- Output to console
-    if config.use_console then
+    elseif config.use_console then
       local log_to_console = function()
         local console_string = config.fmt_msg(true, level_config.name, src_path, src_line, msg)
 
