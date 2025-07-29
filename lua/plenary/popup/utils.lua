@@ -14,6 +14,9 @@ utils.bounded = function(value, min, max)
   return value
 end
 
+-- TODO:    Should defaults get deepcopy before table values are used?
+--          utils.apply_defaults is never used AFAICT.
+--          So I guess this comment is about plenary/tbl.lua.
 utils.apply_defaults = function(original, defaults)
   if original == nil then
     original = {}
