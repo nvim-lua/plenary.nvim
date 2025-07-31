@@ -1,0 +1,17 @@
+std="neovim"
+
+exclude = [
+  "lua/plenary/profile/lua_profiler.lua",
+  "lua/plenary/profile/memory_profiler.lua",
+  "lua/plenary/profile/p.lua", # token `goto` detected as `parse_error`
+  "lua/plenary/async_lib/*.lua",
+]
+
+[rules]
+global_usage = "warn"
+deprecated = "warn" # If change for `allow` it will rely in `lua_ls` diagnostics alone
+multiple_statements = "warn"
+incorrect_standard_library_use = "allow" # This is for cases like `string.format`, `package.config`, etc.
+mixed_table = "allow"
+unused_variable = "warn"
+undefined_variable = "warn"
