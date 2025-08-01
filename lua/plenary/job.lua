@@ -1,10 +1,10 @@
 local vim = vim
-local uv = vim.loop
+local uv = vim.uv or vim.loop
 local compat = require "plenary.compat"
 
 local F = require "plenary.functional"
 
----@class Job
+---@class JobOptions
 ---@field command string Command to run
 ---@field args? string[] List of arguments to pass
 ---@field cwd? string Working directory for job
@@ -20,6 +20,8 @@ local F = require "plenary.functional"
 ---@field on_exit? fun(self: Job, code: number, signal: number)
 ---@field maximum_results? number Stop processing results after this number
 ---@field writer? Job|table|string Job that writes to stdin of this job.
+
+---@class Job: JobOptions
 local Job = {}
 Job.__index = Job
 
@@ -78,7 +80,7 @@ end
 --- Map-like table
 
 ---Create a new job
----@param o Job
+---@param o JobOptions | string[]
 ---@return Job
 function Job:new(o)
   if not o then
