@@ -265,7 +265,7 @@ function Path:new(...)
   end
 
   local obj = {
-    filename = path_string,
+    filename = path_string:gsub("/", sep):gsub("\\", sep),
 
     _sep = sep,
   }

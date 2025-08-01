@@ -44,6 +44,10 @@ describe("Path", function()
     assert.are.same(Path:new("lua", "plenary"), Path:new("lua", Path:new "plenary"))
   end)
 
+  it("can join paths with different separators", function()
+    assert.are.same(Path:new("path\\to"):joinpath("lua/plenary"), Path:new("path/to/lua/plenary"))
+  end)
+
   it("inserts slashes", function()
     assert.are.same("lua" .. path.sep .. "plenary", Path:new("lua", "plenary").filename)
   end)
