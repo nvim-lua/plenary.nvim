@@ -4,8 +4,12 @@ local compat = require "plenary.compat"
 
 local F = require "plenary.functional"
 
----@class Job
----@field command string Command to run
+---@alias PlenaryJobCallback fun(error: string, data: string, self?: PlenaryJob)
+---@alias PlenaryJobOnExit fun(self: PlenaryJob, code?: integer, signal?: integer)
+---@alias PlenaryJobOnOutput fun(err?: string, data?: string, is_complete: boolean)
+
+---@class PlenaryJobOptions
+---@field command? string Command to run
 ---@field args? string[] List of arguments to pass
 ---@field cwd? string Working directory for job
 ---@field env? table<string, string>|string[] Environment looking like: { ['VAR'] = 'VALUE' } or { 'VAR=VALUE' }
@@ -15,15 +19,48 @@ local F = require "plenary.functional"
 ---@field enable_handlers? boolean If set to false, disables all callbacks associated with output (default: true)
 ---@field enable_recording? boolean
 ---@field on_start? fun()
----@field on_stdout? fun(error: string, data: string, self?: Job)
----@field on_stderr? fun(error: string, data: string, self?: Job)
----@field on_exit? fun(self: Job, code: number, signal: number)
----@field maximum_results? number Stop processing results after this number
----@field writer? Job|table|string Job that writes to stdin of this job.
+---@field on_stdout? PlenaryJobCallback
+---@field on_stderr? PlenaryJobCallback
+---@field on_exit? PlenaryJobOnExit
+---@field maximum_results? integer Stop processing results after this number
+---@field writer? string|PlenaryJob|string[]|uv_pipe_t Job that writes to stdin of this job.
+---@field [integer] string Maybe command & args exist here
+
+---@class PlenaryJob
+---@field command string
+---@field args string[]
+---@field env string[]
+---@field interactive boolean
+---@field detached? boolean
+---@field enable_handlers boolean
+---@field enable_recording boolean
+---@field handle uv_process_t?
+---@field is_shutdown boolean?
+---@field stderr? uv_pipe_t
+---@field stdin? uv_pipe_t
+---@field stdout? uv_pipe_t
+---@field user_data table not using
+---@field writer? string|PlenaryJob|string[]|uv_pipe_t
+---@field _maximum_results? integer
+---@field _shutdown_check? uv_check_t
+---@field private _additional_on_exit_callbacks PlenaryJobOnExit[]
+---@field private _pid (string|integer)?
+---@field private _raw_cwd? string
+---@field private _stderr_reader? PlenaryJobOnOutput
+---@field private _stderr_results? string[]
+---@field private _stdout_reader? PlenaryJobOnOutput
+---@field private _stdout_results? string[]
+---@field private _user_on_exit? PlenaryJobOnExit
+---@field private _user_on_start? fun(self: PlenaryJob)
+---@field private _user_on_stderr? PlenaryJobCallback
+---@field private _user_on_stdout? PlenaryJobCallback
 local Job = {}
 Job.__index = Job
 
+---@param j PlenaryJob
+---@param key "handle"|"stderr"|"stdin"|"stdout"
 local function close_safely(j, key)
+  ---@type uv_handle_t?
   local handle = j[key]
 
   if not handle then
@@ -35,6 +72,11 @@ local function close_safely(j, key)
   end
 end
 
+---comment
+---@param child PlenaryJob
+---@param options uv.aliases.spawn_options
+---@param code integer
+---@param signal integer
 local start_shutdown_check = function(child, options, code, signal)
   uv.check_start(child._shutdown_check, function()
     if not child:_pipes_are_closed(options) then
@@ -48,10 +90,14 @@ local start_shutdown_check = function(child, options, code, signal)
     child:_shutdown(code, signal)
 
     -- Remove left over references
+    ---@diagnostic disable-next-line: cast-local-type
     child = nil
   end)
 end
 
+---@param child PlenaryJob
+---@param options uv.aliases.spawn_options
+---@return fun(code: integer, signal: integer)
 local shutdown_factory = function(child, options)
   return function(code, signal)
     if uv.is_closing(child._shutdown_check) then
@@ -62,6 +108,8 @@ local shutdown_factory = function(child, options)
   end
 end
 
+---@param path string
+---@return string
 local function expand(path)
   if vim.in_fast_event() then
     return assert(uv.fs_realpath(path), string.format("Path must be valid: %s", path))
@@ -71,15 +119,9 @@ local function expand(path)
   end
 end
 
----@class Array
---- Numeric table
-
----@class Map
---- Map-like table
-
 ---Create a new job
----@param o Job
----@return Job
+---@param o PlenaryJobOptions
+---@return PlenaryJob
 function Job:new(o)
   if not o then
     error(debug.traceback "Options are required for Job:new")
@@ -99,7 +141,7 @@ function Job:new(o)
   local args = o.args
   if not args then
     if #o > 1 then
-      args = { select(2, unpack(o)) }
+      args = { select(2, unpack(o)) } --[[@as string[] ]]
     end
   end
 
@@ -201,7 +243,11 @@ function Job:_stop()
   close_safely(self, "handle")
 end
 
+---@param options uv.aliases.spawn_options
+---@return boolean
 function Job:_pipes_are_closed(options)
+  -- FIX: These handles does not exist. Use options.stdio instead.
+  ---@diagnostic disable-next-line: undefined-field
   for _, pipe in ipairs { options.stdin, options.stdout, options.stderr } do
     if pipe and not uv.is_closing(pipe) then
       return false
@@ -211,7 +257,9 @@ function Job:_pipes_are_closed(options)
   return true
 end
 
---- Shutdown a job.
+---Shutdown a job.
+---@param code? integer
+---@param signal? integer
 function Job:shutdown(code, signal)
   if self._shutdown_check and uv.is_active(self._shutdown_check) then
     -- shutdown has already started
@@ -221,6 +269,8 @@ function Job:shutdown(code, signal)
   self:_shutdown(code, signal)
 end
 
+---@param code? integer
+---@param signal? integer
 function Job:_shutdown(code, signal)
   if self.is_shutdown then
     return
@@ -261,6 +311,16 @@ function Job:_shutdown(code, signal)
   self._stderr_reader = nil
 end
 
+---Subset type of uv.aliases.spawn_options
+---@class PlenaryJobSpawnOptions
+---@field command string This does not exist on uv.aliases.spawn_options
+---@field args string[]
+---@field stdio uv_pipe_t[]
+---@field cwd? string
+---@field env? table<string, any>
+---@field detached? boolean
+
+---@return PlenaryJobSpawnOptions
 function Job:_create_uv_options()
   local options = {}
 
@@ -282,10 +342,18 @@ function Job:_create_uv_options()
   return options
 end
 
+---@param self PlenaryJob
+---@param result_key "_stderr_results"|"_stdout_results"
+---@param cb? PlenaryJobCallback
+---@return PlenaryJobOnOutput
 local on_output = function(self, result_key, cb)
+  ---@param err string
+  ---@param data string
+  ---@param is_complete boolean
   return coroutine.wrap(function(err, data, is_complete)
     local result_index = 1
 
+    ---@type string, integer, string?, boolean
     local line, start, result_line, found_newline
 
     -- We repeat forever as a coroutine so that we can keep calling this.
@@ -358,7 +426,7 @@ local on_output = function(self, result_key, cb)
 
       -- If we didn't get a newline on the last execute, send the final results.
       if cb and is_complete and not found_newline then
-        cb(err, result_line, self)
+        cb(err, result_line --[[@as string]], self)
       end
 
       if is_complete then
@@ -377,10 +445,11 @@ function Job:_prepare_pipes()
 
   if self.writer then
     if Job.is_job(self.writer) then
-      self.writer:_prepare_pipes()
-      self.stdin = self.writer.stdout
+      local writer = self.writer --[[@as PlenaryJob]]
+      writer:_prepare_pipes()
+      self.stdin = writer.stdout
     elseif self.writer.write then
-      self.stdin = self.writer
+      self.stdin = self.writer --[[@as uv_pipe_t]]
     end
   end
 
@@ -400,7 +469,7 @@ function Job:_execute()
     self:_user_on_start()
   end
 
-  self.handle, self.pid = uv.spawn(options.command, options, shutdown_factory(self, options))
+  self.handle, self._pid = uv.spawn(options.command, options, shutdown_factory(self, options))
 
   if not self.handle then
     error(debug.traceback("Failed to spawn process: " .. vim.inspect(self)))
@@ -429,14 +498,14 @@ function Job:_execute()
           end)
         end
       end
-    elseif type(self.writer) == "string" then
-      self.stdin:write(self.writer, function()
+    elseif type(writer) == "string" then
+      self.stdin:write(writer, function()
         self.stdin:close()
       end)
-    elseif self.writer.write then
-      self.stdin = self.writer
+    elseif writer.write then
+      self.stdin = writer --[[@as uv_pipe_t]]
     else
-      error("Unknown self.writer: " .. vim.inspect(self.writer))
+      error("Unknown self.writer: " .. vim.inspect(writer))
     end
   end
 
@@ -449,6 +518,10 @@ function Job:start()
   self:_execute()
 end
 
+---@param timeout integer
+---@param wait_interval? integer
+---@return string[]? result
+---@return integer code
 function Job:sync(timeout, wait_interval)
   self:start()
   self:wait(timeout, wait_interval)
@@ -456,20 +529,27 @@ function Job:sync(timeout, wait_interval)
   return self.enable_recording and self:result() or nil, self.code
 end
 
+---@return string[]?
 function Job:result()
   assert(self.enable_recording, "'enable_recording' is not enabled for this job.")
   return self._stdout_results
 end
 
+---@return string[]?
 function Job:stderr_result()
   assert(self.enable_recording, "'enable_recording' is not enabled for this job.")
   return self._stderr_results
 end
 
+---@return (string|integer)?
 function Job:pid()
-  return self.pid
+  return self._pid
 end
 
+---@param timeout? integer
+---@param wait_interval? integer
+---@param should_redraw? boolean
+---@return PlenaryJob?
 function Job:wait(timeout, wait_interval, should_redraw)
   timeout = timeout or 5000
   wait_interval = wait_interval or 10
@@ -510,6 +590,9 @@ function Job:wait(timeout, wait_interval, should_redraw)
   return self
 end
 
+---@async
+---@param wait_time? integer
+---@return PlenaryJob?
 function Job:co_wait(wait_time)
   wait_time = wait_time or 5
 
@@ -527,12 +610,16 @@ function Job:co_wait(wait_time)
   return self
 end
 
---- Wait for all jobs to complete
+---Wait for all jobs to complete
+---@param ... integer|PlenaryJob Jobs to wait for. The last arg can be a timeout.
+---@return boolean, -1|-2|nil
 function Job.join(...)
   local jobs_to_wait = { ... }
+  ---@diagnostic disable-next-line: deprecated
   local num_jobs = table.getn(jobs_to_wait)
 
   -- last entry can be timeout
+  ---@type integer?
   local timeout
   if type(jobs_to_wait[num_jobs]) == "number" then
     timeout = table.remove(jobs_to_wait, num_jobs)
@@ -554,25 +641,31 @@ function Job.join(...)
 end
 
 local _request_id = 0
+---@type table<integer, boolean>
 local _request_status = {}
 
+---@param next_job PlenaryJob
 function Job:and_then(next_job)
   self:add_on_exit_callback(function()
     next_job:start()
   end)
 end
 
+---@param next_job PlenaryJob
 function Job:and_then_wrap(next_job)
   self:add_on_exit_callback(vim.schedule_wrap(function()
     next_job:start()
   end))
 end
 
+---@param fn PlenaryJobOnExit
+---@return PlenaryJob
 function Job:after(fn)
   self:add_on_exit_callback(fn)
   return self
 end
 
+---@param next_job PlenaryJob
 function Job:and_then_on_success(next_job)
   self:add_on_exit_callback(function(_, code)
     if code == 0 then
@@ -581,6 +674,7 @@ function Job:and_then_on_success(next_job)
   end)
 end
 
+---@param next_job PlenaryJob
 function Job:and_then_on_success_wrap(next_job)
   self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
     if code == 0 then
@@ -589,6 +683,7 @@ function Job:and_then_on_success_wrap(next_job)
   end))
 end
 
+---@param fn PlenaryJobOnExit
 function Job:after_success(fn)
   self:add_on_exit_callback(function(j, code, signal)
     if code == 0 then
@@ -597,6 +692,7 @@ function Job:after_success(fn)
   end)
 end
 
+---@param next_job PlenaryJob
 function Job:and_then_on_failure(next_job)
   self:add_on_exit_callback(function(_, code)
     if code ~= 0 then
@@ -605,6 +701,7 @@ function Job:and_then_on_failure(next_job)
   end)
 end
 
+---@param next_job PlenaryJob
 function Job:and_then_on_failure_wrap(next_job)
   self:add_on_exit_callback(vim.schedule_wrap(function(_, code)
     if code ~= 0 then
@@ -613,6 +710,7 @@ function Job:and_then_on_failure_wrap(next_job)
   end))
 end
 
+---@param fn PlenaryJobOnExit
 function Job:after_failure(fn)
   self:add_on_exit_callback(function(j, code, signal)
     if code ~= 0 then
@@ -621,6 +719,8 @@ function Job:after_failure(fn)
   end)
 end
 
+---@param ... PlenaryJob
+---@return integer _request_id
 function Job.chain(...)
   _request_id = _request_id + 1
   _request_status[_request_id] = false
@@ -650,10 +750,14 @@ function Job.chain(...)
   return _request_id
 end
 
+---@param id integer
+---@return boolean
 function Job.chain_status(id)
   return _request_status[id]
 end
 
+---@param item any
+---@return boolean
 function Job.is_job(item)
   if type(item) ~= "table" then
     return false
@@ -662,11 +766,13 @@ function Job.is_job(item)
   return getmetatable(item) == Job
 end
 
+---@param cb PlenaryJobOnExit
 function Job:add_on_exit_callback(cb)
   table.insert(self._additional_on_exit_callbacks, cb)
 end
 
---- Send data to a job.
+---Send data to a job.
+---@param data string|string[]
 function Job:send(data)
   if not self.stdin then
     error "job has no 'stdin'. Have you run `job:start()` yet?"

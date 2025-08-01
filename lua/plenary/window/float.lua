@@ -3,6 +3,7 @@ local tbl = require "plenary.tbl"
 
 _AssociatedBufs = {}
 
+---@param bufnr integer
 local clear_buf_on_leave = function(bufnr)
   vim.cmd(
     string.format(
@@ -13,13 +14,22 @@ local clear_buf_on_leave = function(bufnr)
   )
 end
 
+---@class PlenaryWindowFloat
+---@field default_options PlenaryWindowFloatOptions
 local win_float = {}
+
+---@class PlenaryWindowFloatOptions
+---@field bufnr? integer
+---@field percentage float
+---@field winblend float
 
 win_float.default_options = {
   winblend = 15,
   percentage = 0.9,
 }
 
+---@param options? PlenaryWindowFloatOptions
+---@return vim.api.keyset.win_config
 function win_float.default_opts(options)
   options = tbl.apply_defaults(options, win_float.default_options)
 
@@ -41,6 +51,8 @@ function win_float.default_opts(options)
   return opts
 end
 
+---@param options? PlenaryWindowFloatOptions
+---@return { bufnr: integer, win_id: integer }
 function win_float.centered(options)
   options = tbl.apply_defaults(options, win_float.default_options)
 
@@ -60,6 +72,9 @@ function win_float.centered(options)
   }
 end
 
+---@param top_text string[]
+---@param options? PlenaryWindowFloatOptions
+---@return { bufnr: integer, win_id: integer, minor_bufnr: integer, minor_win_id: integer }
 function win_float.centered_with_top_win(top_text, options)
   options = tbl.apply_defaults(options, win_float.default_options)
 
@@ -135,6 +150,11 @@ end
 --                  If table, first index should be start, second_index should be end
 --@param win_opts Table
 --@param border_opts Table
+---@param col_range integer
+---@param row_range integer
+---@param win_opts? PlenaryWindowFloatOptions
+---@param border_opts? PlenaryWindowBorderBorderOptions
+---@return table
 function win_float.percentage_range_window(col_range, row_range, win_opts, border_opts)
   win_opts = tbl.apply_defaults(win_opts, win_float.default_options)
 
@@ -195,6 +215,7 @@ function win_float.percentage_range_window(col_range, row_range, win_opts, borde
   }
 end
 
+---@param bufnr integer
 function win_float.clear(bufnr)
   if _AssociatedBufs[bufnr] == nil then
     return

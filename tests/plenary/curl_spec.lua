@@ -84,7 +84,7 @@ describe("CURL Wrapper:", function()
         return done
       end)
 
-      eq(403, res.status, "It should return 403")
+      eq(403, res and res.status, "It should return 403")
       assert(not succ, "It should fail")
 
       vim.fn.delete(loc)

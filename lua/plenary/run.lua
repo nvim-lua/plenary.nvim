@@ -1,7 +1,13 @@
 local floatwin = require "plenary.window.float"
 
+---@class PlenaryRun
 local run = {}
 
+---@param title_text string[]
+---@param cmd string|string[]
+---@param opts? any
+---@return integer bufnr
+---@return integer win_id
 run.with_displayed_output = function(title_text, cmd, opts)
   local views = floatwin.centered_with_top_win(title_text)
 
