@@ -29,7 +29,11 @@ use "nvim-lua/plenary.nvim"
 Using [lazy](https://github.com/folke/lazy.nvim):
 
 ```
-return { "nvim-lua/plenary.nvim", lazy = true }
+return { "nvim-lua/plenary.nvim", lazy = true } --If using plugins directory structure
+
+--OR
+
+{ "nvim-lua/plenary.nvim", lazy = true } --If using single file structure
 ```
 
 ## Modules
