@@ -22,13 +22,13 @@ Plug 'nvim-lua/plenary.nvim'
 
 Using [packer](https://github.com/wbthomason/packer.nvim):
 
-```
+```vim
 use "nvim-lua/plenary.nvim"
 ```
 
 Using [lazy](https://github.com/folke/lazy.nvim):
 
-```
+```vim
 return { "nvim-lua/plenary.nvim", lazy = true } --If using plugins directory structure
 
 --OR
