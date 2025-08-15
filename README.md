@@ -26,6 +26,12 @@ Using [packer](https://github.com/wbthomason/packer.nvim):
 use "nvim-lua/plenary.nvim"
 ```
 
+Using [lazy](https://github.com/folke/lazy.nvim):
+
+```
+return { "nvim-lua/plenary.nvim", lazy = true }
+```
+
 ## Modules
 
 - [plenary.async](#plenaryasync)
