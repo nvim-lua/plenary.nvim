@@ -272,6 +272,9 @@ function popup.create(what, vim_options)
     )
   end
 
+  -- Disable statusline for popup
+  vim.api.nvim_win_set_option(win_id, "statusline", "")
+
   -- Buffer Options
   if vim_options.cursorline then
     vim.api.nvim_win_set_option(win_id, "cursorline", true)

@@ -51,6 +51,7 @@ function win_float.centered(options)
 
   vim.cmd "setlocal nocursorcolumn"
   vim.api.nvim_win_set_option(win_id, "winblend", options.winblend)
+  vim.api.nvim_win_set_option(win_id, "statusline", "")
 
   vim.cmd(string.format("autocmd WinLeave <buffer> silent! execute 'bdelete! %s'", bufnr))
 
