@@ -9,10 +9,11 @@ local p = require'plenary.profile.p'
 ---@param opts table of options
 ---            flame (bool, default false) write log in flamegraph format
 --                   (see https://github.com/jonhoo/inferno)
+---            popts (string) custom profiler options
 function profile.start(out, opts)
     out = out or "profile.log"
     opts = opts or {}
-    local popts = "10,i1,s,m0"
+    local popts = opts.popts or "10,i1,s,m0"
     if opts.flame then popts = popts .. ",G" end
     p.start(popts, out)
 end
