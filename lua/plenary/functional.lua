@@ -40,7 +40,7 @@ function f.any(fun, iterable)
 end
 
 function f.all(fun, iterable)
-  for k, v in pairs(iterable) do
+  for k, v in ipairs(iterable) do
     if not fun(k, v) then
       return false
     end
@@ -48,7 +48,6 @@ function f.all(fun, iterable)
 
   return true
 end
-
 function f.if_nil(val, was_nil, was_not_nil)
   if val == nil then
     return was_nil
