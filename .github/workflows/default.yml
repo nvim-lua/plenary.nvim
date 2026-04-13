@@ -66,3 +66,16 @@ jobs:
 
       - name: Lint
         run: sudo make lint
+
+  selene:
+    name: Selene
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Run selene
+        uses: NTBBloodbath/selene-action@v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --display-style quiet lua/plenary --allow-warnings
