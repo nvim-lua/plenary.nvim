@@ -595,6 +595,7 @@ function Path:copy(opts)
   end
   -- dir
   if opts.recursive then
+    local suffix = table.remove(self:_split())
     dest:mkdir {
       parents = F.if_nil(opts.parents, false, opts.parents),
       exists_ok = F.if_nil(opts.exists_ok, true, opts.exists_ok),
@@ -608,13 +609,16 @@ function Path:copy(opts)
     })
     for _, entry in ipairs(data) do
       local entry_path = Path:new(entry)
-      local suffix = table.remove(entry_path:_split())
-      local new_dest = dest:joinpath(suffix)
-      -- clear destination as it might be Path table otherwise failing w/ extend
-      opts.destination = nil
-      local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
-      -- nil: not overriden if `override = false`
-      success[new_dest] = entry_path:copy(new_opts) or false
+      local entry_suffix = table.remove(entry_path:_split())
+      -- avoid repeated recursive copying if folder is copied into itself
+      if suffix ~= entry_suffix then
+        local new_dest = dest:joinpath(entry_suffix)
+        -- clear destination as it might be Path table otherwise failing w/ extend
+        opts.destination = nil
+        local new_opts = vim.tbl_deep_extend("force", opts, { destination = new_dest })
+        -- nil: not overriden if `override = false`
+        success[new_dest] = entry_path:copy(new_opts) or false
+      end
     end
     return success
   else
