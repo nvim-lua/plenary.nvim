@@ -47,15 +47,17 @@ local make_gitignore = function(basepath)
     for _, v in ipairs(bp) do
       if entry:find(v, 1, true) then
         local negated = false
-        for _, w in ipairs(patterns[v].ignored) do
-          if not negated and entry:match(w) then
-            for _, inverse in ipairs(patterns[v].negated) do
-              if not negated and entry:match(inverse) then
-                negated = true
+        if patterns[v] then
+          for _, w in ipairs(patterns[v].ignored) do
+            if not negated and entry:match(w) then
+              for _, inverse in ipairs(patterns[v].negated) do
+                if not negated and entry:match(inverse) then
+                  negated = true
+                end
               end
-            end
-            if not negated then
-              return false
+              if not negated then
+                return false
+              end
             end
           end
         end
