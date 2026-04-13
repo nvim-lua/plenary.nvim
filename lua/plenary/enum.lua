@@ -25,12 +25,20 @@
 --- In case of name or value clashing, the call will fail. For this reason, it's
 --- best if you define the members in ascending order.
 ---@brief ]]
+---@class PlenaryEnum
+---@field is_enum fun(tbl: table): boolean
+---@field make_enum fun(tbl: PlenaryEnumRawTable): PlenaryEnumEnum
+---@overload fun(tbl: PlenaryEnumRawTable): PlenaryEnumEnum
+
+---@alias PlenaryEnumRawTable (string|{ [1]: string, [2]: integer })[]
+
+---@class PlenaryEnumEnum
+---@field [integer] string
+---@field [string] PlenaryVariant
 local Enum = {}
 
----@class Enum
-
----@class Variant
-
+---@param name string
+---@return string
 local function validate_member_name(name)
   if #name > 0 and name:sub(1, 1):match "%u" then
     return name
@@ -46,13 +54,19 @@ end
 ---     {'Qux', 10}
 --- }
 --- </pre>
---- @return Enum: A new enum
+---@param tbl PlenaryEnumRawTable
+---@return PlenaryEnumEnum: A new enum
 local function make_enum(tbl)
+  ---@type PlenaryEnumEnum
   local enum = {}
 
+  ---@class PlenaryVariant
+  ---@field value integer
   local Variant = {}
   Variant.__index = Variant
 
+  ---@param i integer
+  ---@return PlenaryVariant
   local function newVariant(i)
     return setmetatable({ value = i }, Variant)
   end
@@ -60,18 +74,26 @@ local function make_enum(tbl)
   -- we don't need __eq because the __eq metamethod will only ever be
   -- invoked when they both have the same metatable
 
+  ---@param o PlenaryVariant
+  ---@return boolean
   function Variant:__lt(o)
     return self.value < o.value
   end
 
+  ---@param o PlenaryVariant
+  ---@return boolean
   function Variant:__gt(o)
     return self.value > o.value
   end
 
+  ---@return string
   function Variant:__tostring()
     return tostring(self.value)
   end
 
+  ---@param e PlenaryEnumEnum
+  ---@param i integer
+  ---@return integer
   local function find_next_idx(e, i)
     local newI = i + 1
     if not e[newI] then
@@ -112,6 +134,9 @@ local function make_enum(tbl)
   return require("plenary.tbl").freeze(setmetatable(enum, Enum))
 end
 
+---@param _ PlenaryEnumEnum
+---@param key string|integer
+---@return string|PlenaryVariant
 Enum.__index = function(_, key)
   if Enum[key] then
     return Enum[key]
@@ -120,8 +145,8 @@ Enum.__index = function(_, key)
 end
 
 --- Checks whether the enum has a member with the given name
---- @param key string: The element to check for
---- @return boolean: True if key is present
+---@param key string The element to check for
+---@return boolean has_key True if key is present
 function Enum:has_key(key)
   if rawget(getmetatable(self).__index, key) then
     return true
@@ -130,8 +155,8 @@ function Enum:has_key(key)
 end
 
 --- If there is a member named 'key', return it, otherwise return nil
---- @param key string: The element to check for
---- @return Variant: The element named by key, or nil if not present
+---@param key string The element to check for
+---@return PlenaryVariant? variant The element named by key, or nil if not present
 function Enum:from_str(key)
   if self:has_key(key) then
     return self[key]
@@ -139,8 +164,8 @@ function Enum:from_str(key)
 end
 
 --- If there is a member of value 'num', return it, otherwise return nil
---- @param num number: The value of the element to check for
---- @return Variant: The element whose value is num
+--- @param num integer The value of the element to check for
+--- @return PlenaryVariant? variant The element whose value is num
 function Enum:from_num(num)
   local key = self[num]
   if key then
@@ -149,8 +174,8 @@ function Enum:from_num(num)
 end
 
 --- Checks whether the given object corresponds to an instance of Enum
---- @param tbl table: The object to be checked
---- @return boolean: True if tbl is an Enum
+---@param tbl table The object to be checked
+---@return boolean is_enum True if tbl is an Enum
 local function is_enum(tbl)
   return getmetatable(getmetatable(tbl).__index) == Enum
 end
@@ -159,4 +184,4 @@ return setmetatable({ is_enum = is_enum, make_enum = make_enum }, {
   __call = function(_, tbl)
     return make_enum(tbl)
   end,
-})
+}) --[[@as PlenaryEnum]]

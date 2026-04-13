@@ -1,7 +1,11 @@
+---@class PlenaryFun
 local M = {}
 
 M.bind = require("plenary.functional").partial
 
+---@param fn fun(...)
+---@param argc integer
+---@return fun(...)
 function M.arify(fn, argc)
   return function(...)
     if select("#", ...) ~= argc then
@@ -12,6 +16,8 @@ function M.arify(fn, argc)
   end
 end
 
+---@param map fun(...)
+---@return fun(to_wrap: fun(...)): fun(...)
 function M.create_wrapper(map)
   return function(to_wrap)
     return function(...)

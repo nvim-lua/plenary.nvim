@@ -12,6 +12,13 @@ local lookups = {
   control = "plenary.async.control",
 }
 
+---@class PlenaryAsync: PlenaryAsyncAsync
+---@field api PlenaryAsyncApi
+---@field control PlenaryAsyncControl
+---@field lsp PlenaryAsyncLsp
+---@field tests PlenaryAsyncTests
+---@field util PlenaryAsyncUtil
+---@field uv PlenaryAsyncUv
 local exports = setmetatable(require "plenary.async.async", {
   __index = function(t, k)
     local require_path = lookups[k]

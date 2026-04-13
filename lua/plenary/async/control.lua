@@ -2,22 +2,26 @@ local a = require "plenary.async.async"
 local Deque = require("plenary.async.structs").Deque
 local tbl = require "plenary.tbl"
 
+---@class PlenaryAsyncControl
 local M = {}
 
+---@class PlenaryAsyncCondvar
+---@field handles (fun(): nil)[]
 local Condvar = {}
 Condvar.__index = Condvar
 
----@class Condvar
----@return Condvar
+---@return PlenaryAsyncCondvar
 function Condvar.new()
   return setmetatable({ handles = {} }, Condvar)
 end
 
 ---`blocks` the thread until a notification is received
+---@param self PlenaryAsyncCondvar
+---@param callback fun(): nil
 Condvar.wait = a.wrap(function(self, callback)
   -- not calling the callback will block the coroutine
   table.insert(self.handles, callback)
-end, 2)
+end, 2) --[[@as async fun(): nil]]
 
 ---notify everyone that is waiting on this Condvar
 function Condvar:notify_all()
@@ -52,12 +56,14 @@ end
 
 M.Condvar = Condvar
 
+---@class PlenaryAsyncSemaphore
+---@field handles (fun(permit: PlenaryAsyncPermit): nil)[]
+---@field permits integer
 local Semaphore = {}
 Semaphore.__index = Semaphore
 
----@class Semaphore
----@param initial_permits number: the number of permits that it can give out
----@return Semaphore
+---@param initial_permits integer the number of permits that it can give out
+---@return PlenaryAsyncSemaphore
 function Semaphore.new(initial_permits)
   vim.validate {
     initial_permits = {
@@ -79,6 +85,8 @@ end
 ---permit:forget()
 ---when a permit can be acquired returns it
 ---call permit:forget() to forget the permit
+---@param self PlenaryAsyncSemaphore
+---@param callback fun(permit: PlenaryAsyncPermit): nil
 Semaphore.acquire = a.wrap(function(self, callback)
   if self.permits > 0 then
     self.permits = self.permits - 1
@@ -87,8 +95,10 @@ Semaphore.acquire = a.wrap(function(self, callback)
     return
   end
 
+  ---@class PlenaryAsyncPermit
   local permit = {}
 
+  ---@param self_permit PlenaryAsyncPermit
   permit.forget = function(self_permit)
     self.permits = self.permits + 1
 
@@ -99,16 +109,17 @@ Semaphore.acquire = a.wrap(function(self, callback)
   end
 
   callback(permit)
-end, 2)
+end, 2) --[[@as async fun(self: PlenaryAsyncSemaphore): PlenaryAsyncPermit]]
 
 M.Semaphore = Semaphore
 
+---@class PlenaryAsyncControlChannel
 M.channel = {}
 
 ---Creates a oneshot channel
 ---returns a sender and receiver function
 ---the sender is not async while the receiver is
----@return function, function
+---@return fun(...): nil tx, async fun(): ... rx
 M.channel.oneshot = function()
   local val = nil
   local saved_callback = nil
@@ -147,20 +158,26 @@ M.channel.oneshot = function()
       if is_single then
         return callback(val)
       else
-        return callback(tbl.unpack(val))
+        return callback(tbl.unpack(val --[[@as table]]))
       end
     else
       saved_callback = callback
     end
-  end, 1)
+  end, 1) --[[@as async fun(): ...]]
 
   return sender, receiver
 end
 
+---@class PlenaryAsyncCounterTx
+---@field send fun(): nil
+
+---@class PlenaryAsyncCounterRx
+---@field recv async fun(): nil
+---@field last async fun(): nil
+
 ---A counter channel.
 ---Basically a channel that you want to use only to notify and not to send any actual values.
----@return function: sender
----@return function: receiver
+---@return PlenaryAsyncCounterTx tx, PlenaryAsyncCounterRx rx
 M.channel.counter = function()
   local counter = 0
   local condvar = Condvar.new()
@@ -191,9 +208,15 @@ M.channel.counter = function()
   return Sender, Receiver
 end
 
+---@class PlenaryAsyncMpscTx
+---@field send fun(...: any): nil
+
+---@class PlenaryAsyncMpscRx
+---@field recv async fun(): ...
+---@field last async fun(): ...
+
 ---A multiple producer single consumer channel
----@return table
----@return table
+---@return PlenaryAsyncMpscTx, PlenaryAsyncMpscRx
 M.channel.mpsc = function()
   local deque = Deque.new()
   local condvar = Condvar.new()

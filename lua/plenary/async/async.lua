@@ -4,13 +4,20 @@ local errors = require "plenary.errors"
 local traceback_error = errors.traceback_error
 local f = require "plenary.functional"
 
+---@class PlenaryAsyncAsync
 local M = {}
 
+---@param fn any
+---@return boolean
 local function is_callable(fn)
   return type(fn) == "function" or (type(fn) == "table" and type(getmetatable(fn)["__call"]) == "function")
 end
 
 ---because we can't store varargs
+---@param step function
+---@param thread thread
+---@param callback? function
+---@param ... any
 local function callback_or_next(step, thread, callback, ...)
   local stat = f.first(...)
 
@@ -33,12 +40,12 @@ local function callback_or_next(step, thread, callback, ...)
 end
 
 ---Executes a future with a callback when it is done
----@param async_function Future: the future to execute
----@param callback function: the callback to call when done
-local execute = function(async_function, callback, ...)
-  assert(is_callable(async_function), "type error :: expected func")
+---@param func function the future to execute
+---@param callback? function the callback to call when done
+local execute = function(func, callback, ...)
+  assert(is_callable(func), "type error :: expected func")
 
-  local thread = co.create(async_function)
+  local thread = co.create(func)
 
   local step
   step = function(...)
@@ -48,31 +55,41 @@ local execute = function(async_function, callback, ...)
   step(...)
 end
 
+---A function including async logic
+---@alias PlenaryAsyncFunction async fun(...): ...
+
 local add_leaf_function
 do
   ---A table to store all leaf async functions
+  ---@type table<PlenaryAsyncFunction, integer>
   _PlenaryLeafTable = setmetatable({}, {
     __mode = "k",
   })
 
+  ---@param async_func PlenaryAsyncFunction
+  ---@param argc integer
   add_leaf_function = function(async_func, argc)
     assert(_PlenaryLeafTable[async_func] == nil, "Async function should not already be in the table")
     _PlenaryLeafTable[async_func] = argc
   end
 
+  ---@param async_func PlenaryAsyncFunction
+  ---@return boolean
   function M.is_leaf_function(async_func)
     return _PlenaryLeafTable[async_func] ~= nil
   end
 
+  ---@param async_func PlenaryAsyncFunction
+  ---@return integer
   function M.get_leaf_function_argc(async_func)
     return _PlenaryLeafTable[async_func]
   end
 end
 
 ---Creates an async function with a callback style function.
----@param func function: A callback style function to be converted. The last argument must be the callback.
----@param argc number: The number of arguments of func. Must be included.
----@return function: Returns an async function
+---@param func function A callback style function to be converted. The last argument must be the callback.
+---@param argc integer The number of arguments of func. Must be included.
+---@return PlenaryAsyncFunction leaf Returns an leaf
 M.wrap = function(func, argc)
   if not is_callable(func) then
     traceback_error("type error :: expected func, got " .. type(func))
@@ -82,6 +99,7 @@ M.wrap = function(func, argc)
     traceback_error("type error :: expected number, got " .. type(argc))
   end
 
+  ---@type PlenaryAsyncFunction
   local function leaf(...)
     local nargs = select("#", ...)
 
@@ -99,13 +117,13 @@ end
 
 ---Use this to either run a future concurrently and then do something else
 ---or use it to run a future with a callback in a non async context
----@param async_function function
+---@param func PlenaryAsyncFunction|function
 ---@param callback function
-M.run = function(async_function, callback)
-  if M.is_leaf_function(async_function) then
-    async_function(callback)
+M.run = function(func, callback)
+  if M.is_leaf_function(func) then
+    func(callback)
   else
-    execute(async_function, callback)
+    execute(func, callback)
   end
 end
 
