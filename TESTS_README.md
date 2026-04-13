@@ -51,6 +51,8 @@ cd plenary.nvim
 nvim --headless -c 'PlenaryBustedDirectory tests'
 ```
 
+Note that `:PlenaryBustedDirectory` will only find tests in files that end in `*_spec.lua`.
+
 # mocking with luassert
 
 Plenary.nvim comes bundled with [luassert](https://github.com/Olivine-Labs/luassert) a library that's built to extend the built-int assertions... but it also comes with stubs, mocks and spies!
