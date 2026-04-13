@@ -18,10 +18,12 @@ local S_IF = {
 local path = {}
 path.home = vim.loop.os_homedir()
 
+local sls_exists = vim.fn.exists('+shellslash')
+
 path.sep = (function()
   if jit then
     local os = string.lower(jit.os)
-    if os ~= "windows" then
+    if os ~= "windows" or vim.opt.shellslash._value then
       return "/"
     else
       return "\\"
@@ -32,14 +34,14 @@ path.sep = (function()
 end)()
 
 path.root = (function()
-  if path.sep == "/" then
+  if path.sep == "/" and not sls_exists then
     return function()
       return "/"
     end
   else
     return function(base)
       base = base or vim.loop.cwd()
-      return base:sub(1, 1) .. ":\\"
+      return base:sub(1, 1) .. ":" .. path.sep
     end
   end
 end)()
@@ -55,8 +57,8 @@ local concat_paths = function(...)
 end
 
 local function is_root(pathname)
-  if path.sep == "\\" then
-    return string.match(pathname, "^[A-Z]:\\?$")
+  if sls_exists then
+    return string.match(pathname, "^[A-Z]:[\\/]?$")
   end
   return pathname == "/"
 end
@@ -77,7 +79,7 @@ local is_uri = function(filename)
 end
 
 local is_absolute = function(filename, sep)
-  if sep == "\\" then
+  if sls_exists then
     return string.match(filename, "^[%a]:[\\/].*$") ~= nil
   end
   return string.sub(filename, 1, 1) == sep
@@ -103,7 +105,7 @@ local function _normalize_path(filename, cwd)
     local split_without_disk_name = function(filename_local)
       local parts = _split_by_separator(filename_local)
       -- Remove disk name part on Windows
-      if path.sep == "\\" and is_abs then
+      if sls_exists and is_abs then
         table.remove(parts, 1)
       end
       return parts
@@ -137,7 +139,7 @@ local function _normalize_path(filename, cwd)
     out_file = prefix .. table.concat(parts, path.sep)
   end
 
-  return out_file
+  return vim.fs.normalize(out_file, {expand_env=false})
 end
 
 local clean = function(pathname)
@@ -435,7 +437,7 @@ local shorten = (function()
     return shorten_len(filename, 1)
   end
 
-  if jit and path.sep ~= "\\" then
+  if jit and not sls_exists then
     local ffi = require "ffi"
     ffi.cdef [[
     typedef unsigned char char_u;
@@ -489,7 +491,7 @@ function Path:mkdir(opts)
       for _, dir in ipairs(dirs) do
         if dir ~= "" then
           local joined = concat_paths(processed, dir)
-          if processed == "" and self._sep == "\\" then
+          if processed == "" and sls_exists then
             joined = dir
           end
           local stat = uv.fs_stat(joined) or {}
