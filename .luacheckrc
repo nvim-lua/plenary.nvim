@@ -41,6 +41,7 @@ files = {
       "clear",
       "assert",
       "print",
+      "RUN_INSIDE_COROUTINE",
     },
   },
   ["lua/plenary/async/init.lua"] = {
