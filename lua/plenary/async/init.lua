@@ -8,6 +8,7 @@ local lookups = {
   util = "plenary.async.util",
   lsp = "plenary.async.lsp",
   api = "plenary.async.api",
+  fn = "plenary.async.fn",
   tests = "plenary.async.tests",
   control = "plenary.async.control",
 }
