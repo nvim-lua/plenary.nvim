@@ -112,15 +112,14 @@ Semaphore.__index = Semaphore
 ---@param initial_permits number: the number of permits that it can give out
 ---@return Semaphore
 function Semaphore.new(initial_permits)
-  vim.validate {
-    initial_permits = {
-      initial_permits,
-      function(n)
-        return n > 0
-      end,
-      "number greater than 0",
-    },
-  }
+  vim.validate(
+    "initial_permits",
+    initial_permits,
+    function(n)
+      return n > 0
+    end,
+    "number greater than 0"
+  )
 
   return setmetatable({ permits = initial_permits, handles = {} }, Semaphore)
 end

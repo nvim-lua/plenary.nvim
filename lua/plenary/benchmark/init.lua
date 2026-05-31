@@ -93,10 +93,8 @@ end
 ---@param name string @benchmark name
 ---@param opts benchmark_run_opts
 local bench = function(name, opts)
-  vim.validate {
-    opts = { opts, "table" },
-    fun = { opts.fun, "table" },
-  }
+  vim.validate("opts", opts, "table")
+  vim.validate("fun", opts.fun, "table")
   opts.warmup = vim.F.if_nil(opts.warmup, 3)
   opts.runs = vim.F.if_nil(opts.runs, 5)
 
