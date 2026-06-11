@@ -9,7 +9,7 @@
 
 local Path = require "plenary.path"
 
-local p_debug = vim.fn.getenv "DEBUG_PLENARY"
+local p_debug = os.getenv "DEBUG_PLENARY"
 if p_debug == vim.NIL then
   p_debug = false
 end
