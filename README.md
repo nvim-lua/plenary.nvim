@@ -202,7 +202,7 @@ local scan = require'plenary.scandir'
 scan.scan_dir('.', { hidden = true, depth = 2 })
 ```
 
-This module also offers `ls -la` sync and async functions that will return a formated string for all files in the directory.
+This module also offers `ls -la` sync and async functions that will return a formatted string for all files in the directory.
 Why? Just for fun
 
 ### plenary.context_manager
