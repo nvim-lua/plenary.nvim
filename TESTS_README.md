@@ -93,7 +93,7 @@ describe("example", function()
 
       testModule.realistic_func()
 
-      -- assert api was called with expcted values
+      -- assert api was called with expected values
       assert.stub(api.nvim_create_buf).was_called_with(false, true)
       -- assert api was called with set expectation
       assert.stub(api.nvim_command).was_called_with("sbuffer 5")
